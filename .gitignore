@@ -1,0 +1,72 @@
+# .gitignore for FinEvo KMP Project
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+.cxx/
+local.properties
+
+# iOS
+*.xcuserstate
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+Pods/
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Secrets (NEVER commit these)
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+sentry.properties
+
+# Generated files
+/captures
+.externalNativeBuild/
+.cxx/
+*.hprof
+
+# Kotlin Multiplatform
+/shared/build/
+/composeApp/build/
+/iosApp/build/

@@ -1,0 +1,471 @@
+-- FinEvo Database Schema
+-- SQLDelight schema for offline-first data storage
+
+-- ============================================
+-- USERS TABLE
+-- ============================================
+CREATE TABLE users (
+    id TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    country TEXT,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    tier TEXT NOT NULL DEFAULT 'FREE',
+    is_malaysian INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+-- ============================================
+-- USER PREFERENCES TABLE
+-- ============================================
+CREATE TABLE user_preferences (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    locale TEXT NOT NULL DEFAULT 'en',
+    use_decimals INTEGER NOT NULL DEFAULT 1,
+    dark_mode INTEGER NOT NULL DEFAULT 1,
+    biometric_enabled INTEGER NOT NULL DEFAULT 0,
+    pin_enabled INTEGER NOT NULL DEFAULT 0,
+    pin_hash TEXT,
+    notifications_enabled INTEGER NOT NULL DEFAULT 1,
+    budget_alerts INTEGER NOT NULL DEFAULT 1,
+    payment_reminders INTEGER NOT NULL DEFAULT 1,
+    habit_reminders INTEGER NOT NULL DEFAULT 1,
+    weekly_report INTEGER NOT NULL DEFAULT 1,
+    first_day_of_week INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- CATEGORIES TABLE
+-- ============================================
+CREATE TABLE categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    type TEXT NOT NULL,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_categories_user ON categories(user_id);
+CREATE INDEX idx_categories_type ON categories(type);
+
+-- ============================================
+-- TRANSACTIONS TABLE
+-- ============================================
+CREATE TABLE transactions (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    description TEXT,
+    note TEXT,
+    date TEXT NOT NULL,
+    is_recurring INTEGER NOT NULL DEFAULT 0,
+    recurring_id TEXT,
+    receipt_url TEXT,
+    tags TEXT,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_transactions_user ON transactions(user_id);
+CREATE INDEX idx_transactions_date ON transactions(date);
+CREATE INDEX idx_transactions_category ON transactions(category_id);
+CREATE INDEX idx_transactions_synced ON transactions(is_synced);
+
+-- ============================================
+-- RECURRING TRANSACTIONS TABLE
+-- ============================================
+CREATE TABLE recurring_transactions (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    description TEXT,
+    frequency TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT,
+    last_generated_date TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_recurring_user ON recurring_transactions(user_id);
+
+-- ============================================
+-- BUDGETS TABLE
+-- ============================================
+CREATE TABLE budgets (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    spent REAL NOT NULL DEFAULT 0,
+    period TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    alert_threshold INTEGER NOT NULL DEFAULT 80,
+    rollover INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_budgets_user ON budgets(user_id);
+CREATE INDEX idx_budgets_category ON budgets(category_id);
+
+-- ============================================
+-- DEBTS TABLE
+-- ============================================
+CREATE TABLE debts (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    original_amount REAL NOT NULL,
+    current_balance REAL NOT NULL,
+    interest_rate REAL NOT NULL,
+    minimum_payment REAL NOT NULL,
+    due_day INTEGER NOT NULL,
+    lender_name TEXT,
+    account_number TEXT,
+    notes TEXT,
+    start_date TEXT NOT NULL,
+    target_payoff_date TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    is_paid_off INTEGER NOT NULL DEFAULT 0,
+    paid_off_date TEXT,
+    color TEXT,
+    priority INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_debts_user ON debts(user_id);
+CREATE INDEX idx_debts_active ON debts(is_active);
+
+-- ============================================
+-- DEBT PAYMENTS TABLE
+-- ============================================
+CREATE TABLE debt_payments (
+    id TEXT NOT NULL PRIMARY KEY,
+    debt_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    principal_amount REAL NOT NULL,
+    interest_amount REAL NOT NULL,
+    date TEXT NOT NULL,
+    note TEXT,
+    is_extra_payment INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_debt_payments_debt ON debt_payments(debt_id);
+CREATE INDEX idx_debt_payments_date ON debt_payments(date);
+
+-- ============================================
+-- BILLS TABLE
+-- ============================================
+CREATE TABLE bills (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    due_day INTEGER NOT NULL,
+    frequency TEXT NOT NULL,
+    category_id TEXT,
+    is_auto_pay_enabled INTEGER NOT NULL DEFAULT 0,
+    reminder_days_before INTEGER NOT NULL DEFAULT 3,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    last_paid_date TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_bills_user ON bills(user_id);
+
+-- ============================================
+-- HABITS TABLE
+-- ============================================
+CREATE TABLE habits (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    category_id TEXT,
+    frequency TEXT NOT NULL,
+    target_days TEXT,
+    target_count INTEGER NOT NULL DEFAULT 1,
+    reminder_time TEXT,
+    reminder_enabled INTEGER NOT NULL DEFAULT 0,
+    current_streak INTEGER NOT NULL DEFAULT 0,
+    best_streak INTEGER NOT NULL DEFAULT 0,
+    total_completions INTEGER NOT NULL DEFAULT 0,
+    xp_reward INTEGER NOT NULL DEFAULT 10,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_habits_user ON habits(user_id);
+CREATE INDEX idx_habits_active ON habits(is_active);
+
+-- ============================================
+-- HABIT LOGS TABLE
+-- ============================================
+CREATE TABLE habit_logs (
+    id TEXT NOT NULL PRIMARY KEY,
+    habit_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    completed_count INTEGER NOT NULL DEFAULT 1,
+    note TEXT,
+    skipped INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_habit_logs_habit ON habit_logs(habit_id);
+CREATE INDEX idx_habit_logs_date ON habit_logs(date);
+CREATE UNIQUE INDEX idx_habit_logs_unique ON habit_logs(habit_id, date);
+
+-- ============================================
+-- HABIT CATEGORIES TABLE
+-- ============================================
+CREATE TABLE habit_categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_habit_categories_user ON habit_categories(user_id);
+
+-- ============================================
+-- USER STATS TABLE (GAMIFICATION)
+-- ============================================
+CREATE TABLE user_stats (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    total_xp INTEGER NOT NULL DEFAULT 0,
+    level INTEGER NOT NULL DEFAULT 1,
+    current_streak_days INTEGER NOT NULL DEFAULT 0,
+    longest_streak_days INTEGER NOT NULL DEFAULT 0,
+    total_habits_completed INTEGER NOT NULL DEFAULT 0,
+    perfect_days INTEGER NOT NULL DEFAULT 0,
+    achievements TEXT,
+    last_active_date TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- SYNC QUEUE TABLE
+-- ============================================
+CREATE TABLE sync_queue (
+    id TEXT NOT NULL PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT
+);
+
+CREATE INDEX idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
+
+-- ============================================
+-- APP CONFIG TABLE
+-- ============================================
+CREATE TABLE app_config (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+-- ============================================
+-- QUERIES
+-- ============================================
+
+-- Users
+selectUserById:
+SELECT * FROM users WHERE id = ?;
+
+selectUserByEmail:
+SELECT * FROM users WHERE email = ?;
+
+insertUser:
+INSERT OR REPLACE INTO users(id, email, display_name, avatar_url, country, currency, tier, is_malaysian, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateUser:
+UPDATE users SET display_name = ?, avatar_url = ?, country = ?, currency = ?, tier = ?, is_malaysian = ?, updated_at = ?
+WHERE id = ?;
+
+deleteUser:
+DELETE FROM users WHERE id = ?;
+
+-- Transactions
+selectAllTransactions:
+SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC;
+
+selectTransactionsByDateRange:
+SELECT * FROM transactions WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date DESC;
+
+selectTransactionById:
+SELECT * FROM transactions WHERE id = ?;
+
+insertTransaction:
+INSERT OR REPLACE INTO transactions(id, user_id, type, amount, currency, category_id, description, note, date, is_recurring, recurring_id, receipt_url, tags, is_synced, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteTransaction:
+DELETE FROM transactions WHERE id = ?;
+
+selectUnsyncedTransactions:
+SELECT * FROM transactions WHERE is_synced = 0;
+
+markTransactionSynced:
+UPDATE transactions SET is_synced = 1 WHERE id = ?;
+
+-- Categories
+selectAllCategories:
+SELECT * FROM categories WHERE user_id IS NULL OR user_id = ? ORDER BY sort_order;
+
+selectCategoriesByType:
+SELECT * FROM categories WHERE (user_id IS NULL OR user_id = ?) AND type = ? ORDER BY sort_order;
+
+insertCategory:
+INSERT OR REPLACE INTO categories(id, user_id, name, icon, color, type, is_default, sort_order, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteCategory:
+DELETE FROM categories WHERE id = ?;
+
+-- Budgets
+selectAllBudgets:
+SELECT * FROM budgets WHERE user_id = ?;
+
+selectActiveBudgets:
+SELECT * FROM budgets WHERE user_id = ? AND is_active = 1;
+
+insertBudget:
+INSERT OR REPLACE INTO budgets(id, user_id, category_id, amount, spent, period, start_date, alert_threshold, rollover, is_active, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateBudgetSpent:
+UPDATE budgets SET spent = ?, updated_at = ? WHERE id = ?;
+
+deleteBudget:
+DELETE FROM budgets WHERE id = ?;
+
+-- Debts
+selectAllDebts:
+SELECT * FROM debts WHERE user_id = ? ORDER BY priority;
+
+selectActiveDebts:
+SELECT * FROM debts WHERE user_id = ? AND is_active = 1 AND is_paid_off = 0 ORDER BY priority;
+
+selectDebtById:
+SELECT * FROM debts WHERE id = ?;
+
+insertDebt:
+INSERT OR REPLACE INTO debts(id, user_id, name, type, original_amount, current_balance, interest_rate, minimum_payment, due_day, lender_name, account_number, notes, start_date, target_payoff_date, is_active, is_paid_off, paid_off_date, color, priority, is_synced, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteDebt:
+DELETE FROM debts WHERE id = ?;
+
+-- Debt Payments
+selectPaymentsByDebtId:
+SELECT * FROM debt_payments WHERE debt_id = ? ORDER BY date DESC;
+
+insertDebtPayment:
+INSERT INTO debt_payments(id, debt_id, amount, principal_amount, interest_amount, date, note, is_extra_payment, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteDebtPayment:
+DELETE FROM debt_payments WHERE id = ?;
+
+-- Habits
+selectAllHabits:
+SELECT * FROM habits WHERE user_id = ? ORDER BY sort_order;
+
+selectActiveHabits:
+SELECT * FROM habits WHERE user_id = ? AND is_active = 1 AND is_archived = 0 ORDER BY sort_order;
+
+selectHabitById:
+SELECT * FROM habits WHERE id = ?;
+
+insertHabit:
+INSERT OR REPLACE INTO habits(id, user_id, name, description, icon, color, category_id, frequency, target_days, target_count, reminder_time, reminder_enabled, current_streak, best_streak, total_completions, xp_reward, is_active, is_archived, sort_order, is_synced, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateHabitStreak:
+UPDATE habits SET current_streak = ?, best_streak = ?, total_completions = ?, updated_at = ? WHERE id = ?;
+
+deleteHabit:
+DELETE FROM habits WHERE id = ?;
+
+-- Habit Logs
+selectHabitLogsByDate:
+SELECT * FROM habit_logs WHERE date = ?;
+
+selectHabitLogsByHabitId:
+SELECT * FROM habit_logs WHERE habit_id = ? ORDER BY date DESC;
+
+selectHabitLogsByDateRange:
+SELECT * FROM habit_logs WHERE habit_id = ? AND date >= ? AND date <= ?;
+
+insertHabitLog:
+INSERT OR REPLACE INTO habit_logs(id, habit_id, date, completed_count, note, skipped, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteHabitLog:
+DELETE FROM habit_logs WHERE habit_id = ? AND date = ?;
+
+-- User Stats
+selectUserStats:
+SELECT * FROM user_stats WHERE user_id = ?;
+
+insertOrUpdateUserStats:
+INSERT OR REPLACE INTO user_stats(user_id, total_xp, level, current_streak_days, longest_streak_days, total_habits_completed, perfect_days, achievements, last_active_date)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- App Config
+selectAppConfig:
+SELECT value FROM app_config WHERE key = ?;
+
+insertAppConfig:
+INSERT OR REPLACE INTO app_config(key, value, updated_at) VALUES (?, ?, ?);

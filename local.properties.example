@@ -1,0 +1,36 @@
+# ============================================
+# LOCAL PROPERTIES - SECRETS CONFIGURATION
+# ============================================
+# 
+# IMPORTANT: Copy this file to 'local.properties' and fill in your values.
+# The 'local.properties' file is git-ignored and should NEVER be committed.
+#
+# How to get these values:
+# 1. Go to https://supabase.com and create a project
+# 2. Navigate to Settings > API
+# 3. Copy the Project URL and anon/public key
+# ============================================
+
+# Android SDK location (auto-detected by Android Studio)
+# sdk.dir=C:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+
+# ============================================
+# SUPABASE CONFIGURATION
+# ============================================
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-service-role
+
+# ============================================
+# SIGNING CONFIGURATION (for release builds)
+# ============================================
+# RELEASE_STORE_FILE=path/to/keystore.jks
+# RELEASE_STORE_PASSWORD=your-store-password
+# RELEASE_KEY_ALIAS=your-key-alias
+# RELEASE_KEY_PASSWORD=your-key-password
+
+# ============================================
+# ANALYTICS & CRASH REPORTING (Optional)
+# ============================================
+# MIXPANEL_TOKEN=your-mixpanel-token
+# SENTRY_DSN=https://your-sentry-dsn

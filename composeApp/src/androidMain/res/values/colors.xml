@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark futuristic colors -->
+    <color name="splash_background">#0A0E1A</color>
+    <color name="app_background">#0A0E1A</color>
+    <color name="primary">#6C63FF</color>
+    <color name="primary_variant">#5A52D5</color>
+    <color name="secondary">#00D9FF</color>
+    <color name="accent">#FF6B9D</color>
+</resources>
