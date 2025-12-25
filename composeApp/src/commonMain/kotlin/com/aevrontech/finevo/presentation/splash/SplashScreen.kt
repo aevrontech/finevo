@@ -18,6 +18,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.aevrontech.finevo.presentation.onboarding.OnboardingScreen
+import com.aevrontech.finevo.presentation.auth.LoginScreen
 import com.aevrontech.finevo.presentation.home.HomeScreen
 import com.aevrontech.finevo.ui.theme.*
 import kotlinx.coroutines.delay
@@ -66,6 +67,9 @@ class SplashScreen : Screen {
                 when (destination) {
                     SplashDestination.ONBOARDING -> {
                         navigator.replace(OnboardingScreen())
+                    }
+                    SplashDestination.LOGIN -> {
+                        navigator.replace(LoginScreen())
                     }
                     SplashDestination.HOME -> {
                         navigator.replace(HomeScreen())

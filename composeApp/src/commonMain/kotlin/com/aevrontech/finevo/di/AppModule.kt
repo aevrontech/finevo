@@ -3,6 +3,7 @@ package com.aevrontech.finevo.di
 import com.aevrontech.finevo.data.local.DatabaseFactory
 import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.data.local.createDatabase
+import com.aevrontech.finevo.data.remote.AuthService
 import com.aevrontech.finevo.data.repository.*
 import com.aevrontech.finevo.domain.repository.*
 import com.aevrontech.finevo.presentation.auth.AuthViewModel
@@ -25,15 +26,18 @@ val appModule = module {
     single { createDatabase(get()) }
     single { LocalDataSource(get()) }
     
+    // Services
+    single { AuthService() }
+    
     // Repositories
-    single<AuthRepository> { AuthRepositoryImpl() }
+    single<AuthRepository> { AuthRepositoryImpl(get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get()) }
     single<DebtRepository> { DebtRepositoryImpl(get()) }
     single<HabitRepository> { HabitRepositoryImpl(get()) }
     single<SettingsRepository> { SettingsRepositoryImpl() }
     
     // ViewModels
-    viewModel { SplashViewModel() }
+    viewModel { SplashViewModel(get()) }
     viewModel { OnboardingViewModel() }
     viewModel { AuthViewModel(get()) }
     viewModel { HomeViewModel() }
