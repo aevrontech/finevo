@@ -4,13 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.core.util.Result
 import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.repository.AccountRepository
 import com.aevrontech.finevo.domain.repository.ExpenseRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 
 /** ViewModel for Expense Tracker feature. */
-class ExpenseViewModel(private val expenseRepository: ExpenseRepository) : ViewModel() {
+class ExpenseViewModel(
+        private val expenseRepository: ExpenseRepository,
+        private val accountRepository: AccountRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
@@ -22,9 +26,50 @@ class ExpenseViewModel(private val expenseRepository: ExpenseRepository) : ViewM
             LocalDate(today.year, today.month, today.month.length(today.year % 4 == 0))
 
     init {
-        loadTransactions()
+        loadAccounts()
         loadCategories()
-        observeTransactionSummary()
+    }
+
+    private fun loadAccounts() {
+        viewModelScope.launch {
+            accountRepository.getActiveAccounts("local_user").collect { accounts ->
+                val selectedAccount = _uiState.value.selectedAccount ?: accounts.firstOrNull()
+                _uiState.update { it.copy(accounts = accounts, selectedAccount = selectedAccount) }
+
+                // Load transactions for selected account
+                selectedAccount?.let { loadTransactionsForAccount(it.id) }
+            }
+        }
+    }
+
+    fun selectAccount(account: Account) {
+        _uiState.update { it.copy(selectedAccount = account) }
+        loadTransactionsForAccount(account.id)
+    }
+
+    private fun loadTransactionsForAccount(accountId: String) {
+        viewModelScope.launch {
+            expenseRepository.getTransactionsByAccount(accountId, monthStart, monthEnd).collect {
+                    transactions ->
+                val income =
+                        transactions.filter { it.type == TransactionType.INCOME }.sumOf {
+                            it.amount
+                        }
+                val expense =
+                        transactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
+                            it.amount
+                        }
+
+                _uiState.update {
+                    it.copy(
+                            transactions = transactions,
+                            isLoading = false,
+                            accountIncome = income,
+                            accountExpense = expense
+                    )
+                }
+            }
+        }
     }
 
     private fun loadTransactions() {
@@ -134,10 +179,15 @@ class ExpenseViewModel(private val expenseRepository: ExpenseRepository) : ViewM
 /** UI state for Expense screen. */
 data class ExpenseUiState(
         val isLoading: Boolean = true,
+        val accounts: List<Account> = emptyList(),
+        val selectedAccount: Account? = null,
         val transactions: List<Transaction> = emptyList(),
         val categories: List<Category> = emptyList(),
         val summary: TransactionSummary? = null,
+        val accountIncome: Double = 0.0,
+        val accountExpense: Double = 0.0,
         val showAddDialog: Boolean = false,
+        val showAddAccountDialog: Boolean = false,
         val selectedTransactionType: TransactionType = TransactionType.EXPENSE,
         val error: String? = null,
         val successMessage: String? = null
@@ -149,11 +199,22 @@ data class ExpenseUiState(
         get() = transactions.filter { it.type == TransactionType.INCOME }
 
     val monthlyTotal: Double
-        get() = summary?.netAmount ?: 0.0
+        get() = summary?.netAmount ?: (accountIncome - accountExpense)
 
     val monthlyExpense: Double
-        get() = summary?.totalExpense ?: 0.0
+        get() = summary?.totalExpense ?: accountExpense
 
     val monthlyIncome: Double
-        get() = summary?.totalIncome ?: 0.0
+        get() = summary?.totalIncome ?: accountIncome
+
+    val accountBalance: Double
+        get() = selectedAccount?.balance ?: 0.0
+
+    val accountBalancePercentage: Double
+        get() {
+            val balance = selectedAccount?.balance ?: 0.0
+            return if (balance > 0) {
+                ((balance - accountExpense) / balance * 100).coerceIn(0.0, 100.0)
+            } else 0.0
+        }
 }

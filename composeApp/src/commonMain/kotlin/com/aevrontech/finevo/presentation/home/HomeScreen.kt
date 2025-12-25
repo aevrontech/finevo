@@ -23,7 +23,6 @@ import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.presentation.auth.AuthViewModel
 import com.aevrontech.finevo.presentation.components.AddDebtDialog
 import com.aevrontech.finevo.presentation.components.AddHabitDialog
-import com.aevrontech.finevo.presentation.components.AddTransactionDialog
 import com.aevrontech.finevo.presentation.debt.DebtViewModel
 import com.aevrontech.finevo.presentation.expense.ExpenseViewModel
 import com.aevrontech.finevo.presentation.habit.HabitViewModel
@@ -363,120 +362,166 @@ private fun QuickActionButton(
 // ============================================
 // EXPENSE TAB CONTENT
 // ============================================
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExpenseTabContent() {
-    val viewModel: ExpenseViewModel = koinViewModel()
-    val uiState by viewModel.uiState.collectAsState()
+    val expenseViewModel: ExpenseViewModel = koinViewModel()
+    val accountViewModel: com.aevrontech.finevo.presentation.expense.AccountViewModel =
+            koinViewModel()
+    val expenseState by expenseViewModel.uiState.collectAsState()
+    val accountState by accountViewModel.uiState.collectAsState()
 
-    // Show AddTransaction dialog
-    if (uiState.showAddDialog) {
-        AddTransactionDialog(
-                onDismiss = { viewModel.hideAddDialog() },
-                onConfirm = { type, amount, categoryId, description ->
-                    viewModel.addTransaction(type, amount, categoryId, description)
-                },
-                categories = uiState.categories,
-                initialType = uiState.selectedTransactionType
+    var showAddTransaction by remember { mutableStateOf(false) }
+    var showAddAccount by remember { mutableStateOf(false) }
+
+    // Show AddTransaction screen
+    if (showAddTransaction) {
+        com.aevrontech.finevo.presentation.expense.AddTransactionScreen(
+                transactionType = expenseState.selectedTransactionType,
+                accounts = expenseState.accounts,
+                categories = expenseState.categories,
+                selectedAccount = expenseState.selectedAccount,
+                onDismiss = { showAddTransaction = false },
+                onConfirm = { type, amount, accountId, categoryId, note, date, time ->
+                    expenseViewModel.addTransaction(type, amount, categoryId, note, note)
+                    showAddTransaction = false
+                }
         )
+        return
     }
 
-    LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Header
-        item {
-            Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                        text = "Expenses",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurface
-                )
-                FloatingActionButton(
-                        onClick = { viewModel.showAddDialog() },
-                        containerColor = Primary,
-                        contentColor = OnPrimary,
-                        modifier = Modifier.size(48.dp)
-                ) { Icon(Icons.Filled.Add, contentDescription = "Add") }
-            }
-        }
+    // Show AddAccount screen
+    if (showAddAccount) {
+        com.aevrontech.finevo.presentation.expense.AddAccountScreen(
+                onDismiss = { showAddAccount = false },
+                onConfirm = { name, balance, currency, type, color ->
+                    accountViewModel.createAccount(name, balance, currency, type, color)
+                    showAddAccount = false
+                },
+                defaultCurrency = expenseState.selectedAccount?.currency ?: "MYR"
+        )
+        return
+    }
 
-        // Summary Card
-        item {
-            Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("This Month", color = OnSurfaceVariant, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Income", color = Income, fontSize = 12.sp)
-                            Text(
-                                    text = "RM ${String.format("%.2f", uiState.monthlyIncome)}",
-                                    color = Income,
-                                    fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Column {
-                            Text("Expenses", color = Expense, fontSize = 12.sp)
-                            Text(
-                                    text = "RM ${String.format("%.2f", uiState.monthlyExpense)}",
-                                    color = Expense,
-                                    fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Transaction List
-        if (uiState.transactions.isEmpty() && !uiState.isLoading) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
             item {
-                Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                            modifier = Modifier.fillMaxWidth().padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("💰", fontSize = 48.sp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("No transactions yet", color = OnSurfaceVariant)
-                        Text(
-                                "Tap + to add your first transaction",
-                                color = OnSurfaceVariant,
-                                fontSize = 12.sp
-                        )
-                    }
+                    Text(
+                            text = "Accounts",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                    )
                 }
             }
-        } else {
-            items(uiState.transactions.size) { index ->
-                val transaction = uiState.transactions[index]
-                TransactionItem(transaction = transaction)
+
+            // Account Cards - Horizontal Scroll
+            item {
+                com.aevrontech.finevo.presentation.expense.AccountCardsRow(
+                        accounts = expenseState.accounts,
+                        selectedAccount = expenseState.selectedAccount,
+                        onAccountClick = { account -> expenseViewModel.selectAccount(account) },
+                        onAddAccountClick = { showAddAccount = true }
+                )
             }
+
+            // Account Summary Card
+            item {
+                com.aevrontech.finevo.presentation.expense.AccountSummaryCard(
+                        account = expenseState.selectedAccount,
+                        income = expenseState.accountIncome,
+                        expense = expenseState.accountExpense
+                )
+            }
+
+            // Section Header: Transactions
+            item {
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                            text = "Transactions",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = OnSurface
+                    )
+                    Text(text = "This Month", fontSize = 12.sp, color = OnSurfaceVariant)
+                }
+            }
+
+            // Transaction List
+            if (expenseState.transactions.isEmpty() && !expenseState.isLoading) {
+                item {
+                    Card(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceContainer),
+                            shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("💸", fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                    "No transactions yet",
+                                    color = OnSurface,
+                                    fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                    "Tap + to add your first transaction",
+                                    color = OnSurfaceVariant,
+                                    fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(expenseState.transactions.size) { index ->
+                    val transaction = expenseState.transactions[index]
+                    TransactionItem(
+                            transaction = transaction,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                }
+            }
+
+            // Bottom spacer for FAB
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
+
+        // FAB at bottom right
+        FloatingActionButton(
+                onClick = { showAddTransaction = true },
+                containerColor = Primary,
+                contentColor = OnPrimary,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp).size(56.dp),
+                shape = RoundedCornerShape(16.dp)
+        ) { Icon(Icons.Default.Add, contentDescription = "Add Transaction") }
     }
 }
 
 @Composable
-private fun TransactionItem(transaction: com.aevrontech.finevo.domain.model.Transaction) {
+private fun TransactionItem(
+        transaction: com.aevrontech.finevo.domain.model.Transaction,
+        modifier: Modifier = Modifier
+) {
     Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+            modifier = modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = SurfaceContainer),
+            shape = RoundedCornerShape(12.dp)
     ) {
         Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),

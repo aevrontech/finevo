@@ -9,21 +9,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 
-/**
- * ExpenseRepository implementation using SQLDelight for local storage.
- */
-class ExpenseRepositoryImpl(
-    private val localDataSource: LocalDataSource
-) : ExpenseRepository {
+/** ExpenseRepository implementation using SQLDelight for local storage. */
+class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : ExpenseRepository {
 
     override fun getTransactions(): Flow<List<Transaction>> {
         return localDataSource.getTransactions()
     }
 
-    override fun getTransactions(startDate: LocalDate, endDate: LocalDate): Flow<List<Transaction>> {
+    override fun getTransactions(
+            startDate: LocalDate,
+            endDate: LocalDate
+    ): Flow<List<Transaction>> {
         return localDataSource.getTransactionsByDateRange(startDate, endDate)
     }
 
@@ -31,12 +29,18 @@ class ExpenseRepositoryImpl(
         return localDataSource.getTransactionsByDateRange(date, date)
     }
 
+    override fun getTransactionsByAccount(
+            accountId: String,
+            startDate: LocalDate,
+            endDate: LocalDate
+    ): Flow<List<Transaction>> {
+        return localDataSource.getTransactionsByAccountAndDateRange(accountId, startDate, endDate)
+    }
+
     override suspend fun getTransaction(id: String): Result<Transaction> {
         return try {
-            val transaction = localDataSource.getTransactions()
-                .first()
-                .find { it.id == id }
-            
+            val transaction = localDataSource.getTransactions().first().find { it.id == id }
+
             if (transaction != null) {
                 Result.success(transaction)
             } else {
@@ -75,17 +79,22 @@ class ExpenseRepositoryImpl(
         }
     }
 
-    override fun getTransactionSummary(startDate: LocalDate, endDate: LocalDate): Flow<TransactionSummary> {
+    override fun getTransactionSummary(
+            startDate: LocalDate,
+            endDate: LocalDate
+    ): Flow<TransactionSummary> {
         return getTransactions(startDate, endDate).map { transactions ->
-            val income = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-            val expense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-            
+            val income =
+                    transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+            val expense =
+                    transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+
             TransactionSummary(
-                totalIncome = income,
-                totalExpense = expense,
-                netAmount = income - expense,
-                transactionCount = transactions.size,
-                topCategories = emptyList() // TODO: Calculate
+                    totalIncome = income,
+                    totalExpense = expense,
+                    netAmount = income - expense,
+                    transactionCount = transactions.size,
+                    topCategories = emptyList() // TODO: Calculate
             )
         }
     }
@@ -125,17 +134,13 @@ class ExpenseRepositoryImpl(
     }
 
     override fun getActiveBudgets(): Flow<List<Budget>> {
-        return localDataSource.getBudgets().map { list ->
-            list.filter { it.isActive }
-        }
+        return localDataSource.getBudgets().map { list -> list.filter { it.isActive } }
     }
 
     override suspend fun getBudget(id: String): Result<Budget> {
         return try {
-            val budget = localDataSource.getBudgets()
-                .first()
-                .find { it.id == id }
-            
+            val budget = localDataSource.getBudgets().first().find { it.id == id }
+
             if (budget != null) Result.success(budget)
             else Result.error(AppException.NotFound("Budget"))
         } catch (e: Exception) {
@@ -169,11 +174,15 @@ class ExpenseRepositoryImpl(
         return flowOf(emptyList()) // TODO: Implement
     }
 
-    override suspend fun addRecurringTransaction(recurring: RecurringTransaction): Result<RecurringTransaction> {
+    override suspend fun addRecurringTransaction(
+            recurring: RecurringTransaction
+    ): Result<RecurringTransaction> {
         return Result.success(recurring)
     }
 
-    override suspend fun updateRecurringTransaction(recurring: RecurringTransaction): Result<RecurringTransaction> {
+    override suspend fun updateRecurringTransaction(
+            recurring: RecurringTransaction
+    ): Result<RecurringTransaction> {
         return Result.success(recurring)
     }
 
@@ -189,9 +198,7 @@ class ExpenseRepositoryImpl(
 
     override fun getPendingChangesCount(): Flow<Int> = flowOf(0)
 
-    /**
-     * Initialize default categories if none exist.
-     */
+    /** Initialize default categories if none exist. */
     suspend fun initializeDefaultCategories() {
         val categories = localDataSource.getCategories().first()
         if (categories.isEmpty()) {
