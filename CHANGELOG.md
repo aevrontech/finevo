@@ -1,219 +1,80 @@
 # FinEvo - Changelog
 
-## Phases 1-3 Implementation Summary
-**Date:** 2024-12-24  
-**Version:** 0.1.0-alpha
+## [0.2.0-alpha] - 2024-12-25
+
+### Phase 4: Core Features ✅
+
+#### Add/Edit Dialogs
+- **AddTransactionDialog** - Amount input, type toggle (Income/Expense), category grid, description
+- **AddDebtDialog** - Name, debt type picker, balance, interest rate, minimum payment, due day
+- **AddHabitDialog** - Icon picker, color selector, frequency (Daily/Weekly), XP reward
+
+#### ViewModels Implemented
+- **ExpenseViewModel** - Transaction CRUD, monthly summary, categories, dialog state
+- **DebtViewModel** - Debt CRUD, payment recording, payoff strategy calculation
+- **HabitViewModel** - Habit CRUD, toggle completion, streak tracking, XP rewards
+
+#### Tab UIs (HomeScreen)
+- **ExpenseTab** - Transaction list with icons, monthly income/expense summary, FAB
+- **DebtTab** - Debt list with progress bars, total debt card, payment percentages
+- **HabitTab** - Today's habits with checkboxes, progress bar, streak/XP display
+- **SettingsTab** - Sign out button, app version info
+
+#### Malaysian Calculators
+- **EPF (KWSP)** - Employee 11%, Employer 12-13% based on salary
+- **SOCSO (PERKESO)** - Category 1/2 contributions
+- **EIS (SIP)** - 0.2% each for employee/employer
+- **PCB (MTD)** - Progressive tax with reliefs (personal, spouse, children, EPF)
+- **Zakat** - Nisab-based calculation (2.5%)
+- **Salary Breakdown** - Combined calculator with net salary
+
+#### Files Added
+- `presentation/components/Dialogs.kt` - All add dialogs
+- `domain/calculator/MalaysianCalculators.kt` - All MY calculators
 
 ---
 
-## Phase 1: Project Foundation ✅
+## [0.1.0-alpha] - 2024-12-24
 
-### Project Setup
-- Kotlin Multiplatform (KMP) project with Compose Multiplatform
+### Phase 1-3: Foundation & Authentication
+
+#### Project Setup
+- Kotlin Multiplatform (KMP) with Compose Multiplatform
 - Gradle with version catalogs (`libs.versions.toml`)
 - Android & iOS targets configured
 
-### Dependencies Integrated
+#### Dependencies
 - **UI:** Compose Multiplatform, Material3
 - **Navigation:** Voyager
-- **Database:** SQLDelight with SQLCipher support
-- **Networking:** Ktor Client
-- **Backend:** Supabase (Auth, Postgrest, Realtime, Storage)
+- **Database:** SQLDelight
+- **Backend:** Supabase (Auth, Postgrest)
 - **DI:** Koin
-- **DateTime:** kotlinx-datetime
 
-### Domain Layer
-- `User` - User profile with tier system
-- `Transaction` - Income/Expense tracking
-- `Category` - Transaction categories
-- `Budget` - Budget management
-- `Debt` - Debt tracking with payoff plans
-- `DebtPayment` - Payment records
-- `Habit` - Habit tracking with gamification
-- `HabitLog` - Habit completion logs
-- `Bill` - Bill reminders
+#### Domain Models
+- User, Transaction, Category, Budget, Debt, DebtPayment, Habit, HabitLog, Bill
 
-### Repository Interfaces
-- `AuthRepository` - Authentication operations
-- `ExpenseRepository` - Transaction/Budget CRUD
-- `DebtRepository` - Debt/Payment management
-- `HabitRepository` - Habit tracking with XP
-- `SettingsRepository` - App preferences
+#### Repository Implementations
+- AuthRepositoryImpl, ExpenseRepositoryImpl, DebtRepositoryImpl, HabitRepositoryImpl
 
-### UI Theme
-- Futuristic dark theme
-- Custom color palette with gradients
-- Material3 typography
-- Financial-specific colors (profit green, loss red)
+#### Authentication
+- Email/password sign in/up
+- Google Sign-In (Android Credential Manager + nonce)
+- Apple Sign-In button (iOS only)
+- Session persistence
 
-### Screens Implemented
-- **SplashScreen** - Animated logo with gradient
-- **OnboardingScreen** - Multi-page intro flow
-- **LoginScreen** - Email/password authentication
-- **HomeScreen** - Tab navigation (Dashboard, Expenses, Debts, Habits, Settings)
-
-### Database Schema (SQLDelight)
-- 12 tables designed for offline-first architecture
-- Full CRUD queries for all entities
+#### Database (SQLDelight)
+- 12 tables with full CRUD queries
 - Indexes for performance
 
----
-
-## Phase 2: Core Infrastructure ✅
-
-### Database Factory
-- `DatabaseFactory` (expect/actual pattern)
-- Android: SQLite driver
-- iOS: Native SQLite driver
-
-### Local Data Source
-- `LocalDataSource` - Wrapper for all SQLDelight queries
-- Flow-based reactive data access
-- Domain model mapping extensions
-- Default expense/income categories
-
-### Supabase Configuration
-- `SupabaseConfig` - Client initialization
-- Auth, Postgrest, Realtime, Storage plugins
-- Deep linking for auth callbacks
-
-### Repository Implementations
-- `ExpenseRepositoryImpl` - SQLDelight-backed
-- `HabitRepositoryImpl` - With streak calculations
-- `DebtRepositoryImpl` - With payoff plan calculator
-
-### Dependency Injection
-- Platform-specific Koin modules
-- Database factory injection
-- Repository bindings
+#### Screens
+- SplashScreen, OnboardingScreen, LoginScreen, HomeScreen (5-tab navigation)
 
 ---
 
-## Phase 3: Authentication ✅
+## Next Steps
 
-### Auth Service
-- `AuthService` - Supabase Auth wrapper
-- Email/password sign in
-- Email/password sign up
-- Password reset email
-- Session state observation
-- User-friendly error messages
-
-### Auth Repository
-- `AuthRepositoryImpl` - Uses AuthService
-- `currentUser` Flow
-- `isLoggedIn` Flow
-
-### ViewModels
-- `AuthViewModel` - Sign in/up flows with validation
-- `SplashViewModel` - Session check on startup
-
-### Features
-- Session persistence across app restarts
-- Input validation (email format, password length)
-- Error state handling with Snackbar
-- Loading states
-- Success messages
-
-### Social Login (Added)
-- **Google Sign-In** - Android Credential Manager with GoogleIdTokenCredential
-- **Apple Sign-In** - iOS AuthenticationServices
-- `SocialLoginHandler` expect/actual pattern for platform-specific implementation
-- Supabase OAuth integration via IDToken provider
-
-### Dependencies Added
-- `androidx.credentials:credentials:1.3.0`
-- `androidx.credentials:credentials-play-services-auth:1.3.0`
-- `com.google.android.libraries.identity.googleid:googleid:1.1.1`
-
----
-
-## File Structure
-
-```
-composeApp/
-├── src/
-│   ├── commonMain/kotlin/com/aevrontech/finevo/
-│   │   ├── App.kt
-│   │   ├── core/util/
-│   │   │   ├── Result.kt
-│   │   │   └── AppException.kt
-│   │   ├── data/
-│   │   │   ├── local/
-│   │   │   │   ├── DatabaseFactory.kt
-│   │   │   │   └── LocalDataSource.kt
-│   │   │   ├── remote/
-│   │   │   │   ├── SupabaseConfig.kt
-│   │   │   │   └── AuthService.kt
-│   │   │   └── repository/
-│   │   │       ├── AuthRepositoryImpl.kt
-│   │   │       ├── ExpenseRepositoryImpl.kt
-│   │   │       ├── DebtRepositoryImpl.kt
-│   │   │       ├── HabitRepositoryImpl.kt
-│   │   │       └── SettingsRepositoryImpl.kt
-│   │   ├── di/
-│   │   │   └── AppModule.kt
-│   │   ├── domain/
-│   │   │   ├── model/
-│   │   │   │   ├── User.kt
-│   │   │   │   ├── Transaction.kt
-│   │   │   │   ├── Debt.kt
-│   │   │   │   └── Habit.kt
-│   │   │   └── repository/
-│   │   │       ├── AuthRepository.kt
-│   │   │       ├── ExpenseRepository.kt
-│   │   │       ├── DebtRepository.kt
-│   │   │       ├── HabitRepository.kt
-│   │   │       └── SettingsRepository.kt
-│   │   ├── presentation/
-│   │   │   ├── splash/
-│   │   │   ├── onboarding/
-│   │   │   ├── auth/
-│   │   │   ├── home/
-│   │   │   ├── expense/
-│   │   │   ├── debt/
-│   │   │   ├── habit/
-│   │   │   └── settings/
-│   │   └── ui/theme/
-│   │       ├── Color.kt
-│   │       ├── Typography.kt
-│   │       └── Theme.kt
-│   ├── androidMain/kotlin/com/aevrontech/finevo/
-│   │   ├── MainActivity.kt
-│   │   ├── FinEvoApplication.kt
-│   │   ├── data/local/DatabaseFactory.android.kt
-│   │   └── di/AppModule.android.kt
-│   ├── iosMain/kotlin/com/aevrontech/finevo/
-│   │   ├── MainViewController.kt
-│   │   ├── data/local/DatabaseFactory.ios.kt
-│   │   └── di/AppModule.ios.kt
-│   └── commonMain/sqldelight/
-│       └── com/aevrontech/finevo/data/local/FinEvoDatabase.sq
-├── build.gradle.kts
-└── proguard-rules.pro
-```
-
----
-
-## Configuration Required
-
-### local.properties
-```properties
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_anon_key
-```
-
-### Supabase Dashboard
-1. Enable Email/Password auth provider
-2. (Optional) Configure Google/Apple OAuth for social login
-
----
-
-## Next Steps (Phase 4+)
-- [ ] Add/Edit Transaction UI
-- [ ] Debt Payoff Calculator UI
-- [ ] Habit Completion with Streaks
-- [ ] Malaysian Calculators (EPF, PCB, SOCSO)
+- [ ] Charts & Analytics (pie, line, bar charts)
+- [ ] Transaction/Habit Calendar views
+- [ ] Category management screen
 - [ ] Localization (EN, MS, ZH)
-- [ ] Cloud sync
-- [ ] Premium features
+- [ ] Cloud sync for premium users
