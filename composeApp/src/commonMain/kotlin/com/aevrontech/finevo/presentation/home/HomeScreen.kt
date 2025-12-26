@@ -1,6 +1,7 @@
 package com.aevrontech.finevo.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,8 @@ import com.aevrontech.finevo.presentation.components.AddDebtDialog
 import com.aevrontech.finevo.presentation.components.AddHabitDialog
 import com.aevrontech.finevo.presentation.debt.DebtViewModel
 import com.aevrontech.finevo.presentation.expense.ExpenseViewModel
+import com.aevrontech.finevo.presentation.expense.groupTransactionsByDate
+import com.aevrontech.finevo.presentation.expense.groupedTransactionItems
 import com.aevrontech.finevo.presentation.habit.HabitViewModel
 import com.aevrontech.finevo.presentation.settings.SettingsViewModel
 import com.aevrontech.finevo.ui.theme.*
@@ -373,6 +376,35 @@ private fun ExpenseTabContent() {
 
     var showAddTransaction by remember { mutableStateOf(false) }
     var showAddAccount by remember { mutableStateOf(false) }
+    var transactionToEdit by remember {
+        mutableStateOf<com.aevrontech.finevo.domain.model.Transaction?>(null)
+    }
+
+    // Show Edit Transaction screen
+    if (transactionToEdit != null) {
+        val tx = transactionToEdit!!
+        com.aevrontech.finevo.presentation.expense.AddTransactionScreen(
+                transactionType = tx.type,
+                accounts = expenseState.accounts,
+                categories = expenseState.categories,
+                selectedAccount = expenseState.accounts.find { it.id == tx.accountId },
+                editingTransaction = tx,
+                onDismiss = { transactionToEdit = null },
+                onConfirm = { type, amount, accountId, categoryId, note, date, time ->
+                    expenseViewModel.updateTransaction(
+                            tx.id,
+                            type,
+                            amount,
+                            accountId,
+                            categoryId,
+                            note,
+                            date
+                    )
+                    transactionToEdit = null
+                }
+        )
+        return
+    }
 
     // Show AddTransaction screen
     if (showAddTransaction) {
@@ -383,9 +415,35 @@ private fun ExpenseTabContent() {
                 selectedAccount = expenseState.selectedAccount,
                 onDismiss = { showAddTransaction = false },
                 onConfirm = { type, amount, accountId, categoryId, note, date, time ->
-                    expenseViewModel.addTransaction(type, amount, categoryId, note, note)
+                    expenseViewModel.addTransaction(type, amount, accountId, categoryId, note, date)
                     showAddTransaction = false
                 }
+        )
+        return
+    }
+
+    // Account options dialog (for long-press edit/delete)
+    var accountToManage by remember {
+        mutableStateOf<com.aevrontech.finevo.domain.model.Account?>(null)
+    }
+    var showAccountDeleteConfirm by remember { mutableStateOf(false) }
+    var showEditAccount by remember { mutableStateOf(false) }
+
+    // Show Edit Account screen
+    if (showEditAccount && accountToManage != null) {
+        val acc = accountToManage!!
+        com.aevrontech.finevo.presentation.expense.AddAccountScreen(
+                onDismiss = {
+                    showEditAccount = false
+                    accountToManage = null
+                },
+                onConfirm = { name, balance, currency, type, color ->
+                    accountViewModel.updateAccount(acc.id, name, balance, currency, type, color)
+                    showEditAccount = false
+                    accountToManage = null
+                },
+                defaultCurrency = acc.currency,
+                editingAccount = acc
         )
         return
     }
@@ -401,6 +459,31 @@ private fun ExpenseTabContent() {
                 defaultCurrency = expenseState.selectedAccount?.currency ?: "MYR"
         )
         return
+    }
+
+    // Account options dialog (after long-press)
+    if (accountToManage != null) {
+        AlertDialog(
+                onDismissRequest = { accountToManage = null },
+                title = { Text("Account Options") },
+                text = { Text("What would you like to do with \"${accountToManage!!.name}\"?") },
+                confirmButton = {
+                    TextButton(onClick = { showEditAccount = true }) {
+                        Text("Edit", color = Primary)
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = { accountToManage = null }) { Text("Cancel") }
+                        TextButton(
+                                onClick = {
+                                    accountToManage?.let { accountViewModel.deleteAccount(it.id) }
+                                    accountToManage = null
+                                }
+                        ) { Text("Delete", color = Error) }
+                    }
+                }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -431,6 +514,7 @@ private fun ExpenseTabContent() {
                         accounts = expenseState.accounts,
                         selectedAccount = expenseState.selectedAccount,
                         onAccountClick = { account -> expenseViewModel.selectAccount(account) },
+                        onAccountLongClick = { account -> accountToManage = account },
                         onAddAccountClick = { showAddAccount = true }
                 )
             }
@@ -461,7 +545,7 @@ private fun ExpenseTabContent() {
                 }
             }
 
-            // Transaction List
+            // Transaction List - Grouped by Date
             if (expenseState.transactions.isEmpty() && !expenseState.isLoading) {
                 item {
                     Card(
@@ -489,13 +573,14 @@ private fun ExpenseTabContent() {
                     }
                 }
             } else {
-                items(expenseState.transactions.size) { index ->
-                    val transaction = expenseState.transactions[index]
-                    TransactionItem(
-                            transaction = transaction,
-                            modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                }
+                // Group transactions by date
+                val groupedTransactions = groupTransactionsByDate(expenseState.transactions)
+
+                groupedTransactionItems(
+                        groups = groupedTransactions,
+                        onTransactionClick = { tx -> transactionToEdit = tx },
+                        onTransactionDelete = { tx -> expenseViewModel.deleteTransaction(tx.id) }
+                )
             }
 
             // Bottom spacer for FAB
@@ -906,6 +991,15 @@ private fun HabitItem(
 private fun SettingsTabContent() {
     val viewModel: SettingsViewModel = koinViewModel()
     val authViewModel: AuthViewModel = koinViewModel()
+    var showCategoryManagement by remember { mutableStateOf(false) }
+
+    // Show Category Management Screen
+    if (showCategoryManagement) {
+        com.aevrontech.finevo.presentation.category.CategoryManagementScreen(
+                onBack = { showCategoryManagement = false }
+        )
+        return
+    }
 
     LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -921,6 +1015,45 @@ private fun SettingsTabContent() {
             )
         }
 
+        // Categories Section
+        item {
+            Card(
+                    modifier = Modifier.fillMaxWidth().clickable { showCategoryManagement = true },
+                    colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+            ) {
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("📁", fontSize = 24.sp)
+                        Column {
+                            Text(
+                                    "Manage Categories",
+                                    fontWeight = FontWeight.Medium,
+                                    color = OnSurface
+                            )
+                            Text(
+                                    "Add, edit, or delete categories",
+                                    fontSize = 12.sp,
+                                    color = OnSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                            Icons.Default.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = OnSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Account Section
         item {
             Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -938,6 +1071,7 @@ private fun SettingsTabContent() {
             }
         }
 
+        // App Info
         item {
             Card(
                     modifier = Modifier.fillMaxWidth(),

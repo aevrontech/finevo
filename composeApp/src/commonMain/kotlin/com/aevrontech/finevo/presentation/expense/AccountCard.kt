@@ -27,6 +27,7 @@ fun AccountCardsRow(
         accounts: List<Account>,
         selectedAccount: Account?,
         onAccountClick: (Account) -> Unit,
+        onAccountLongClick: ((Account) -> Unit)? = null,
         onAddAccountClick: () -> Unit,
         modifier: Modifier = Modifier
 ) {
@@ -39,7 +40,8 @@ fun AccountCardsRow(
             AccountCard(
                     account = account,
                     isSelected = account == selectedAccount,
-                    onClick = { onAccountClick(account) }
+                    onClick = { onAccountClick(account) },
+                    onLongClick = onAccountLongClick?.let { { it(account) } }
             )
         }
 
@@ -49,40 +51,43 @@ fun AccountCardsRow(
 }
 
 /** Individual account card with balance and icon. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AccountCard(
         account: Account,
         isSelected: Boolean,
         onClick: () -> Unit,
+        onLongClick: (() -> Unit)? = null,
         modifier: Modifier = Modifier
 ) {
     val cardColor = parseAccountColor(account.color)
     val borderColor = if (isSelected) Primary else Color.Transparent
 
     Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             color = if (isSelected) cardColor.copy(alpha = 0.15f) else SurfaceContainer,
-            border = BorderStroke(2.dp, borderColor),
-            modifier = modifier.width(140.dp)
+            border = BorderStroke(1.5.dp, borderColor),
+            modifier =
+                    modifier.width(110.dp)
+                            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Icon with colored background
+            // Icon with colored background - compact
             Box(
                     modifier =
-                            Modifier.size(40.dp)
+                            Modifier.size(28.dp)
                                     .clip(CircleShape)
                                     .background(cardColor.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
-            ) { Text(account.icon, fontSize = 20.sp) }
+            ) { Text(account.icon, fontSize = 14.sp) }
 
             // Account name
             Text(
                     account.name,
-                    fontSize = 13.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = OnSurface,
                     maxLines = 1,
@@ -92,7 +97,7 @@ fun AccountCard(
             // Balance
             Text(
                     formatAccountBalance(account),
-                    fontSize = 16.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (account.balance >= 0) OnSurface else Error,
                     maxLines = 1,
@@ -100,13 +105,13 @@ fun AccountCard(
             )
 
             // Account type badge
-            Surface(shape = RoundedCornerShape(4.dp), color = cardColor.copy(alpha = 0.15f)) {
+            Surface(shape = RoundedCornerShape(3.dp), color = cardColor.copy(alpha = 0.15f)) {
                 Text(
                         account.type.displayName,
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         color = cardColor,
                         fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                         maxLines = 1
                 )
             }
@@ -119,13 +124,13 @@ fun AccountCard(
 fun AddAccountCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
             onClick = onClick,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             color = SurfaceContainer,
-            border = BorderStroke(2.dp, SurfaceContainerHighest.copy(alpha = 0.5f)),
-            modifier = modifier.width(100.dp)
+            border = BorderStroke(1.5.dp, SurfaceContainerHighest.copy(alpha = 0.5f)),
+            modifier = modifier.width(70.dp)
     ) {
         Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
         ) {
@@ -133,10 +138,10 @@ fun AddAccountCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
                     Icons.Default.Add,
                     contentDescription = "Add Account",
                     tint = Primary,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Add", fontSize = 12.sp, color = Primary, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Add", fontSize = 10.sp, color = Primary, fontWeight = FontWeight.Medium)
         }
     }
 }

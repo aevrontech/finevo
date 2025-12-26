@@ -6,6 +6,7 @@ import com.aevrontech.finevo.data.remote.AuthService
 import com.aevrontech.finevo.data.repository.*
 import com.aevrontech.finevo.domain.repository.*
 import com.aevrontech.finevo.presentation.auth.AuthViewModel
+import com.aevrontech.finevo.presentation.category.CategoryViewModel
 import com.aevrontech.finevo.presentation.debt.DebtViewModel
 import com.aevrontech.finevo.presentation.expense.AccountViewModel
 import com.aevrontech.finevo.presentation.expense.ExpenseViewModel
@@ -33,6 +34,7 @@ val appModule = module {
     single<DebtRepository> { DebtRepositoryImpl(get()) }
     single<HabitRepository> { HabitRepositoryImpl(get()) }
     single<AccountRepository> { AccountRepositoryImpl(get()) }
+    single<CategoryRepository> { CategoryRepositoryImpl(get()) }
     single<SettingsRepository> { SettingsRepositoryImpl() }
 
     // ViewModels
@@ -45,6 +47,7 @@ val appModule = module {
     viewModel { HabitViewModel(get()) }
     viewModel { SettingsViewModel(get()) }
     viewModel { AccountViewModel(get()) }
+    viewModel { CategoryViewModel(get()) }
 }
 
 /** Platform-specific module - override this in each platform. */

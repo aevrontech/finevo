@@ -51,18 +51,21 @@ class ExpenseViewModel(
         viewModelScope.launch {
             expenseRepository.getTransactionsByAccount(accountId, monthStart, monthEnd).collect {
                     transactions ->
+                // Enrich transactions with category data
+                val enrichedTransactions = enrichWithCategoryData(transactions)
+
                 val income =
-                        transactions.filter { it.type == TransactionType.INCOME }.sumOf {
+                        enrichedTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
                             it.amount
                         }
                 val expense =
-                        transactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
+                        enrichedTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
                             it.amount
                         }
 
                 _uiState.update {
                     it.copy(
-                            transactions = transactions,
+                            transactions = enrichedTransactions,
                             isLoading = false,
                             accountIncome = income,
                             accountExpense = expense
@@ -75,7 +78,37 @@ class ExpenseViewModel(
     private fun loadTransactions() {
         viewModelScope.launch {
             expenseRepository.getTransactions(monthStart, monthEnd).collect { transactions ->
-                _uiState.update { it.copy(transactions = transactions, isLoading = false) }
+                // Enrich transactions with category data
+                val enrichedTransactions = enrichWithCategoryData(transactions)
+                _uiState.update { it.copy(transactions = enrichedTransactions, isLoading = false) }
+            }
+        }
+    }
+
+    /**
+     * Enriches transactions with category name/icon/color from loaded categories.
+     *
+     * Performance: O(n + m) where n = transactions, m = categories
+     * - Uses HashMap for O(1) category lookups instead of O(m) list scan
+     * - Scales well to 10,000+ transactions with 100+ categories
+     */
+    private fun enrichWithCategoryData(transactions: List<Transaction>): List<Transaction> {
+        // Build category lookup map once - O(m)
+        val categoryMap = _uiState.value.categories.associateBy { it.id }
+
+        // Enrich each transaction with O(1) lookup - O(n)
+        return transactions.map { transaction ->
+            val category = categoryMap[transaction.categoryId]
+            if (category != null &&
+                            (transaction.categoryName == null || transaction.categoryIcon == null)
+            ) {
+                transaction.copy(
+                        categoryName = category.name,
+                        categoryIcon = category.icon,
+                        categoryColor = category.color
+                )
+            } else {
+                transaction
             }
         }
     }
@@ -99,19 +132,22 @@ class ExpenseViewModel(
     fun addTransaction(
             type: TransactionType,
             amount: Double,
+            accountId: String?,
             categoryId: String,
-            description: String?,
-            note: String? = null
+            note: String?,
+            date: kotlinx.datetime.LocalDate
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
+            val selectedAccount = _uiState.value.accounts.find { it.id == accountId }
             val transaction =
                     Transaction(
                             id = generateId(),
                             userId = "local", // Will be replaced with actual user ID
+                            accountId = accountId,
                             type = type,
                             amount = amount,
-                            currency = "MYR",
+                            currency = selectedAccount?.currency ?: "MYR",
                             categoryId = categoryId,
                             categoryName =
                                     _uiState.value.categories.find { it.id == categoryId }?.name,
@@ -119,18 +155,28 @@ class ExpenseViewModel(
                                     _uiState.value.categories.find { it.id == categoryId }?.icon,
                             categoryColor =
                                     _uiState.value.categories.find { it.id == categoryId }?.color,
-                            description = description,
+                            description = note,
                             note = note,
-                            date = today,
+                            date = date,
                             createdAt = now,
                             updatedAt = now
                     )
 
             when (val result = expenseRepository.addTransaction(transaction)) {
                 is Result.Success -> {
+                    // Update account balance if account selected
+                    if (accountId != null && selectedAccount != null) {
+                        val balanceChange = if (type == TransactionType.EXPENSE) -amount else amount
+                        accountRepository.updateAccountBalance(
+                                accountId,
+                                selectedAccount.balance + balanceChange
+                        )
+                    }
                     _uiState.update {
                         it.copy(successMessage = "Transaction added!", showAddDialog = false)
                     }
+                    // Reload transactions
+                    loadTransactions()
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -142,9 +188,114 @@ class ExpenseViewModel(
 
     fun deleteTransaction(id: String) {
         viewModelScope.launch {
+            // Find the transaction to get its amount and account
+            val transaction = _uiState.value.transactions.find { it.id == id }
+
             when (val result = expenseRepository.deleteTransaction(id)) {
                 is Result.Success -> {
+                    // Reverse the balance effect
+                    if (transaction != null && transaction.accountId != null) {
+                        val account =
+                                _uiState.value.accounts.find { it.id == transaction.accountId }
+                        if (account != null) {
+                            val balanceChange =
+                                    if (transaction.type == TransactionType.EXPENSE) {
+                                        transaction.amount // Add back what was subtracted
+                                    } else {
+                                        -transaction.amount // Subtract what was added
+                                    }
+                            accountRepository.updateAccountBalance(
+                                    transaction.accountId!!,
+                                    account.balance + balanceChange
+                            )
+                        }
+                    }
                     _uiState.update { it.copy(successMessage = "Transaction deleted") }
+                    loadTransactions()
+                }
+                is Result.Error -> {
+                    _uiState.update { it.copy(error = result.exception.message) }
+                }
+                is Result.Loading -> {}
+            }
+        }
+    }
+
+    fun updateTransaction(
+            id: String,
+            type: TransactionType,
+            amount: Double,
+            accountId: String?,
+            categoryId: String,
+            note: String?,
+            date: kotlinx.datetime.LocalDate
+    ) {
+        viewModelScope.launch {
+            // Find the old transaction to calculate balance delta
+            val oldTransaction = _uiState.value.transactions.find { it.id == id }
+
+            val now = Clock.System.now()
+            val selectedAccount = _uiState.value.accounts.find { it.id == accountId }
+            val transaction =
+                    Transaction(
+                            id = id,
+                            userId = "local",
+                            accountId = accountId,
+                            type = type,
+                            amount = amount,
+                            currency = selectedAccount?.currency ?: "MYR",
+                            categoryId = categoryId,
+                            categoryName =
+                                    _uiState.value.categories.find { it.id == categoryId }?.name,
+                            categoryIcon =
+                                    _uiState.value.categories.find { it.id == categoryId }?.icon,
+                            categoryColor =
+                                    _uiState.value.categories.find { it.id == categoryId }?.color,
+                            description = note,
+                            note = note,
+                            date = date,
+                            createdAt = oldTransaction?.createdAt ?: now,
+                            updatedAt = now
+                    )
+
+            when (val result = expenseRepository.updateTransaction(transaction)) {
+                is Result.Success -> {
+                    // Update account balance: reverse old effect, apply new effect
+                    if (oldTransaction != null && accountId != null && selectedAccount != null) {
+                        // Calculate old balance effect (what we need to reverse)
+                        // Expense was subtracted from balance, so ADD it back (positive)
+                        // Income was added to balance, so SUBTRACT it (negative)
+                        val oldEffect =
+                                if (oldTransaction.type == TransactionType.EXPENSE) {
+                                    oldTransaction.amount // Add expense back (reverse subtraction)
+                                } else {
+                                    -oldTransaction.amount // Subtract income (reverse addition)
+                                }
+
+                        // Calculate new balance effect
+                        // Expense subtracts from balance (negative)
+                        // Income adds to balance (positive)
+                        val newEffect =
+                                if (type == TransactionType.EXPENSE) {
+                                    -amount // Expense subtracts from balance
+                                } else {
+                                    amount // Income adds to balance
+                                }
+
+                        // Net change = reverse old + apply new
+                        val netChange = oldEffect + newEffect
+
+                        // Only update if there's actually a change
+                        if (netChange != 0.0) {
+                            accountRepository.updateAccountBalance(
+                                    accountId,
+                                    selectedAccount.balance + netChange
+                            )
+                        }
+                    }
+
+                    _uiState.update { it.copy(successMessage = "Transaction updated!") }
+                    loadTransactions()
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }

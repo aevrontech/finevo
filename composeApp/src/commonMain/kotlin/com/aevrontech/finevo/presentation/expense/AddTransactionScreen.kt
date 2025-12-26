@@ -28,6 +28,7 @@ fun AddTransactionScreen(
         accounts: List<Account>,
         categories: List<Category>,
         selectedAccount: Account?,
+        editingTransaction: Transaction? = null,
         onDismiss: () -> Unit,
         onConfirm:
                 (
@@ -39,18 +40,33 @@ fun AddTransactionScreen(
                         date: LocalDate,
                         time: String?) -> Unit
 ) {
-        var expression by remember { mutableStateOf("") }
-        var computedAmount by remember { mutableStateOf(0.0) }
+        val isEditing = editingTransaction != null
+
+        var expression by remember {
+                mutableStateOf(
+                        if (isEditing) String.format("%.2f", editingTransaction?.amount ?: 0.0)
+                        else ""
+                )
+        }
+        var computedAmount by remember { mutableStateOf(editingTransaction?.amount ?: 0.0) }
         var selectedAccountLocal by remember { mutableStateOf(selectedAccount) }
-        var selectedCategory by remember { mutableStateOf<Category?>(null) }
-        var note by remember { mutableStateOf("") }
+        var selectedCategory by remember {
+                mutableStateOf<Category?>(
+                        if (isEditing) categories.find { it.id == editingTransaction?.categoryId }
+                        else null
+                )
+        }
+        var note by remember { mutableStateOf(editingTransaction?.note ?: "") }
         var selectedDate by remember {
-                mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault()))
+                mutableStateOf(
+                        editingTransaction?.date
+                                ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+                )
         }
         var showCategoryPicker by remember { mutableStateOf(false) }
         var showAccountPicker by remember { mutableStateOf(false) }
         var showDatePicker by remember { mutableStateOf(false) }
-        var type by remember { mutableStateOf(transactionType) }
+        var type by remember { mutableStateOf(editingTransaction?.type ?: transactionType) }
 
         // Filter categories by type
         val filteredCategories = categories.filter { it.type == type }
@@ -69,8 +85,15 @@ fun AddTransactionScreen(
                         TopAppBar(
                                 title = {
                                         Text(
-                                                if (type == TransactionType.EXPENSE) "Add Expense"
-                                                else "Add Income",
+                                                if (isEditing) {
+                                                        if (type == TransactionType.EXPENSE)
+                                                                "Edit Expense"
+                                                        else "Edit Income"
+                                                } else {
+                                                        if (type == TransactionType.EXPENSE)
+                                                                "Add Expense"
+                                                        else "Add Income"
+                                                },
                                                 fontWeight = FontWeight.SemiBold
                                         )
                                 },
