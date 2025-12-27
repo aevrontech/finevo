@@ -21,14 +21,14 @@ interface AccountRepository {
 
     /** Create a new account. */
     suspend fun createAccount(
-            userId: String,
-            name: String,
-            initialBalance: Double,
-            currency: String,
-            type: AccountType,
-            color: String,
-            icon: String = type.icon,
-            isDefault: Boolean = false
+        userId: String,
+        name: String,
+        initialBalance: Double,
+        currency: String,
+        type: AccountType,
+        color: String,
+        icon: String = type.icon,
+        isDefault: Boolean = false
     ): Account
 
     /** Update an existing account. */

@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.tab.*
-import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.presentation.auth.AuthViewModel
 import com.aevrontech.finevo.presentation.components.AddDebtDialog
 import com.aevrontech.finevo.presentation.components.AddHabitDialog
@@ -30,6 +28,8 @@ import com.aevrontech.finevo.presentation.expense.groupTransactionsByDate
 import com.aevrontech.finevo.presentation.expense.groupedTransactionItems
 import com.aevrontech.finevo.presentation.habit.HabitViewModel
 import com.aevrontech.finevo.presentation.settings.SettingsViewModel
+import com.aevrontech.finevo.ui.components.GlassmorphicNavBar
+import com.aevrontech.finevo.ui.components.NavBarItem
 import com.aevrontech.finevo.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -45,22 +45,45 @@ class HomeScreen : Screen {
                             listOf(DashboardTab, ExpenseTab, DebtTab, HabitTab, SettingsTab)
                     )
                 }
-        ) { tabNavigator ->
-            Scaffold(
-                    bottomBar = {
-                        NavigationBar(containerColor = SurfaceContainer, contentColor = OnSurface) {
-                            TabNavigationItem(DashboardTab)
-                            TabNavigationItem(ExpenseTab)
-                            TabNavigationItem(DebtTab)
-                            TabNavigationItem(HabitTab)
-                            TabNavigationItem(SettingsTab)
-                        }
-                    }
-            ) { paddingValues ->
+        ) { _ ->
+            val tabNavigator = LocalTabNavigator.current
+            val tabs = listOf(DashboardTab, ExpenseTab, DebtTab, HabitTab, SettingsTab)
+            val selectedIndex = tabs.indexOf(tabNavigator.current)
+
+            Box(
+                    modifier =
+                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            ) {
+                // Content area with bottom padding for nav bar
                 Box(
                         modifier =
-                                Modifier.fillMaxSize().padding(paddingValues).background(Background)
+                                Modifier.fillMaxSize()
+                                        .padding(
+                                                bottom = 120.dp
+                                        ) // Space for floating nav + system nav
                 ) { CurrentTab() }
+
+                // Glassmorphic Floating Navigation Bar
+                Box(
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .align(Alignment.BottomCenter)
+                                        .navigationBarsPadding() // Respect system
+                        // navigation bars
+                        ) {
+                    GlassmorphicNavBar(
+                            items =
+                                    listOf(
+                                            NavBarItem(Icons.Filled.Home, "Home"),
+                                            NavBarItem(Icons.Filled.List, "Expenses"),
+                                            NavBarItem(Icons.Filled.ShoppingCart, "Debts"),
+                                            NavBarItem(Icons.Filled.CheckCircle, "Habits"),
+                                            NavBarItem(Icons.Filled.Settings, "Settings")
+                                    ),
+                            selectedIndex = selectedIndex,
+                            onItemSelected = { index -> tabNavigator.current = tabs[index] }
+                    )
+                }
             }
         }
     }
@@ -201,96 +224,117 @@ private fun DashboardContent() {
                     text = "Dashboard",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = OnSurface
+                    color = ThemeColors.onSurface
             )
         }
 
         // Balance Card
         item {
             Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceContainer),
-                    shape = RoundedCornerShape(16.dp)
+                    modifier = Modifier.fillMaxWidth().height(240.dp), // Increased height
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors =
+                            CardDefaults.cardColors(
+                                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                            )
             ) {
-                Box(
-                        modifier =
-                                Modifier.fillMaxWidth()
-                                        .background(
-                                                Brush.linearGradient(
-                                                        colors =
-                                                                listOf(
-                                                                        GradientStart.copy(
-                                                                                alpha = 0.3f
-                                                                        ),
-                                                                        GradientMid.copy(
-                                                                                alpha = 0.2f
-                                                                        )
-                                                                )
-                                                )
-                                        )
-                                        .padding(20.dp)
-                ) {
-                    Column {
-                        Text(text = "Total Balance", color = OnSurfaceVariant, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                                text = "RM 12,345.67",
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // SVG Pattern Background
+                    DashboardCardBackground()
+
+                    // Content Overlay
+                    Column(
+                            modifier = Modifier.fillMaxSize().padding(24.dp),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                    text = "Your available balance",
+                                    color =
+                                            androidx.compose.ui.graphics.Color.White.copy(
+                                                    alpha = 0.9f
+                                            ),
+                                    fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                    text = "$ 24,500",
+                                    fontSize = 40.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = androidx.compose.ui.graphics.Color.White
+                            )
+                        }
+
+                        Spacer(
+                                modifier = Modifier.height(16.dp)
+                        ) // Space between balance and income/expense
+
+                        // Income/Expense Row with translucent background
                         Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .background(
+                                                        color =
+                                                                androidx.compose.ui.graphics.Color
+                                                                        .White.copy(alpha = 0.15f),
+                                                        shape = RoundedCornerShape(16.dp)
+                                                )
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            BalanceItem(label = "Income", amount = "+RM 5,000", color = Income)
-                            BalanceItem(label = "Expenses", amount = "-RM 3,200", color = Expense)
+                            BalanceItem(
+                                    label = "Income",
+                                    amount = "$5,086",
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    icon = Icons.Filled.KeyboardArrowDown
+                            )
+                            BalanceItem(
+                                    label = "Expense",
+                                    amount = "$5,086",
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    icon = Icons.Filled.KeyboardArrowUp
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Quick Actions
+        // Quick Actions - Added margin/padding as requested
         item {
-            Text(
-                    text = "Quick Actions",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = OnSurface,
-                    modifier = Modifier.padding(top = 8.dp)
-            )
+            Spacer(modifier = Modifier.height(8.dp)) // Extra spacing between card and actions
         }
 
         item {
             Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 QuickActionButton(
-                        icon = Icons.Filled.Add,
-                        label = "Add\nExpense",
-                        color = Expense,
-                        modifier = Modifier.weight(1f)
+                        icon = Icons.Filled.Refresh, // Was SwapVert (Transfer)
+                        label = "Transfer",
+                        color = ActionTransfer,
+                        backgroundColor = ActionTransferBg
                 )
                 QuickActionButton(
-                        icon = Icons.Filled.Star,
-                        label = "Add\nIncome",
-                        color = Income,
-                        modifier = Modifier.weight(1f)
+                        icon = Icons.Filled.Add, // Was CreditCard (Top-up)
+                        label = "Top-up",
+                        color = ActionTopUp,
+                        backgroundColor = ActionTopUpBg
                 )
                 QuickActionButton(
-                        icon = Icons.Filled.AccountCircle,
-                        label = "Pay\nDebt",
-                        color = Warning,
-                        modifier = Modifier.weight(1f)
+                        icon = Icons.Filled.List, // Was Receipt (Bill)
+                        label = "Bill",
+                        color = ActionBill,
+                        backgroundColor = ActionBillBg
                 )
                 QuickActionButton(
-                        icon = Icons.Filled.Check,
-                        label = "Log\nHabit",
-                        color = Primary,
-                        modifier = Modifier.weight(1f)
+                        icon = Icons.Filled.Menu, // Was GridView (More)
+                        label = "More",
+                        color = ActionMode,
+                        backgroundColor = ActionModeBg
                 )
             }
         }
@@ -299,7 +343,7 @@ private fun DashboardContent() {
         item {
             Card(
                     modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+                    colors = CardDefaults.cardColors(containerColor = ThemeColors.surfaceContainer)
             ) {
                 Column(
                         modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -310,7 +354,7 @@ private fun DashboardContent() {
                     Text(
                             text = "More features coming soon!",
                             fontSize = 16.sp,
-                            color = OnSurfaceVariant
+                            color = ThemeColors.onSurfaceVariant
                     )
                 }
             }
@@ -319,10 +363,116 @@ private fun DashboardContent() {
 }
 
 @Composable
-private fun BalanceItem(label: String, amount: String, color: androidx.compose.ui.graphics.Color) {
-    Column {
-        Text(text = label, color = OnSurfaceVariant, fontSize = 12.sp)
-        Text(text = amount, color = color, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+private fun DashboardCardBackground() {
+    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+        val width = size.width
+        val height = size.height
+
+        // Gradient Background
+        drawRect(
+                brush =
+                        Brush.linearGradient(
+                                colors =
+                                        listOf(
+                                                DashboardGradientStart,
+                                                DashboardGradientMid,
+                                                DashboardGradientEnd
+                                        ),
+                                start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                end = androidx.compose.ui.geometry.Offset(width, height)
+                        )
+        )
+
+        // Bubble Groups - Group 1 (Top Left)
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 6.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.1f, y = height * 0.13f),
+                alpha = 0.25f
+        )
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 4.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.15f, y = height * 0.2f),
+                alpha = 0.25f
+        )
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 5.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.21f, y = height * 0.15f),
+                alpha = 0.25f
+        )
+
+        // Bubble Groups - Group 2 (Top Right)
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 6.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.83f, y = height * 0.11f),
+                alpha = 0.25f
+        )
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 4.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.89f, y = height * 0.20f),
+                alpha = 0.25f
+        )
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 5.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.94f, y = height * 0.14f),
+                alpha = 0.25f
+        )
+
+        // Bubble Groups - Group 3 (Left Mid)
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 8.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.14f, y = height * 0.39f),
+                alpha = 0.15f
+        )
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 5.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.18f, y = height * 0.47f),
+                alpha = 0.15f
+        )
+
+        // Bubble Groups - Group 4 (Right Mid)
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 7.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.76f, y = height * 0.55f),
+                alpha = 0.15f
+        )
+        drawCircle(
+                color = androidx.compose.ui.graphics.Color.White,
+                radius = 6.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x = width * 0.90f, y = height * 0.58f),
+                alpha = 0.15f
+        )
+        // Large bubbles removed as per user request
+    }
+}
+
+@Composable
+private fun BalanceItem(
+        label: String,
+        amount: String,
+        color: androidx.compose.ui.graphics.Color,
+        icon: ImageVector
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+                modifier =
+                        Modifier.size(32.dp)
+                                .background(color.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+        ) { Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp)) }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(text = label, color = color.copy(alpha = 0.8f), fontSize = 12.sp)
+            Text(text = amount, color = color, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
     }
 }
 
@@ -331,34 +481,26 @@ private fun QuickActionButton(
         icon: ImageVector,
         label: String,
         color: androidx.compose.ui.graphics.Color,
+        backgroundColor: androidx.compose.ui.graphics.Color,
         modifier: Modifier = Modifier
 ) {
-    Card(
-            modifier = modifier,
-            colors = CardDefaults.cardColors(containerColor = SurfaceContainer),
-            shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.clickable {}) {
+        Box(
+                modifier =
+                        Modifier.size(56.dp) // Larger square icon bg
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(backgroundColor),
+                contentAlignment = Alignment.Center
         ) {
-            Box(
-                    modifier =
-                            Modifier.size(40.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(color.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = label, fontSize = 11.sp, color = OnSurfaceVariant, lineHeight = 14.sp)
+            Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+            )
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = label, fontSize = 12.sp, color = OnSurface, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -372,7 +514,6 @@ private fun ExpenseTabContent() {
     val accountViewModel: com.aevrontech.finevo.presentation.expense.AccountViewModel =
             koinViewModel()
     val expenseState by expenseViewModel.uiState.collectAsState()
-    val accountState by accountViewModel.uiState.collectAsState()
 
     var showAddTransaction by remember { mutableStateOf(false) }
     var showAddAccount by remember { mutableStateOf(false) }
@@ -426,7 +567,6 @@ private fun ExpenseTabContent() {
     var accountToManage by remember {
         mutableStateOf<com.aevrontech.finevo.domain.model.Account?>(null)
     }
-    var showAccountDeleteConfirm by remember { mutableStateOf(false) }
     var showEditAccount by remember { mutableStateOf(false) }
 
     // Show Edit Account screen
@@ -632,7 +772,12 @@ private fun TransactionItem(
             }
             Text(
                     text =
-                            "${if (transaction.type == com.aevrontech.finevo.domain.model.TransactionType.EXPENSE) "-" else "+"} RM ${String.format("%.2f", transaction.amount)}",
+                            "${if (transaction.type == com.aevrontech.finevo.domain.model.TransactionType.EXPENSE) "-" else "+"} RM ${
+                        String.format(
+                            "%.2f",
+                            transaction.amount
+                        )
+                    }",
                     color =
                             if (transaction.type ==
                                             com.aevrontech.finevo.domain.model.TransactionType
@@ -993,6 +1138,9 @@ private fun SettingsTabContent() {
     val authViewModel: AuthViewModel = koinViewModel()
     var showCategoryManagement by remember { mutableStateOf(false) }
 
+    // Observe dark mode state
+    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+
     // Show Category Management Screen
     if (showCategoryManagement) {
         com.aevrontech.finevo.presentation.category.CategoryManagementScreen(
@@ -1011,8 +1159,54 @@ private fun SettingsTabContent() {
                     text = "Settings",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = OnSurface
+                    color = MaterialTheme.colorScheme.onSurface
             )
+        }
+
+        // Appearance Section - Dark Mode Toggle
+        item {
+            Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors =
+                            CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            )
+            ) {
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(if (isDarkMode) "🌙" else "☀️", fontSize = 24.sp)
+                        Column {
+                            Text(
+                                    "Dark Mode",
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                    if (isDarkMode) "Dark theme enabled" else "Light theme enabled",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { enabled -> ThemeManager.setDarkMode(enabled) },
+                            colors =
+                                    SwitchDefaults.colors(
+                                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                            checkedTrackColor =
+                                                    MaterialTheme.colorScheme.primaryContainer
+                                    )
+                    )
+                }
+            }
         }
 
         // Categories Section

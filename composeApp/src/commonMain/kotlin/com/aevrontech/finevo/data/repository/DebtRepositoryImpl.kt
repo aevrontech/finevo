@@ -3,7 +3,14 @@ package com.aevrontech.finevo.data.repository
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
 import com.aevrontech.finevo.data.local.LocalDataSource
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.Bill
+import com.aevrontech.finevo.domain.model.Debt
+import com.aevrontech.finevo.domain.model.DebtPayment
+import com.aevrontech.finevo.domain.model.DebtPayoffInfo
+import com.aevrontech.finevo.domain.model.MonthlyPayment
+import com.aevrontech.finevo.domain.model.PayoffPlan
+import com.aevrontech.finevo.domain.model.PayoffStrategy
+import com.aevrontech.finevo.domain.model.WhatIfScenario
 import com.aevrontech.finevo.domain.repository.DebtRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -36,7 +43,7 @@ class DebtRepositoryImpl(
             val debt = localDataSource.getDebts()
                 .first()
                 .find { it.id == id }
-            
+
             if (debt != null) Result.success(debt)
             else Result.error(AppException.NotFound("Debt"))
         } catch (e: Exception) {
@@ -75,7 +82,7 @@ class DebtRepositoryImpl(
         return try {
             val debt = localDataSource.getDebts().first().find { it.id == id }
                 ?: return Result.error(AppException.NotFound("Debt"))
-            
+
             val paidOff = debt.copy(
                 isPaidOff = true,
                 currentBalance = 0.0,
@@ -99,7 +106,7 @@ class DebtRepositoryImpl(
     override suspend fun addPayment(payment: DebtPayment): Result<DebtPayment> {
         return try {
             localDataSource.insertDebtPayment(payment)
-            
+
             // Update debt balance
             val debt = localDataSource.getDebts().first().find { it.id == payment.debtId }
             if (debt != null) {
@@ -111,7 +118,7 @@ class DebtRepositoryImpl(
                 )
                 localDataSource.insertDebt(updated)
             }
-            
+
             Result.success(payment)
         } catch (e: Exception) {
             Result.error(AppException.DatabaseError(e.message ?: "Failed to add payment"))
@@ -128,42 +135,44 @@ class DebtRepositoryImpl(
     ): Result<PayoffPlan> {
         return try {
             val debts = localDataSource.getActiveDebts().first()
-            
+
             if (debts.isEmpty()) {
                 return Result.error(AppException.ValidationError("validation", "No active debts to calculate"))
             }
-            
+
             // Sort by strategy
             val sortedDebts = when (strategy) {
                 PayoffStrategy.AVALANCHE -> debts.sortedByDescending { it.interestRate }
                 PayoffStrategy.SNOWBALL -> debts.sortedBy { it.currentBalance }
                 PayoffStrategy.CUSTOM -> debts.sortedBy { it.priority }
             }
-            
+
             // Simple calculation
             val totalDebt = debts.sumOf { it.currentBalance }
             val monthlyPayment = debts.sumOf { it.minimumPayment } + extraMonthlyPayment
             val estimatedMonths = if (monthlyPayment > 0) ((totalDebt / monthlyPayment) + 1).toInt() else 12
-            
+
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
             val payoffDate = today.plus(DatePeriod(months = estimatedMonths))
-            
-            Result.success(PayoffPlan(
-                strategy = strategy,
-                debts = sortedDebts.mapIndexed { index, debt ->
-                    DebtPayoffInfo(
-                        debt = debt,
-                        payoffOrder = index + 1,
-                        payoffDate = payoffDate,
-                        totalInterest = debt.currentBalance * (debt.interestRate / 100) * (estimatedMonths / 12.0),
-                        monthlyPayments = emptyList()
-                    )
-                },
-                monthlyPayment = monthlyPayment,
-                totalInterestSaved = 0.0,
-                payoffDate = payoffDate,
-                totalMonths = estimatedMonths
-            ))
+
+            Result.success(
+                PayoffPlan(
+                    strategy = strategy,
+                    debts = sortedDebts.mapIndexed { index, debt ->
+                        DebtPayoffInfo(
+                            debt = debt,
+                            payoffOrder = index + 1,
+                            payoffDate = payoffDate,
+                            totalInterest = debt.currentBalance * (debt.interestRate / 100) * (estimatedMonths / 12.0),
+                            monthlyPayments = emptyList()
+                        )
+                    },
+                    monthlyPayment = monthlyPayment,
+                    totalInterestSaved = 0.0,
+                    payoffDate = payoffDate,
+                    totalMonths = estimatedMonths
+                )
+            )
         } catch (e: Exception) {
             Result.error(AppException.DatabaseError(e.message ?: "Failed to calculate payoff plan"))
         }

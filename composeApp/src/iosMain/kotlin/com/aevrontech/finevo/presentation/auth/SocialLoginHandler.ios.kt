@@ -9,18 +9,18 @@ import kotlin.random.Random
 actual class SocialLoginHandler {
 
     actual suspend fun signInWithGoogle(
-            activity: Any,
-            onSuccess: (idToken: String, nonce: String?) -> Unit,
-            onError: (message: String) -> Unit
+        activity: Any,
+        onSuccess: (idToken: String, nonce: String?) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         // On iOS, Google Sign-In requires the GoogleSignIn SDK
         onError("Google Sign-In requires additional setup. Please use Apple Sign-In on iOS.")
     }
 
     actual suspend fun signInWithApple(
-            activity: Any,
-            onSuccess: (idToken: String, nonce: String) -> Unit,
-            onError: (message: String) -> Unit
+        activity: Any,
+        onSuccess: (idToken: String, nonce: String) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         // TODO: Implement using ASAuthorizationController
         onError("Apple Sign-In setup in progress. Please use email sign-in.")

@@ -1,7 +1,13 @@
 package com.aevrontech.finevo.domain.repository
 
 import com.aevrontech.finevo.core.util.Result
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.Achievement
+import com.aevrontech.finevo.domain.model.DailyHabitSummary
+import com.aevrontech.finevo.domain.model.Habit
+import com.aevrontech.finevo.domain.model.HabitCategory
+import com.aevrontech.finevo.domain.model.HabitLog
+import com.aevrontech.finevo.domain.model.UserStats
+import com.aevrontech.finevo.domain.model.WeeklyHabitAnalytics
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 

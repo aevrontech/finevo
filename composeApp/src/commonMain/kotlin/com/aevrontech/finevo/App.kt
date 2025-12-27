@@ -1,37 +1,34 @@
 package com.aevrontech.finevo
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
-import com.aevrontech.finevo.ui.theme.FinEvoTheme
 import com.aevrontech.finevo.presentation.splash.SplashScreen
+import com.aevrontech.finevo.ui.theme.FinEvoTheme
+import com.aevrontech.finevo.ui.theme.ThemeManager
 import org.koin.compose.KoinContext
 
 @Composable
 fun App() {
+    // Get current theme state (Activity recreates when this changes)
+    val isDarkMode = ThemeManager.isDarkMode.value
+
     KoinContext {
-        FinEvoTheme(
-            darkTheme = true // Always use dark theme for futuristic look
-        ) {
+        FinEvoTheme(darkTheme = isDarkMode) {
             Surface(
-                modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
             ) {
                 Navigator(
-                    screen = SplashScreen(),
-                    onBackPressed = { currentScreen ->
-                        true // Handle back press
-                    }
-                ) { navigator ->
-                    SlideTransition(navigator)
-                }
+                        screen = SplashScreen(),
+                        onBackPressed = { currentScreen ->
+                            true // Handle back press
+                        }
+                ) { navigator -> SlideTransition(navigator) }
             }
         }
     }

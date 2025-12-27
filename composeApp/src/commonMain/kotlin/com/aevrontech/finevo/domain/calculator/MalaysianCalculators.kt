@@ -20,10 +20,10 @@ object MalaysianCalculators {
     fun calculateEPF(grossSalary: Double, age: Int): EPFResult {
         // Employee rate: 11% for age ≤60, 0% for age >60 (can opt for 5.5%)
         val employeeRate =
-                when {
-                    age > 60 -> 0.0 // Optional contribution
-                    else -> 0.11 // 11%
-                }
+            when {
+                age > 60 -> 0.0 // Optional contribution
+                else -> 0.11 // 11%
+            }
 
         // Employer rate: 13% if salary > RM5000, 12% if salary ≤ RM5000
         val employerRate = if (grossSalary > 5000) 0.13 else 0.12
@@ -34,13 +34,13 @@ object MalaysianCalculators {
         val netSalaryAfterEPF = grossSalary - employeeContribution
 
         return EPFResult(
-                grossSalary = grossSalary,
-                employeeRate = employeeRate,
-                employerRate = employerRate,
-                employeeContribution = employeeContribution,
-                employerContribution = employerContribution,
-                totalContribution = totalContribution,
-                netSalaryAfterEPF = netSalaryAfterEPF
+            grossSalary = grossSalary,
+            employeeRate = employeeRate,
+            employerRate = employerRate,
+            employeeContribution = employeeContribution,
+            employerContribution = employerContribution,
+            totalContribution = totalContribution,
+            netSalaryAfterEPF = netSalaryAfterEPF
         )
     }
 
@@ -73,11 +73,11 @@ object MalaysianCalculators {
         val totalContribution = employeeContribution + employerContribution
 
         return SOCSOResult(
-                grossSalary = grossSalary,
-                category = if (isCategory1) 1 else 2,
-                employeeContribution = employeeContribution,
-                employerContribution = employerContribution,
-                totalContribution = totalContribution
+            grossSalary = grossSalary,
+            category = if (isCategory1) 1 else 2,
+            employeeContribution = employeeContribution,
+            employerContribution = employerContribution,
+            totalContribution = totalContribution
         )
     }
 
@@ -102,12 +102,12 @@ object MalaysianCalculators {
         val totalContribution = employeeContribution + employerContribution
 
         return EISResult(
-                grossSalary = grossSalary,
-                cappedSalary = cappedSalary,
-                rate = rate,
-                employeeContribution = employeeContribution,
-                employerContribution = employerContribution,
-                totalContribution = totalContribution
+            grossSalary = grossSalary,
+            cappedSalary = cappedSalary,
+            rate = rate,
+            employeeContribution = employeeContribution,
+            employerContribution = employerContribution,
+            totalContribution = totalContribution
         )
     }
 
@@ -126,10 +126,10 @@ object MalaysianCalculators {
      * @return PCBResult with estimated tax
      */
     fun calculatePCB(
-            grossSalary: Double,
-            epfDeduction: Double,
-            maritalStatus: MaritalStatus = MaritalStatus.SINGLE,
-            childrenCount: Int = 0
+        grossSalary: Double,
+        epfDeduction: Double,
+        maritalStatus: MaritalStatus = MaritalStatus.SINGLE,
+        childrenCount: Int = 0
     ): PCBResult {
         // Calculate annual income
         val annualGross = grossSalary * 12
@@ -137,10 +137,10 @@ object MalaysianCalculators {
         // Apply reliefs
         val personalRelief = 9000.0 // Individual relief
         val spouseRelief =
-                when (maritalStatus) {
-                    MaritalStatus.MARRIED_SPOUSE_NOT_WORKING -> 4000.0
-                    else -> 0.0
-                }
+            when (maritalStatus) {
+                MaritalStatus.MARRIED_SPOUSE_NOT_WORKING -> 4000.0
+                else -> 0.0
+            }
         val childRelief = childrenCount * 2000.0 // RM2000 per child (under 18)
         val epfRelief = minOf(epfDeduction * 12, 4000.0) // Max RM4000
         val socsoRelief = minOf(grossSalary * 0.005 * 12, 350.0) // Max RM350
@@ -159,14 +159,14 @@ object MalaysianCalculators {
         val monthlyPCB = netAnnualTax / 12
 
         return PCBResult(
-                grossSalary = grossSalary,
-                annualGross = annualGross,
-                totalRelief = totalRelief,
-                chargeableIncome = chargeableIncome,
-                annualTax = annualTax,
-                rebate = rebate,
-                netAnnualTax = netAnnualTax,
-                monthlyPCB = monthlyPCB
+            grossSalary = grossSalary,
+            annualGross = annualGross,
+            totalRelief = totalRelief,
+            chargeableIncome = chargeableIncome,
+            annualTax = annualTax,
+            rebate = rebate,
+            netAnnualTax = netAnnualTax,
+            monthlyPCB = monthlyPCB
         )
     }
 
@@ -174,18 +174,18 @@ object MalaysianCalculators {
     private fun calculateAnnualTax(chargeableIncome: Double): Double {
         // Malaysian tax brackets 2024
         val brackets =
-                listOf(
-                        TaxBracket(0.0, 5000.0, 0.0), // 0%
-                        TaxBracket(5001.0, 20000.0, 0.01), // 1%
-                        TaxBracket(20001.0, 35000.0, 0.03), // 3%
-                        TaxBracket(35001.0, 50000.0, 0.06), // 6% (was 8% in some older versions)
-                        TaxBracket(50001.0, 70000.0, 0.11), // 11%
-                        TaxBracket(70001.0, 100000.0, 0.19), // 19%
-                        TaxBracket(100001.0, 400000.0, 0.25), // 25%
-                        TaxBracket(400001.0, 600000.0, 0.26), // 26%
-                        TaxBracket(600001.0, 2000000.0, 0.28), // 28%
-                        TaxBracket(2000001.0, Double.MAX_VALUE, 0.30) // 30%
-                )
+            listOf(
+                TaxBracket(0.0, 5000.0, 0.0), // 0%
+                TaxBracket(5001.0, 20000.0, 0.01), // 1%
+                TaxBracket(20001.0, 35000.0, 0.03), // 3%
+                TaxBracket(35001.0, 50000.0, 0.06), // 6% (was 8% in some older versions)
+                TaxBracket(50001.0, 70000.0, 0.11), // 11%
+                TaxBracket(70001.0, 100000.0, 0.19), // 19%
+                TaxBracket(100001.0, 400000.0, 0.25), // 25%
+                TaxBracket(400001.0, 600000.0, 0.26), // 26%
+                TaxBracket(600001.0, 2000000.0, 0.28), // 28%
+                TaxBracket(2000001.0, Double.MAX_VALUE, 0.30) // 30%
+            )
 
         var tax = 0.0
         var remainingIncome = chargeableIncome
@@ -224,11 +224,11 @@ object MalaysianCalculators {
         val zakatAmount = if (isEligible) annualIncome * zakatRate else 0.0
 
         return ZakatResult(
-                annualIncome = annualIncome,
-                nisab = nisab,
-                isEligible = isEligible,
-                zakatRate = zakatRate,
-                zakatAmount = zakatAmount
+            annualIncome = annualIncome,
+            nisab = nisab,
+            isEligible = isEligible,
+            zakatRate = zakatRate,
+            zakatAmount = zakatAmount
         )
     }
 
@@ -238,10 +238,10 @@ object MalaysianCalculators {
 
     /** Calculate complete salary breakdown with all deductions. */
     fun calculateSalaryBreakdown(
-            grossSalary: Double,
-            age: Int = 30,
-            maritalStatus: MaritalStatus = MaritalStatus.SINGLE,
-            childrenCount: Int = 0
+        grossSalary: Double,
+        age: Int = 30,
+        maritalStatus: MaritalStatus = MaritalStatus.SINGLE,
+        childrenCount: Int = 0
     ): SalaryBreakdown {
         val epf = calculateEPF(grossSalary, age)
         val socso = calculateSOCSO(grossSalary, age)
@@ -249,20 +249,20 @@ object MalaysianCalculators {
         val pcb = calculatePCB(grossSalary, epf.employeeContribution, maritalStatus, childrenCount)
 
         val totalDeductions =
-                epf.employeeContribution +
-                        socso.employeeContribution +
-                        eis.employeeContribution +
-                        pcb.monthlyPCB
+            epf.employeeContribution +
+                socso.employeeContribution +
+                eis.employeeContribution +
+                pcb.monthlyPCB
         val netSalary = grossSalary - totalDeductions
 
         return SalaryBreakdown(
-                grossSalary = grossSalary,
-                epf = epf,
-                socso = socso,
-                eis = eis,
-                pcb = pcb,
-                totalDeductions = totalDeductions,
-                netSalary = netSalary
+            grossSalary = grossSalary,
+            epf = epf,
+            socso = socso,
+            eis = eis,
+            pcb = pcb,
+            totalDeductions = totalDeductions,
+            netSalary = netSalary
         )
     }
 }
@@ -272,59 +272,59 @@ object MalaysianCalculators {
 // ============================================
 
 data class EPFResult(
-        val grossSalary: Double,
-        val employeeRate: Double,
-        val employerRate: Double,
-        val employeeContribution: Double,
-        val employerContribution: Double,
-        val totalContribution: Double,
-        val netSalaryAfterEPF: Double
+    val grossSalary: Double,
+    val employeeRate: Double,
+    val employerRate: Double,
+    val employeeContribution: Double,
+    val employerContribution: Double,
+    val totalContribution: Double,
+    val netSalaryAfterEPF: Double
 )
 
 data class SOCSOResult(
-        val grossSalary: Double,
-        val category: Int,
-        val employeeContribution: Double,
-        val employerContribution: Double,
-        val totalContribution: Double
+    val grossSalary: Double,
+    val category: Int,
+    val employeeContribution: Double,
+    val employerContribution: Double,
+    val totalContribution: Double
 )
 
 data class EISResult(
-        val grossSalary: Double,
-        val cappedSalary: Double,
-        val rate: Double,
-        val employeeContribution: Double,
-        val employerContribution: Double,
-        val totalContribution: Double
+    val grossSalary: Double,
+    val cappedSalary: Double,
+    val rate: Double,
+    val employeeContribution: Double,
+    val employerContribution: Double,
+    val totalContribution: Double
 )
 
 data class PCBResult(
-        val grossSalary: Double,
-        val annualGross: Double,
-        val totalRelief: Double,
-        val chargeableIncome: Double,
-        val annualTax: Double,
-        val rebate: Double,
-        val netAnnualTax: Double,
-        val monthlyPCB: Double
+    val grossSalary: Double,
+    val annualGross: Double,
+    val totalRelief: Double,
+    val chargeableIncome: Double,
+    val annualTax: Double,
+    val rebate: Double,
+    val netAnnualTax: Double,
+    val monthlyPCB: Double
 )
 
 data class ZakatResult(
-        val annualIncome: Double,
-        val nisab: Double,
-        val isEligible: Boolean,
-        val zakatRate: Double,
-        val zakatAmount: Double
+    val annualIncome: Double,
+    val nisab: Double,
+    val isEligible: Boolean,
+    val zakatRate: Double,
+    val zakatAmount: Double
 )
 
 data class SalaryBreakdown(
-        val grossSalary: Double,
-        val epf: EPFResult,
-        val socso: SOCSOResult,
-        val eis: EISResult,
-        val pcb: PCBResult,
-        val totalDeductions: Double,
-        val netSalary: Double
+    val grossSalary: Double,
+    val epf: EPFResult,
+    val socso: SOCSOResult,
+    val eis: EISResult,
+    val pcb: PCBResult,
+    val totalDeductions: Double,
+    val netSalary: Double
 )
 
 enum class MaritalStatus {

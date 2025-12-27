@@ -39,6 +39,7 @@ class AuthService {
                         AuthState.NotAuthenticated
                     }
                 }
+
                 is SessionStatus.NotAuthenticated -> AuthState.NotAuthenticated
                 is SessionStatus.Initializing -> AuthState.Loading
                 is SessionStatus.RefreshFailure -> AuthState.NotAuthenticated
@@ -49,13 +50,13 @@ class AuthService {
     /** Sign in with email and password. */
     suspend fun signInWithEmail(email: String, password: String): Result<User> {
         val authClient =
-                auth
-                        ?: return Result.error(
-                                AppException.ServerError(
-                                        503,
-                                        "Service unavailable. Please check your connection."
-                                )
-                        )
+            auth
+                ?: return Result.error(
+                    AppException.ServerError(
+                        503,
+                        "Service unavailable. Please check your connection."
+                    )
+                )
 
         return try {
             authClient.signInWith(Email) {
@@ -77,13 +78,13 @@ class AuthService {
     /** Sign up with email and password. */
     suspend fun signUpWithEmail(email: String, password: String): Result<User> {
         val authClient =
-                auth
-                        ?: return Result.error(
-                                AppException.ServerError(
-                                        503,
-                                        "Service unavailable. Please check your connection."
-                                )
-                        )
+            auth
+                ?: return Result.error(
+                    AppException.ServerError(
+                        503,
+                        "Service unavailable. Please check your connection."
+                    )
+                )
 
         return try {
             authClient.signUpWith(Email) {
@@ -110,13 +111,13 @@ class AuthService {
      */
     suspend fun signInWithGoogle(idToken: String, nonce: String? = null): Result<User> {
         val authClient =
-                auth
-                        ?: return Result.error(
-                                AppException.ServerError(
-                                        503,
-                                        "Service unavailable. Please check your connection."
-                                )
-                        )
+            auth
+                ?: return Result.error(
+                    AppException.ServerError(
+                        503,
+                        "Service unavailable. Please check your connection."
+                    )
+                )
 
         return try {
             println("DEBUG: Attempting Google sign-in with Supabase...")
@@ -157,13 +158,13 @@ class AuthService {
      */
     suspend fun signInWithApple(idToken: String, nonce: String? = null): Result<User> {
         val authClient =
-                auth
-                        ?: return Result.error(
-                                AppException.ServerError(
-                                        503,
-                                        "Service unavailable. Please check your connection."
-                                )
-                        )
+            auth
+                ?: return Result.error(
+                    AppException.ServerError(
+                        503,
+                        "Service unavailable. Please check your connection."
+                    )
+                )
 
         return try {
             authClient.signInWith(IDToken) {
@@ -210,13 +211,13 @@ class AuthService {
     /** Send password reset email. */
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         val authClient =
-                auth
-                        ?: return Result.error(
-                                AppException.ServerError(
-                                        503,
-                                        "Service unavailable. Please check your connection."
-                                )
-                        )
+            auth
+                ?: return Result.error(
+                    AppException.ServerError(
+                        503,
+                        "Service unavailable. Please check your connection."
+                    )
+                )
 
         return try {
             authClient.resetPasswordForEmail(email)
@@ -233,65 +234,65 @@ class AuthService {
         return when {
             // Invalid credentials
             message.contains("Invalid", ignoreCase = true) &&
-                    message.contains("credentials", ignoreCase = true) ->
-                    AppException.InvalidCredentials
+                message.contains("credentials", ignoreCase = true) ->
+                AppException.InvalidCredentials
 
             // Email not verified
             message.contains("email", ignoreCase = true) &&
-                    message.contains("confirm", ignoreCase = true) -> AppException.EmailNotVerified
+                message.contains("confirm", ignoreCase = true) -> AppException.EmailNotVerified
 
             // Email already exists
             message.contains("already registered", ignoreCase = true) ||
-                    message.contains("already exists", ignoreCase = true) ->
-                    AppException.EmailAlreadyExists
+                message.contains("already exists", ignoreCase = true) ->
+                AppException.EmailAlreadyExists
 
             // Weak password
             message.contains("password", ignoreCase = true) &&
-                    (message.contains("weak", ignoreCase = true) ||
-                            message.contains("short", ignoreCase = true) ||
-                            message.contains("at least", ignoreCase = true)) ->
-                    AppException.WeakPassword
+                (message.contains("weak", ignoreCase = true) ||
+                    message.contains("short", ignoreCase = true) ||
+                    message.contains("at least", ignoreCase = true)) ->
+                AppException.WeakPassword
 
             // Email sending errors (Supabase SMTP not configured)
             message.contains("sending", ignoreCase = true) &&
-                    message.contains("email", ignoreCase = true) ->
-                    AppException.ServerError(
-                            500,
-                            "Unable to send email. Please try again later or contact support."
-                    )
+                message.contains("email", ignoreCase = true) ->
+                AppException.ServerError(
+                    500,
+                    "Unable to send email. Please try again later or contact support."
+                )
 
             // OAuth/Social login errors
             message.contains("oauth", ignoreCase = true) ||
-                    message.contains("provider", ignoreCase = true) ->
-                    AppException.ServerError(
-                            400,
-                            "Social login is not configured. Please use email sign-in or contact support."
-                    )
+                message.contains("provider", ignoreCase = true) ->
+                AppException.ServerError(
+                    400,
+                    "Social login is not configured. Please use email sign-in or contact support."
+                )
 
             // Rate limiting
             message.contains("rate", ignoreCase = true) ||
-                    message.contains("too many", ignoreCase = true) ->
-                    AppException.ServerError(
-                            429,
-                            "Too many attempts. Please wait a moment and try again."
-                    )
+                message.contains("too many", ignoreCase = true) ->
+                AppException.ServerError(
+                    429,
+                    "Too many attempts. Please wait a moment and try again."
+                )
 
             // Network errors
             message.contains("network", ignoreCase = true) ||
-                    message.contains("connection", ignoreCase = true) ||
-                    message.contains("timeout", ignoreCase = true) ->
-                    AppException.NetworkUnavailable
+                message.contains("connection", ignoreCase = true) ||
+                message.contains("timeout", ignoreCase = true) ->
+                AppException.NetworkUnavailable
 
             // Generic server error
             message.contains("server", ignoreCase = true) ||
-                    message.contains("500", ignoreCase = true) ->
-                    AppException.ServerError(500, "Server error. Please try again later.")
+                message.contains("500", ignoreCase = true) ->
+                AppException.ServerError(500, "Server error. Please try again later.")
 
             // Fallback: show a user-friendly message
             else ->
-                    AppException.Unknown(
-                            "Unable to $action. Please check your connection and try again."
-                    )
+                AppException.Unknown(
+                    "Unable to $action. Please check your connection and try again."
+                )
         }
     }
 }
@@ -306,17 +307,17 @@ sealed class AuthState {
 /** Extension to convert Supabase UserInfo to domain User. */
 private fun UserInfo.toDomainUser(): User {
     return User(
-            id = id,
-            email = email ?: "",
-            displayName = userMetadata?.get("display_name")?.toString()
-                            ?: userMetadata?.get("full_name")?.toString()
-                                    ?: userMetadata?.get("name")?.toString(),
-            avatarUrl = userMetadata?.get("avatar_url")?.toString()
-                            ?: userMetadata?.get("picture")?.toString(),
-            tier = UserTier.FREE,
-            country = userMetadata?.get("country")?.toString() ?: "MY",
-            currency = userMetadata?.get("currency")?.toString() ?: "MYR",
-            createdAt = Clock.System.now(),
-            updatedAt = Clock.System.now()
+        id = id,
+        email = email ?: "",
+        displayName = userMetadata?.get("display_name")?.toString()
+            ?: userMetadata?.get("full_name")?.toString()
+            ?: userMetadata?.get("name")?.toString(),
+        avatarUrl = userMetadata?.get("avatar_url")?.toString()
+            ?: userMetadata?.get("picture")?.toString(),
+        tier = UserTier.FREE,
+        country = userMetadata?.get("country")?.toString() ?: "MY",
+        currency = userMetadata?.get("currency")?.toString() ?: "MYR",
+        createdAt = Clock.System.now(),
+        updatedAt = Clock.System.now()
     )
 }

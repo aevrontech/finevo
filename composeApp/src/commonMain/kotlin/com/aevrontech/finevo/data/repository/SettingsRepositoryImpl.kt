@@ -90,13 +90,15 @@ class SettingsRepositoryImpl : SettingsRepository {
     }
 
     override suspend fun getStorageUsage(): Result<StorageInfo> {
-        return Result.success(StorageInfo(
-            usedBytes = 1024 * 1024,
-            totalBytes = 500 * 1024 * 1024,
-            transactionCount = 0,
-            debtCount = 0,
-            habitCount = 0
-        ))
+        return Result.success(
+            StorageInfo(
+                usedBytes = 1024 * 1024,
+                totalBytes = 500 * 1024 * 1024,
+                transactionCount = 0,
+                debtCount = 0,
+                habitCount = 0
+            )
+        )
     }
 
     override fun getAppVersion(): String = "1.0.0"

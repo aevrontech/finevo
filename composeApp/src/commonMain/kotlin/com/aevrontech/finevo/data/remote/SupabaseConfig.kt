@@ -13,16 +13,16 @@ import io.github.jan.supabase.storage.Storage
  * Credentials are loaded from BuildConfig (injected from local.properties).
  */
 object SupabaseConfig {
-    
+
     private var _client: SupabaseClient? = null
-    
+
     /**
      * Initialize Supabase client with URL and key.
      * Call this during app initialization.
      */
     fun initialize(supabaseUrl: String, supabaseKey: String) {
         if (_client != null) return
-        
+
         _client = createSupabaseClient(
             supabaseUrl = supabaseUrl,
             supabaseKey = supabaseKey
@@ -37,7 +37,7 @@ object SupabaseConfig {
             install(Storage)
         }
     }
-    
+
     /**
      * Get the Supabase client instance.
      * Throws if not initialized.
@@ -46,7 +46,7 @@ object SupabaseConfig {
         get() = _client ?: throw IllegalStateException(
             "Supabase client not initialized. Call SupabaseConfig.initialize() first."
         )
-    
+
     /**
      * Check if client is initialized.
      */

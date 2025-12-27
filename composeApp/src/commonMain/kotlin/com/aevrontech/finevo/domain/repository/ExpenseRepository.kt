@@ -1,7 +1,12 @@
 package com.aevrontech.finevo.domain.repository
 
 import com.aevrontech.finevo.core.util.Result
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.Budget
+import com.aevrontech.finevo.domain.model.Category
+import com.aevrontech.finevo.domain.model.RecurringTransaction
+import com.aevrontech.finevo.domain.model.Transaction
+import com.aevrontech.finevo.domain.model.TransactionSummary
+import com.aevrontech.finevo.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 
@@ -19,9 +24,9 @@ interface ExpenseRepository {
 
     /** Get transactions for a specific account and date range */
     fun getTransactionsByAccount(
-            accountId: String,
-            startDate: LocalDate,
-            endDate: LocalDate
+        accountId: String,
+        startDate: LocalDate,
+        endDate: LocalDate
     ): Flow<List<Transaction>>
 
     /** Get transactions for a specific date */
@@ -92,12 +97,12 @@ interface ExpenseRepository {
 
     /** Add a recurring transaction */
     suspend fun addRecurringTransaction(
-            recurring: RecurringTransaction
+        recurring: RecurringTransaction
     ): Result<RecurringTransaction>
 
     /** Update a recurring transaction */
     suspend fun updateRecurringTransaction(
-            recurring: RecurringTransaction
+        recurring: RecurringTransaction
     ): Result<RecurringTransaction>
 
     /** Delete a recurring transaction */

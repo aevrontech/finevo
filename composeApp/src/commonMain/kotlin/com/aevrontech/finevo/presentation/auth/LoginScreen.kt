@@ -1,7 +1,17 @@
 package com.aevrontech.finevo.presentation.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,8 +19,33 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -30,598 +65,604 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.aevrontech.finevo.core.util.Platform
 import com.aevrontech.finevo.presentation.home.HomeScreen
-import com.aevrontech.finevo.ui.theme.*
+import com.aevrontech.finevo.ui.theme.Background
+import com.aevrontech.finevo.ui.theme.Error
+import com.aevrontech.finevo.ui.theme.ErrorContainer
+import com.aevrontech.finevo.ui.theme.OnErrorContainer
+import com.aevrontech.finevo.ui.theme.OnPrimary
+import com.aevrontech.finevo.ui.theme.OnSurface
+import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
+import com.aevrontech.finevo.ui.theme.Outline
+import com.aevrontech.finevo.ui.theme.Primary
+import com.aevrontech.finevo.ui.theme.Secondary
+import com.aevrontech.finevo.ui.theme.SurfaceVariant
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 class LoginScreen : Screen {
 
-        // Unique key to prevent "key used multiple times" error in Voyager transitions
-        override val key: cafe.adriel.voyager.core.screen.ScreenKey = "LoginScreen"
+    // Unique key to prevent "key used multiple times" error in Voyager transitions
+    override val key: cafe.adriel.voyager.core.screen.ScreenKey = "LoginScreen"
 
-        @Composable
-        override fun Content() {
-                val navigator = LocalNavigator.currentOrThrow
-                val viewModel: AuthViewModel = koinViewModel()
-                val uiState by viewModel.uiState.collectAsState()
-                val focusManager = LocalFocusManager.current
-                val snackbarHostState = remember { SnackbarHostState() }
-                val scope = rememberCoroutineScope()
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+        val viewModel: AuthViewModel = koinViewModel()
+        val uiState by viewModel.uiState.collectAsState()
+        val focusManager = LocalFocusManager.current
+        val snackbarHostState = remember { SnackbarHostState() }
+        val scope = rememberCoroutineScope()
 
-                var email by remember { mutableStateOf("") }
-                var password by remember { mutableStateOf("") }
-                var passwordVisible by remember { mutableStateOf(false) }
-                var isLoginMode by remember { mutableStateOf(true) }
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
+        var passwordVisible by remember { mutableStateOf(false) }
+        var isLoginMode by remember { mutableStateOf(true) }
 
-                // Navigate on success
-                LaunchedEffect(uiState.isLoggedIn) {
-                        if (uiState.isLoggedIn) {
-                                navigator.replace(HomeScreen())
-                        }
-                }
-
-                // Show error in Snackbar
-                LaunchedEffect(uiState.error) {
-                        uiState.error?.let { error ->
-                                scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                                message = error,
-                                                duration = SnackbarDuration.Long,
-                                                actionLabel = "Dismiss"
-                                        )
-                                        viewModel.clearError()
-                                }
-                        }
-                }
-
-                // Show success message
-                LaunchedEffect(uiState.successMessage) {
-                        uiState.successMessage?.let { message ->
-                                scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                                message = message,
-                                                duration = SnackbarDuration.Long
-                                        )
-                                        viewModel.clearSuccessMessage()
-                                }
-                        }
-                }
-
-                Scaffold(
-                        snackbarHost = {
-                                SnackbarHost(hostState = snackbarHostState) { data ->
-                                        Snackbar(
-                                                snackbarData = data,
-                                                containerColor =
-                                                        if (uiState.error != null) ErrorContainer
-                                                        else SurfaceVariant,
-                                                contentColor =
-                                                        if (uiState.error != null) OnErrorContainer
-                                                        else OnSurface,
-                                                actionColor =
-                                                        if (uiState.error != null) Error
-                                                        else Primary,
-                                                shape = RoundedCornerShape(12.dp)
-                                        )
-                                }
-                        },
-                        containerColor = Background
-                ) { paddingValues ->
-                        Box(
-                                modifier =
-                                        Modifier.fillMaxSize()
-                                                .padding(paddingValues)
-                                                .background(Background)
-                        ) {
-                                Column(
-                                        modifier = Modifier.fillMaxSize().padding(24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                        Spacer(modifier = Modifier.height(60.dp))
-
-                                        // Logo
-                                        Text(
-                                                text = "FinEvo",
-                                                fontSize = 40.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                style =
-                                                        MaterialTheme.typography.displayMedium.copy(
-                                                                brush =
-                                                                        Brush.linearGradient(
-                                                                                colors =
-                                                                                        listOf(
-                                                                                                Primary,
-                                                                                                Secondary
-                                                                                        )
-                                                                        )
-                                                        )
-                                        )
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        Text(
-                                                text =
-                                                        if (isLoginMode) "Welcome back!"
-                                                        else "Create your account",
-                                                fontSize = 16.sp,
-                                                color = OnSurfaceVariant
-                                        )
-
-                                        Spacer(modifier = Modifier.height(48.dp))
-
-                                        // Email field
-                                        OutlinedTextField(
-                                                value = email,
-                                                onValueChange = { email = it },
-                                                label = { Text("Email") },
-                                                leadingIcon = {
-                                                        Icon(
-                                                                Icons.Default.Email,
-                                                                contentDescription = null
-                                                        )
-                                                },
-                                                keyboardOptions =
-                                                        KeyboardOptions(
-                                                                keyboardType = KeyboardType.Email,
-                                                                imeAction = ImeAction.Next
-                                                        ),
-                                                keyboardActions =
-                                                        KeyboardActions(
-                                                                onNext = {
-                                                                        focusManager.moveFocus(
-                                                                                FocusDirection.Down
-                                                                        )
-                                                                }
-                                                        ),
-                                                singleLine = true,
-                                                isError = uiState.error != null,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                colors =
-                                                        OutlinedTextFieldDefaults.colors(
-                                                                focusedBorderColor = Primary,
-                                                                unfocusedBorderColor = Outline,
-                                                                focusedLabelColor = Primary,
-                                                                errorBorderColor = Error
-                                                        ),
-                                                shape = RoundedCornerShape(12.dp)
-                                        )
-
-                                        Spacer(modifier = Modifier.height(16.dp))
-
-                                        // Password field
-                                        OutlinedTextField(
-                                                value = password,
-                                                onValueChange = { password = it },
-                                                label = { Text("Password") },
-                                                leadingIcon = {
-                                                        Icon(
-                                                                Icons.Default.Lock,
-                                                                contentDescription = null
-                                                        )
-                                                },
-                                                trailingIcon = {
-                                                        IconButton(
-                                                                onClick = {
-                                                                        passwordVisible =
-                                                                                !passwordVisible
-                                                                }
-                                                        ) {
-                                                                Icon(
-                                                                        if (passwordVisible)
-                                                                                Icons.Default.Lock
-                                                                        else Icons.Default.Person,
-                                                                        contentDescription =
-                                                                                if (passwordVisible)
-                                                                                        "Hide password"
-                                                                                else "Show password"
-                                                                )
-                                                        }
-                                                },
-                                                visualTransformation =
-                                                        if (passwordVisible)
-                                                                VisualTransformation.None
-                                                        else PasswordVisualTransformation(),
-                                                keyboardOptions =
-                                                        KeyboardOptions(
-                                                                keyboardType =
-                                                                        KeyboardType.Password,
-                                                                imeAction = ImeAction.Done
-                                                        ),
-                                                keyboardActions =
-                                                        KeyboardActions(
-                                                                onDone = {
-                                                                        focusManager.clearFocus()
-                                                                        if (email.isNotBlank() &&
-                                                                                        password.isNotBlank()
-                                                                        ) {
-                                                                                if (isLoginMode)
-                                                                                        viewModel
-                                                                                                .signIn(
-                                                                                                        email,
-                                                                                                        password
-                                                                                                )
-                                                                                else
-                                                                                        viewModel
-                                                                                                .signUp(
-                                                                                                        email,
-                                                                                                        password
-                                                                                                )
-                                                                        }
-                                                                }
-                                                        ),
-                                                singleLine = true,
-                                                isError = uiState.error != null,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                colors =
-                                                        OutlinedTextFieldDefaults.colors(
-                                                                focusedBorderColor = Primary,
-                                                                unfocusedBorderColor = Outline,
-                                                                focusedLabelColor = Primary,
-                                                                errorBorderColor = Error
-                                                        ),
-                                                shape = RoundedCornerShape(12.dp)
-                                        )
-
-                                        if (isLoginMode) {
-                                                Spacer(modifier = Modifier.height(8.dp))
-
-                                                TextButton(
-                                                        onClick = {
-                                                                if (email.isNotBlank()) {
-                                                                        viewModel.sendPasswordReset(
-                                                                                email
-                                                                        )
-                                                                } else {
-                                                                        scope.launch {
-                                                                                snackbarHostState
-                                                                                        .showSnackbar(
-                                                                                                "Please enter your email first"
-                                                                                        )
-                                                                        }
-                                                                }
-                                                        },
-                                                        modifier = Modifier.align(Alignment.End)
-                                                ) {
-                                                        Text(
-                                                                text = "Forgot password?",
-                                                                color = Primary,
-                                                                fontSize = 14.sp
-                                                        )
-                                                }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(24.dp))
-
-                                        // Inline error display
-                                        uiState.error?.let { error ->
-                                                Card(
-                                                        modifier =
-                                                                Modifier.fillMaxWidth()
-                                                                        .padding(bottom = 16.dp),
-                                                        colors =
-                                                                CardDefaults.cardColors(
-                                                                        containerColor =
-                                                                                ErrorContainer
-                                                                ),
-                                                        shape = RoundedCornerShape(8.dp)
-                                                ) {
-                                                        Text(
-                                                                text = error,
-                                                                color = OnErrorContainer,
-                                                                fontSize = 14.sp,
-                                                                textAlign = TextAlign.Center,
-                                                                modifier = Modifier.padding(12.dp)
-                                                        )
-                                                }
-                                        }
-
-                                        // Login/Signup button
-                                        Button(
-                                                onClick = {
-                                                        if (isLoginMode) {
-                                                                viewModel.signIn(email, password)
-                                                        } else {
-                                                                viewModel.signUp(email, password)
-                                                        }
-                                                },
-                                                modifier = Modifier.fillMaxWidth().height(56.dp),
-                                                enabled =
-                                                        !uiState.isLoading &&
-                                                                email.isNotBlank() &&
-                                                                password.isNotBlank(),
-                                                colors =
-                                                        ButtonDefaults.buttonColors(
-                                                                containerColor = Primary
-                                                        ),
-                                                shape = RoundedCornerShape(12.dp)
-                                        ) {
-                                                if (uiState.isLoading) {
-                                                        CircularProgressIndicator(
-                                                                modifier = Modifier.size(24.dp),
-                                                                color = OnPrimary
-                                                        )
-                                                } else {
-                                                        Text(
-                                                                text =
-                                                                        if (isLoginMode) "Sign In"
-                                                                        else "Create Account",
-                                                                fontSize = 16.sp,
-                                                                fontWeight = FontWeight.SemiBold
-                                                        )
-                                                }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(24.dp))
-
-                                        // Divider
-                                        Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                                HorizontalDivider(
-                                                        modifier = Modifier.weight(1f),
-                                                        color = Outline
-                                                )
-                                                Text(
-                                                        text = "  or continue with  ",
-                                                        color = OnSurfaceVariant,
-                                                        fontSize = 14.sp
-                                                )
-                                                HorizontalDivider(
-                                                        modifier = Modifier.weight(1f),
-                                                        color = Outline
-                                                )
-                                        }
-
-                                        Spacer(modifier = Modifier.height(24.dp))
-
-                                        // Social login buttons - Google only on Android, both on
-                                        // iOS
-                                        val socialLoginHandler = remember { SocialLoginHandler() }
-                                        val activityContext =
-                                                com.aevrontech.finevo.core.util.getActivityContext()
-
-                                        if (Platform.isAndroid) {
-                                                // Android: Only Google Sign-In (full width)
-                                                GoogleSignInButton(
-                                                        onClick = {
-                                                                viewModel.onSocialLoginStarted()
-                                                                scope.launch {
-                                                                        val activity =
-                                                                                activityContext
-                                                                        if (activity != null) {
-                                                                                socialLoginHandler
-                                                                                        .signInWithGoogle(
-                                                                                                activity =
-                                                                                                        activity,
-                                                                                                onSuccess = {
-                                                                                                        idToken,
-                                                                                                        nonce
-                                                                                                        ->
-                                                                                                        viewModel
-                                                                                                                .signInWithGoogle(
-                                                                                                                        idToken,
-                                                                                                                        nonce
-                                                                                                                )
-                                                                                                },
-                                                                                                onError = {
-                                                                                                        error
-                                                                                                        ->
-                                                                                                        viewModel
-                                                                                                                .onSocialLoginError(
-                                                                                                                        error
-                                                                                                                )
-                                                                                                }
-                                                                                        )
-                                                                        } else {
-                                                                                viewModel
-                                                                                        .onSocialLoginError(
-                                                                                                "Unable to access activity for sign-in"
-                                                                                        )
-                                                                        }
-                                                                }
-                                                        },
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        isEnabled = !uiState.isLoading
-                                                )
-                                        } else {
-                                                // iOS: Both Google and Apple
-                                                Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        horizontalArrangement =
-                                                                Arrangement.spacedBy(16.dp)
-                                                ) {
-                                                        GoogleSignInButton(
-                                                                onClick = {
-                                                                        viewModel
-                                                                                .onSocialLoginStarted()
-                                                                        scope.launch {
-                                                                                snackbarHostState
-                                                                                        .showSnackbar(
-                                                                                                "Google Sign-In requires additional setup on iOS"
-                                                                                        )
-                                                                                viewModel
-                                                                                        .clearError()
-                                                                        }
-                                                                },
-                                                                modifier = Modifier.weight(1f),
-                                                                isEnabled = !uiState.isLoading
-                                                        )
-
-                                                        AppleSignInButton(
-                                                                onClick = {
-                                                                        viewModel
-                                                                                .onSocialLoginStarted()
-                                                                        scope.launch {
-                                                                                socialLoginHandler
-                                                                                        .signInWithApple(
-                                                                                                activity =
-                                                                                                        activityContext
-                                                                                                                ?: Unit,
-                                                                                                onSuccess = {
-                                                                                                        idToken,
-                                                                                                        nonce
-                                                                                                        ->
-                                                                                                        viewModel
-                                                                                                                .signInWithApple(
-                                                                                                                        idToken,
-                                                                                                                        nonce
-                                                                                                                )
-                                                                                                },
-                                                                                                onError = {
-                                                                                                        error
-                                                                                                        ->
-                                                                                                        viewModel
-                                                                                                                .onSocialLoginError(
-                                                                                                                        error
-                                                                                                                )
-                                                                                                }
-                                                                                        )
-                                                                        }
-                                                                },
-                                                                modifier = Modifier.weight(1f),
-                                                                isEnabled = !uiState.isLoading
-                                                        )
-                                                }
-                                        }
-
-                                        Spacer(modifier = Modifier.weight(1f))
-
-                                        // Toggle login/signup
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                        text =
-                                                                if (isLoginMode)
-                                                                        "Don't have an account?"
-                                                                else "Already have an account?",
-                                                        color = OnSurfaceVariant
-                                                )
-                                                TextButton(
-                                                        onClick = {
-                                                                isLoginMode = !isLoginMode
-                                                                viewModel.clearError()
-                                                        }
-                                                ) {
-                                                        Text(
-                                                                text =
-                                                                        if (isLoginMode) "Sign Up"
-                                                                        else "Sign In",
-                                                                color = Primary,
-                                                                fontWeight = FontWeight.SemiBold
-                                                        )
-                                                }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                }
-                        }
-                }
+        // Navigate on success
+        LaunchedEffect(uiState.isLoggedIn) {
+            if (uiState.isLoggedIn) {
+                navigator.replace(HomeScreen())
+            }
         }
+
+        // Show error in Snackbar
+        LaunchedEffect(uiState.error) {
+            uiState.error?.let { error ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = error,
+                        duration = SnackbarDuration.Long,
+                        actionLabel = "Dismiss"
+                    )
+                    viewModel.clearError()
+                }
+            }
+        }
+
+        // Show success message
+        LaunchedEffect(uiState.successMessage) {
+            uiState.successMessage?.let { message ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = message,
+                        duration = SnackbarDuration.Long
+                    )
+                    viewModel.clearSuccessMessage()
+                }
+            }
+        }
+
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState) { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor =
+                            if (uiState.error != null) ErrorContainer
+                            else SurfaceVariant,
+                        contentColor =
+                            if (uiState.error != null) OnErrorContainer
+                            else OnSurface,
+                        actionColor =
+                            if (uiState.error != null) Error
+                            else Primary,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            containerColor = Background
+        ) { paddingValues ->
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(paddingValues)
+                        .background(Background)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(60.dp))
+
+                    // Logo
+                    Text(
+                        text = "FinEvo",
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold,
+                        style =
+                            MaterialTheme.typography.displayMedium.copy(
+                                brush =
+                                    Brush.linearGradient(
+                                        colors =
+                                            listOf(
+                                                Primary,
+                                                Secondary
+                                            )
+                                    )
+                            )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text =
+                            if (isLoginMode) "Welcome back!"
+                            else "Create your account",
+                        fontSize = 16.sp,
+                        color = OnSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(48.dp))
+
+                    // Email field
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Email,
+                                contentDescription = null
+                            )
+                        },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                        keyboardActions =
+                            KeyboardActions(
+                                onNext = {
+                                    focusManager.moveFocus(
+                                        FocusDirection.Down
+                                    )
+                                }
+                            ),
+                        singleLine = true,
+                        isError = uiState.error != null,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = Outline,
+                                focusedLabelColor = Primary,
+                                errorBorderColor = Error
+                            ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Password field
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    passwordVisible =
+                                        !passwordVisible
+                                }
+                            ) {
+                                Icon(
+                                    if (passwordVisible)
+                                        Icons.Default.Lock
+                                    else Icons.Default.Person,
+                                    contentDescription =
+                                        if (passwordVisible)
+                                            "Hide password"
+                                        else "Show password"
+                                )
+                            }
+                        },
+                        visualTransformation =
+                            if (passwordVisible)
+                                VisualTransformation.None
+                            else PasswordVisualTransformation(),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType =
+                                    KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                        keyboardActions =
+                            KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                    if (email.isNotBlank() &&
+                                        password.isNotBlank()
+                                    ) {
+                                        if (isLoginMode)
+                                            viewModel
+                                                .signIn(
+                                                    email,
+                                                    password
+                                                )
+                                        else
+                                            viewModel
+                                                .signUp(
+                                                    email,
+                                                    password
+                                                )
+                                    }
+                                }
+                            ),
+                        singleLine = true,
+                        isError = uiState.error != null,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = Outline,
+                                focusedLabelColor = Primary,
+                                errorBorderColor = Error
+                            ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    if (isLoginMode) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(
+                            onClick = {
+                                if (email.isNotBlank()) {
+                                    viewModel.sendPasswordReset(
+                                        email
+                                    )
+                                } else {
+                                    scope.launch {
+                                        snackbarHostState
+                                            .showSnackbar(
+                                                "Please enter your email first"
+                                            )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text(
+                                text = "Forgot password?",
+                                color = Primary,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Inline error display
+                    uiState.error?.let { error ->
+                        Card(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(bottom = 16.dp),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        ErrorContainer
+                                ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = error,
+                                color = OnErrorContainer,
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    // Login/Signup button
+                    Button(
+                        onClick = {
+                            if (isLoginMode) {
+                                viewModel.signIn(email, password)
+                            } else {
+                                viewModel.signUp(email, password)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        enabled =
+                            !uiState.isLoading &&
+                                email.isNotBlank() &&
+                                password.isNotBlank(),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = Primary
+                            ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = OnPrimary
+                            )
+                        } else {
+                            Text(
+                                text =
+                                    if (isLoginMode) "Sign In"
+                                    else "Create Account",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Divider
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = Outline
+                        )
+                        Text(
+                            text = "  or continue with  ",
+                            color = OnSurfaceVariant,
+                            fontSize = 14.sp
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = Outline
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Social login buttons - Google only on Android, both on
+                    // iOS
+                    val socialLoginHandler = remember { SocialLoginHandler() }
+                    val activityContext =
+                        com.aevrontech.finevo.core.util.getActivityContext()
+
+                    if (Platform.isAndroid) {
+                        // Android: Only Google Sign-In (full width)
+                        GoogleSignInButton(
+                            onClick = {
+                                viewModel.onSocialLoginStarted()
+                                scope.launch {
+                                    val activity =
+                                        activityContext
+                                    if (activity != null) {
+                                        socialLoginHandler
+                                            .signInWithGoogle(
+                                                activity =
+                                                    activity,
+                                                onSuccess = { idToken,
+                                                              nonce
+                                                    ->
+                                                    viewModel
+                                                        .signInWithGoogle(
+                                                            idToken,
+                                                            nonce
+                                                        )
+                                                },
+                                                onError = { error
+                                                    ->
+                                                    viewModel
+                                                        .onSocialLoginError(
+                                                            error
+                                                        )
+                                                }
+                                            )
+                                    } else {
+                                        viewModel
+                                            .onSocialLoginError(
+                                                "Unable to access activity for sign-in"
+                                            )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            isEnabled = !uiState.isLoading
+                        )
+                    } else {
+                        // iOS: Both Google and Apple
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(16.dp)
+                        ) {
+                            GoogleSignInButton(
+                                onClick = {
+                                    viewModel
+                                        .onSocialLoginStarted()
+                                    scope.launch {
+                                        snackbarHostState
+                                            .showSnackbar(
+                                                "Google Sign-In requires additional setup on iOS"
+                                            )
+                                        viewModel
+                                            .clearError()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                isEnabled = !uiState.isLoading
+                            )
+
+                            AppleSignInButton(
+                                onClick = {
+                                    viewModel
+                                        .onSocialLoginStarted()
+                                    scope.launch {
+                                        socialLoginHandler
+                                            .signInWithApple(
+                                                activity =
+                                                    activityContext
+                                                        ?: Unit,
+                                                onSuccess = { idToken,
+                                                              nonce
+                                                    ->
+                                                    viewModel
+                                                        .signInWithApple(
+                                                            idToken,
+                                                            nonce
+                                                        )
+                                                },
+                                                onError = { error
+                                                    ->
+                                                    viewModel
+                                                        .onSocialLoginError(
+                                                            error
+                                                        )
+                                                }
+                                            )
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                isEnabled = !uiState.isLoading
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Toggle login/signup
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text =
+                                if (isLoginMode)
+                                    "Don't have an account?"
+                                else "Already have an account?",
+                            color = OnSurfaceVariant
+                        )
+                        TextButton(
+                            onClick = {
+                                isLoginMode = !isLoginMode
+                                viewModel.clearError()
+                            }
+                        ) {
+                            Text(
+                                text =
+                                    if (isLoginMode) "Sign Up"
+                                    else "Sign In",
+                                color = Primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+    }
 }
 
 /** Google Sign-In button with official branding. */
 @Composable
 private fun GoogleSignInButton(
-        onClick: () -> Unit,
-        modifier: Modifier = Modifier,
-        isEnabled: Boolean = true
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEnabled: Boolean = true
 ) {
-        OutlinedButton(
-                onClick = onClick,
-                enabled = isEnabled,
-                modifier = modifier.height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface)
+    OutlinedButton(
+        onClick = onClick,
+        enabled = isEnabled,
+        modifier = modifier.height(52.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-                Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        // Google logo using Canvas with official brand colors
-                        androidx.compose.foundation.Canvas(modifier = Modifier.size(20.dp)) {
-                                val googleBlue = Color(0xFF4285F4)
-                                val googleRed = Color(0xFFEA4335)
-                                val googleYellow = Color(0xFFFBBC05)
-                                val googleGreen = Color(0xFF34A853)
+            // Google logo using Canvas with official brand colors
+            androidx.compose.foundation.Canvas(modifier = Modifier.size(20.dp)) {
+                val googleBlue = Color(0xFF4285F4)
+                val googleRed = Color(0xFFEA4335)
+                val googleYellow = Color(0xFFFBBC05)
+                val googleGreen = Color(0xFF34A853)
 
-                                // Official Google "G" logo approximation
-                                // Blue segment (right side, top-right of G)
-                                drawArc(
-                                        color = googleBlue,
-                                        startAngle = -45f,
-                                        sweepAngle = 90f,
-                                        useCenter = true
-                                )
-                                // Green segment (bottom-right of G)
-                                drawArc(
-                                        color = googleGreen,
-                                        startAngle = 45f,
-                                        sweepAngle = 90f,
-                                        useCenter = true
-                                )
-                                // Yellow segment (bottom-left of G)
-                                drawArc(
-                                        color = googleYellow,
-                                        startAngle = 135f,
-                                        sweepAngle = 90f,
-                                        useCenter = true
-                                )
-                                // Red segment (top-left of G)
-                                drawArc(
-                                        color = googleRed,
-                                        startAngle = 225f,
-                                        sweepAngle = 90f,
-                                        useCenter = true
-                                )
-                                // Inner white circle to create the ring effect
-                                drawCircle(color = Color.White, radius = size.minDimension * 0.35f)
-                                // Blue horizontal bar for the "G" shape
-                                drawRect(
-                                        color = googleBlue,
-                                        topLeft =
-                                                androidx.compose.ui.geometry.Offset(
-                                                        size.width * 0.48f,
-                                                        size.height * 0.35f
-                                                ),
-                                        size =
-                                                androidx.compose.ui.geometry.Size(
-                                                        size.width * 0.52f,
-                                                        size.height * 0.3f
-                                                )
-                                )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sign in with Google", fontSize = 14.sp)
-                }
+                // Official Google "G" logo approximation
+                // Blue segment (right side, top-right of G)
+                drawArc(
+                    color = googleBlue,
+                    startAngle = -45f,
+                    sweepAngle = 90f,
+                    useCenter = true
+                )
+                // Green segment (bottom-right of G)
+                drawArc(
+                    color = googleGreen,
+                    startAngle = 45f,
+                    sweepAngle = 90f,
+                    useCenter = true
+                )
+                // Yellow segment (bottom-left of G)
+                drawArc(
+                    color = googleYellow,
+                    startAngle = 135f,
+                    sweepAngle = 90f,
+                    useCenter = true
+                )
+                // Red segment (top-left of G)
+                drawArc(
+                    color = googleRed,
+                    startAngle = 225f,
+                    sweepAngle = 90f,
+                    useCenter = true
+                )
+                // Inner white circle to create the ring effect
+                drawCircle(color = Color.White, radius = size.minDimension * 0.35f)
+                // Blue horizontal bar for the "G" shape
+                drawRect(
+                    color = googleBlue,
+                    topLeft =
+                        androidx.compose.ui.geometry.Offset(
+                            size.width * 0.48f,
+                            size.height * 0.35f
+                        ),
+                    size =
+                        androidx.compose.ui.geometry.Size(
+                            size.width * 0.52f,
+                            size.height * 0.3f
+                        )
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Sign in with Google", fontSize = 14.sp)
         }
+    }
 }
 
 /** Apple Sign-In button with Apple branding. */
 @Composable
 private fun AppleSignInButton(
-        onClick: () -> Unit,
-        modifier: Modifier = Modifier,
-        isEnabled: Boolean = true
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEnabled: Boolean = true
 ) {
-        OutlinedButton(
-                onClick = onClick,
-                enabled = isEnabled,
-                modifier = modifier.height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface)
+    OutlinedButton(
+        onClick = onClick,
+        enabled = isEnabled,
+        modifier = modifier.height(52.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-                Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        // Apple logo using SF Symbol-style text
-                        Text(
-                                text = "", // Apple logo character
-                                fontSize = 18.sp,
-                                color = OnSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sign in with Apple", fontSize = 14.sp)
-                }
+            // Apple logo using SF Symbol-style text
+            Text(
+                text = "", // Apple logo character
+                fontSize = 18.sp,
+                color = OnSurface
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Sign in with Apple", fontSize = 14.sp)
         }
+    }
 }

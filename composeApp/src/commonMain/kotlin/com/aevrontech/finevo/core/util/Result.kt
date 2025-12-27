@@ -2,7 +2,7 @@ package com.aevrontech.finevo.core.util
 
 /**
  * A generic sealed class representing the result of an operation.
- * 
+ *
  * @param T The type of data in case of success
  */
 sealed class Result<out T> {

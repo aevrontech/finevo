@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * FinEvo Futuristic Dark Theme Color Palette
- * 
+ *
  * Design Philosophy:
  * - Deep space backgrounds with vibrant neon accents
  * - Electric blues and purples for primary actions
@@ -135,6 +135,21 @@ val GradientStart = Color(0xFF6C63FF)
 val GradientMid = Color(0xFF00D9FF)
 val GradientEnd = Color(0xFF00E676)
 
+// Dashboard Balance Card Gradient (Blue)
+val DashboardGradientStart = Color(0xFF4FC3F7)
+val DashboardGradientMid = Color(0xFF42A5F5)
+val DashboardGradientEnd = Color(0xFF2979FF)
+
+// Quick Action Colors
+val ActionTransfer = Color(0xFF2979FF)
+val ActionTransferBg = Color(0xFFE3F2FD)
+val ActionTopUp = Color(0xFFFFB74D) // Matches Warning/HabitStreak
+val ActionTopUpBg = Color(0xFFFFF3E0)
+val ActionBill = Color(0xFF00E676) // Matches Success/Income
+val ActionBillBg = Color(0xFFE8F5E9)
+val ActionMode = Color(0xFFB388FF) // Light Purple
+val ActionModeBg = Color(0xFFF3E5F5)
+
 // Card gradient
 val CardGradientStart = Color(0xFF1A2038)
 val CardGradientEnd = Color(0xFF252D52)
@@ -160,13 +175,68 @@ val Scrim = Color(0xCC000000)
 val Overlay = Color(0x80000000)
 
 // ============================================
+// GLASSMORPHISM COLORS
+// ============================================
+
+val GlassBackground = Color(0xFFFFFFFF).copy(alpha = 0.15f)
+val GlassBorder = Color(0xFFFFFFFF).copy(alpha = 0.3f)
+val GlassShadow = Color(0xFF000000).copy(alpha = 0.1f)
+val LensBubbleBackground = Color(0xFFFFFFFF).copy(alpha = 0.95f)
+val LensBubbleBorder = Color(0xFFFFFFFF).copy(alpha = 0.5f)
+val NavBarActiveIcon = Color(0xFF6C63FF) // Primary color
+val NavBarInactiveIcon = Color(0xFF8E8E93)
+
+// ============================================
 // LIGHT THEME COLORS (for future use)
 // ============================================
 
 object LightColors {
     val Primary = Color(0xFF5A52D5)
-    val Background = Color(0xFFF5F7FA)
+    val Background = Color(0xFFF8FAFC)
     val Surface = Color(0xFFFFFFFF)
-    val OnBackground = Color(0xFF1A1C2E)
-    val OnSurface = Color(0xFF1A1C2E)
+    val SurfaceVariant = Color(0xFFF1F5F9)
+    val SurfaceContainer = Color(0xFFE2E8F0)
+    val SurfaceContainerHigh = Color(0xFFCBD5E1)
+    val SurfaceContainerHighest = Color(0xFF94A3B8)
+    val OnBackground = Color(0xFF1E293B)
+    val OnSurface = Color(0xFF1E293B)
+    val OnSurfaceVariant = Color(0xFF64748B)
+}
+
+// ============================================
+// THEME-AWARE COLOR ACCESSORS
+// ============================================
+
+/**
+ * Use these properties in composables to get the correct color based on current theme. These must
+ * be accessed inside @Composable functions only.
+ */
+object ThemeColors {
+    val onSurface: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+
+    val onSurfaceVariant: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+
+    val surface: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.surface
+
+    val surfaceContainer: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer
+
+    val surfaceContainerHigh: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh
+
+    val surfaceContainerHighest: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHighest
+
+    val background: Color
+        @androidx.compose.runtime.Composable
+        get() = androidx.compose.material3.MaterialTheme.colorScheme.background
 }

@@ -3,7 +3,12 @@ package com.aevrontech.finevo.data.repository
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
 import com.aevrontech.finevo.data.local.LocalDataSource
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.Budget
+import com.aevrontech.finevo.domain.model.Category
+import com.aevrontech.finevo.domain.model.RecurringTransaction
+import com.aevrontech.finevo.domain.model.Transaction
+import com.aevrontech.finevo.domain.model.TransactionSummary
+import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.domain.repository.ExpenseRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -19,8 +24,8 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
     }
 
     override fun getTransactions(
-            startDate: LocalDate,
-            endDate: LocalDate
+        startDate: LocalDate,
+        endDate: LocalDate
     ): Flow<List<Transaction>> {
         return localDataSource.getTransactionsByDateRange(startDate, endDate)
     }
@@ -30,9 +35,9 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
     }
 
     override fun getTransactionsByAccount(
-            accountId: String,
-            startDate: LocalDate,
-            endDate: LocalDate
+        accountId: String,
+        startDate: LocalDate,
+        endDate: LocalDate
     ): Flow<List<Transaction>> {
         return localDataSource.getTransactionsByAccountAndDateRange(accountId, startDate, endDate)
     }
@@ -80,21 +85,21 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
     }
 
     override fun getTransactionSummary(
-            startDate: LocalDate,
-            endDate: LocalDate
+        startDate: LocalDate,
+        endDate: LocalDate
     ): Flow<TransactionSummary> {
         return getTransactions(startDate, endDate).map { transactions ->
             val income =
-                    transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
             val expense =
-                    transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
             TransactionSummary(
-                    totalIncome = income,
-                    totalExpense = expense,
-                    netAmount = income - expense,
-                    transactionCount = transactions.size,
-                    topCategories = emptyList() // TODO: Calculate
+                totalIncome = income,
+                totalExpense = expense,
+                netAmount = income - expense,
+                transactionCount = transactions.size,
+                topCategories = emptyList() // TODO: Calculate
             )
         }
     }
@@ -175,13 +180,13 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
     }
 
     override suspend fun addRecurringTransaction(
-            recurring: RecurringTransaction
+        recurring: RecurringTransaction
     ): Result<RecurringTransaction> {
         return Result.success(recurring)
     }
 
     override suspend fun updateRecurringTransaction(
-            recurring: RecurringTransaction
+        recurring: RecurringTransaction
     ): Result<RecurringTransaction> {
         return Result.success(recurring)
     }

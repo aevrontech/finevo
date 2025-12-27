@@ -28,28 +28,28 @@ class SplashViewModel(
         viewModelScope.launch {
             // Start animation
             _uiState.value = _uiState.value.copy(isAnimating = true)
-            
+
             // Brief delay for logo animation
             delay(500)
-            
+
             // Show tagline
             _uiState.value = _uiState.value.copy(showTagline = true)
-            
+
             // Check authentication state
             delay(1500)
-            
+
             val isLoggedIn = authRepository.isLoggedIn.first()
-            
+
             // TODO: Check if onboarding has been completed
             val hasCompletedOnboarding = false // For now, always show onboarding
-            
+
             // Determine navigation destination
             val destination = when {
                 isLoggedIn -> SplashDestination.HOME
                 hasCompletedOnboarding -> SplashDestination.LOGIN
                 else -> SplashDestination.ONBOARDING
             }
-            
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 navigateTo = destination

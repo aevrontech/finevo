@@ -12,8 +12,8 @@ import kotlinx.datetime.*
 
 /** ViewModel for Expense Tracker feature. */
 class ExpenseViewModel(
-        private val expenseRepository: ExpenseRepository,
-        private val accountRepository: AccountRepository
+    private val expenseRepository: ExpenseRepository,
+    private val accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
@@ -23,7 +23,7 @@ class ExpenseViewModel(
     private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     private val monthStart = LocalDate(today.year, today.month, 1)
     private val monthEnd =
-            LocalDate(today.year, today.month, today.month.length(today.year % 4 == 0))
+        LocalDate(today.year, today.month, today.month.length(today.year % 4 == 0))
 
     init {
         loadAccounts()
@@ -49,26 +49,25 @@ class ExpenseViewModel(
 
     private fun loadTransactionsForAccount(accountId: String) {
         viewModelScope.launch {
-            expenseRepository.getTransactionsByAccount(accountId, monthStart, monthEnd).collect {
-                    transactions ->
+            expenseRepository.getTransactionsByAccount(accountId, monthStart, monthEnd).collect { transactions ->
                 // Enrich transactions with category data
                 val enrichedTransactions = enrichWithCategoryData(transactions)
 
                 val income =
-                        enrichedTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
-                            it.amount
-                        }
+                    enrichedTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
+                        it.amount
+                    }
                 val expense =
-                        enrichedTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
-                            it.amount
-                        }
+                    enrichedTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
+                        it.amount
+                    }
 
                 _uiState.update {
                     it.copy(
-                            transactions = enrichedTransactions,
-                            isLoading = false,
-                            accountIncome = income,
-                            accountExpense = expense
+                        transactions = enrichedTransactions,
+                        isLoading = false,
+                        accountIncome = income,
+                        accountExpense = expense
                     )
                 }
             }
@@ -100,12 +99,12 @@ class ExpenseViewModel(
         return transactions.map { transaction ->
             val category = categoryMap[transaction.categoryId]
             if (category != null &&
-                            (transaction.categoryName == null || transaction.categoryIcon == null)
+                (transaction.categoryName == null || transaction.categoryIcon == null)
             ) {
                 transaction.copy(
-                        categoryName = category.name,
-                        categoryIcon = category.icon,
-                        categoryColor = category.color
+                    categoryName = category.name,
+                    categoryIcon = category.icon,
+                    categoryColor = category.color
                 )
             } else {
                 transaction
@@ -130,37 +129,37 @@ class ExpenseViewModel(
     }
 
     fun addTransaction(
-            type: TransactionType,
-            amount: Double,
-            accountId: String?,
-            categoryId: String,
-            note: String?,
-            date: kotlinx.datetime.LocalDate
+        type: TransactionType,
+        amount: Double,
+        accountId: String?,
+        categoryId: String,
+        note: String?,
+        date: LocalDate
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
             val selectedAccount = _uiState.value.accounts.find { it.id == accountId }
             val transaction =
-                    Transaction(
-                            id = generateId(),
-                            userId = "local", // Will be replaced with actual user ID
-                            accountId = accountId,
-                            type = type,
-                            amount = amount,
-                            currency = selectedAccount?.currency ?: "MYR",
-                            categoryId = categoryId,
-                            categoryName =
-                                    _uiState.value.categories.find { it.id == categoryId }?.name,
-                            categoryIcon =
-                                    _uiState.value.categories.find { it.id == categoryId }?.icon,
-                            categoryColor =
-                                    _uiState.value.categories.find { it.id == categoryId }?.color,
-                            description = note,
-                            note = note,
-                            date = date,
-                            createdAt = now,
-                            updatedAt = now
-                    )
+                Transaction(
+                    id = generateId(),
+                    userId = "local", // Will be replaced with actual user ID
+                    accountId = accountId,
+                    type = type,
+                    amount = amount,
+                    currency = selectedAccount?.currency ?: "MYR",
+                    categoryId = categoryId,
+                    categoryName =
+                        _uiState.value.categories.find { it.id == categoryId }?.name,
+                    categoryIcon =
+                        _uiState.value.categories.find { it.id == categoryId }?.icon,
+                    categoryColor =
+                        _uiState.value.categories.find { it.id == categoryId }?.color,
+                    description = note,
+                    note = note,
+                    date = date,
+                    createdAt = now,
+                    updatedAt = now
+                )
 
             when (val result = expenseRepository.addTransaction(transaction)) {
                 is Result.Success -> {
@@ -168,8 +167,8 @@ class ExpenseViewModel(
                     if (accountId != null && selectedAccount != null) {
                         val balanceChange = if (type == TransactionType.EXPENSE) -amount else amount
                         accountRepository.updateAccountBalance(
-                                accountId,
-                                selectedAccount.balance + balanceChange
+                            accountId,
+                            selectedAccount.balance + balanceChange
                         )
                     }
                     _uiState.update {
@@ -178,9 +177,11 @@ class ExpenseViewModel(
                     // Reload transactions
                     loadTransactions()
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -196,39 +197,41 @@ class ExpenseViewModel(
                     // Reverse the balance effect
                     if (transaction != null && transaction.accountId != null) {
                         val account =
-                                _uiState.value.accounts.find { it.id == transaction.accountId }
+                            _uiState.value.accounts.find { it.id == transaction.accountId }
                         if (account != null) {
                             val balanceChange =
-                                    if (transaction.type == TransactionType.EXPENSE) {
-                                        transaction.amount // Add back what was subtracted
-                                    } else {
-                                        -transaction.amount // Subtract what was added
-                                    }
+                                if (transaction.type == TransactionType.EXPENSE) {
+                                    transaction.amount // Add back what was subtracted
+                                } else {
+                                    -transaction.amount // Subtract what was added
+                                }
                             accountRepository.updateAccountBalance(
-                                    transaction.accountId!!,
-                                    account.balance + balanceChange
+                                transaction.accountId!!,
+                                account.balance + balanceChange
                             )
                         }
                     }
                     _uiState.update { it.copy(successMessage = "Transaction deleted") }
                     loadTransactions()
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
     }
 
     fun updateTransaction(
-            id: String,
-            type: TransactionType,
-            amount: Double,
-            accountId: String?,
-            categoryId: String,
-            note: String?,
-            date: kotlinx.datetime.LocalDate
+        id: String,
+        type: TransactionType,
+        amount: Double,
+        accountId: String?,
+        categoryId: String,
+        note: String?,
+        date: LocalDate
     ) {
         viewModelScope.launch {
             // Find the old transaction to calculate balance delta
@@ -237,26 +240,26 @@ class ExpenseViewModel(
             val now = Clock.System.now()
             val selectedAccount = _uiState.value.accounts.find { it.id == accountId }
             val transaction =
-                    Transaction(
-                            id = id,
-                            userId = "local",
-                            accountId = accountId,
-                            type = type,
-                            amount = amount,
-                            currency = selectedAccount?.currency ?: "MYR",
-                            categoryId = categoryId,
-                            categoryName =
-                                    _uiState.value.categories.find { it.id == categoryId }?.name,
-                            categoryIcon =
-                                    _uiState.value.categories.find { it.id == categoryId }?.icon,
-                            categoryColor =
-                                    _uiState.value.categories.find { it.id == categoryId }?.color,
-                            description = note,
-                            note = note,
-                            date = date,
-                            createdAt = oldTransaction?.createdAt ?: now,
-                            updatedAt = now
-                    )
+                Transaction(
+                    id = id,
+                    userId = "local",
+                    accountId = accountId,
+                    type = type,
+                    amount = amount,
+                    currency = selectedAccount?.currency ?: "MYR",
+                    categoryId = categoryId,
+                    categoryName =
+                        _uiState.value.categories.find { it.id == categoryId }?.name,
+                    categoryIcon =
+                        _uiState.value.categories.find { it.id == categoryId }?.icon,
+                    categoryColor =
+                        _uiState.value.categories.find { it.id == categoryId }?.color,
+                    description = note,
+                    note = note,
+                    date = date,
+                    createdAt = oldTransaction?.createdAt ?: now,
+                    updatedAt = now
+                )
 
             when (val result = expenseRepository.updateTransaction(transaction)) {
                 is Result.Success -> {
@@ -266,21 +269,21 @@ class ExpenseViewModel(
                         // Expense was subtracted from balance, so ADD it back (positive)
                         // Income was added to balance, so SUBTRACT it (negative)
                         val oldEffect =
-                                if (oldTransaction.type == TransactionType.EXPENSE) {
-                                    oldTransaction.amount // Add expense back (reverse subtraction)
-                                } else {
-                                    -oldTransaction.amount // Subtract income (reverse addition)
-                                }
+                            if (oldTransaction.type == TransactionType.EXPENSE) {
+                                oldTransaction.amount // Add expense back (reverse subtraction)
+                            } else {
+                                -oldTransaction.amount // Subtract income (reverse addition)
+                            }
 
                         // Calculate new balance effect
                         // Expense subtracts from balance (negative)
                         // Income adds to balance (positive)
                         val newEffect =
-                                if (type == TransactionType.EXPENSE) {
-                                    -amount // Expense subtracts from balance
-                                } else {
-                                    amount // Income adds to balance
-                                }
+                            if (type == TransactionType.EXPENSE) {
+                                -amount // Expense subtracts from balance
+                            } else {
+                                amount // Income adds to balance
+                            }
 
                         // Net change = reverse old + apply new
                         val netChange = oldEffect + newEffect
@@ -288,8 +291,8 @@ class ExpenseViewModel(
                         // Only update if there's actually a change
                         if (netChange != 0.0) {
                             accountRepository.updateAccountBalance(
-                                    accountId,
-                                    selectedAccount.balance + netChange
+                                accountId,
+                                selectedAccount.balance + netChange
                             )
                         }
                     }
@@ -297,9 +300,11 @@ class ExpenseViewModel(
                     _uiState.update { it.copy(successMessage = "Transaction updated!") }
                     loadTransactions()
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -323,25 +328,25 @@ class ExpenseViewModel(
 
     private fun generateId(): String {
         return Clock.System.now().toEpochMilliseconds().toString() +
-                (1000..9999).random().toString()
+            (1000..9999).random().toString()
     }
 }
 
 /** UI state for Expense screen. */
 data class ExpenseUiState(
-        val isLoading: Boolean = true,
-        val accounts: List<Account> = emptyList(),
-        val selectedAccount: Account? = null,
-        val transactions: List<Transaction> = emptyList(),
-        val categories: List<Category> = emptyList(),
-        val summary: TransactionSummary? = null,
-        val accountIncome: Double = 0.0,
-        val accountExpense: Double = 0.0,
-        val showAddDialog: Boolean = false,
-        val showAddAccountDialog: Boolean = false,
-        val selectedTransactionType: TransactionType = TransactionType.EXPENSE,
-        val error: String? = null,
-        val successMessage: String? = null
+    val isLoading: Boolean = true,
+    val accounts: List<Account> = emptyList(),
+    val selectedAccount: Account? = null,
+    val transactions: List<Transaction> = emptyList(),
+    val categories: List<Category> = emptyList(),
+    val summary: TransactionSummary? = null,
+    val accountIncome: Double = 0.0,
+    val accountExpense: Double = 0.0,
+    val showAddDialog: Boolean = false,
+    val showAddAccountDialog: Boolean = false,
+    val selectedTransactionType: TransactionType = TransactionType.EXPENSE,
+    val error: String? = null,
+    val successMessage: String? = null
 ) {
     val expenseTransactions: List<Transaction>
         get() = transactions.filter { it.type == TransactionType.EXPENSE }

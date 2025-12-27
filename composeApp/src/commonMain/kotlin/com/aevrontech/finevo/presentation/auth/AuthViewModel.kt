@@ -21,11 +21,11 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
     // Observe auth state
     val authState =
-            authRepository.currentUser.stateIn(
-                    viewModelScope,
-                    SharingStarted.WhileSubscribed(5000),
-                    null
-            )
+        authRepository.currentUser.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            null
+        )
 
     init {
         // Check if already authenticated
@@ -48,17 +48,19 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
             when (val result = authRepository.signIn(email, password)) {
                 is Result.Success -> {
                     _uiState.value =
-                            _uiState.value.copy(
-                                    isLoading = false,
-                                    isLoggedIn = true,
-                                    user = result.data,
-                                    error = null
-                            )
+                        _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = true,
+                            user = result.data,
+                            error = null
+                        )
                 }
+
                 is Result.Error -> {
                     _uiState.value =
-                            _uiState.value.copy(isLoading = false, error = result.exception.message)
+                        _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
+
                 is Result.Loading -> {
                     // Already handled
                 }
@@ -76,31 +78,33 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
             when (val result = authRepository.signUp(email, password)) {
                 is Result.Success -> {
                     _uiState.value =
-                            _uiState.value.copy(
-                                    isLoading = false,
-                                    isLoggedIn = true,
-                                    user = result.data,
-                                    error = null,
-                                    successMessage = "Account created successfully!"
-                            )
+                        _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = true,
+                            user = result.data,
+                            error = null,
+                            successMessage = "Account created successfully!"
+                        )
                 }
+
                 is Result.Error -> {
                     val message = result.exception.message
                     // Check if it's a "confirm email" case
                     if (message?.contains("confirm", ignoreCase = true) == true ||
-                                    message?.contains("verify", ignoreCase = true) == true
+                        message?.contains("verify", ignoreCase = true) == true
                     ) {
                         _uiState.value =
-                                _uiState.value.copy(
-                                        isLoading = false,
-                                        error = null,
-                                        successMessage =
-                                                "Please check your email to confirm your account"
-                                )
+                            _uiState.value.copy(
+                                isLoading = false,
+                                error = null,
+                                successMessage =
+                                    "Please check your email to confirm your account"
+                            )
                     } else {
                         _uiState.value = _uiState.value.copy(isLoading = false, error = message)
                     }
                 }
+
                 is Result.Loading -> {
                     // Already handled
                 }
@@ -116,19 +120,21 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
             when (val result = authRepository.signInWithGoogle(idToken, nonce)) {
                 is Result.Success -> {
                     _uiState.value =
-                            _uiState.value.copy(
-                                    isLoading = false,
-                                    isLoggedIn = true,
-                                    user = result.data,
-                                    error = null,
-                                    successMessage =
-                                            "Welcome, ${result.data.displayName ?: "User"}!"
-                            )
+                        _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = true,
+                            user = result.data,
+                            error = null,
+                            successMessage =
+                                "Welcome, ${result.data.displayName ?: "User"}!"
+                        )
                 }
+
                 is Result.Error -> {
                     _uiState.value =
-                            _uiState.value.copy(isLoading = false, error = result.exception.message)
+                        _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -142,19 +148,21 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
             when (val result = authRepository.signInWithApple(idToken, nonce)) {
                 is Result.Success -> {
                     _uiState.value =
-                            _uiState.value.copy(
-                                    isLoading = false,
-                                    isLoggedIn = true,
-                                    user = result.data,
-                                    error = null,
-                                    successMessage =
-                                            "Welcome, ${result.data.displayName ?: "User"}!"
-                            )
+                        _uiState.value.copy(
+                            isLoading = false,
+                            isLoggedIn = true,
+                            user = result.data,
+                            error = null,
+                            successMessage =
+                                "Welcome, ${result.data.displayName ?: "User"}!"
+                        )
                 }
+
                 is Result.Error -> {
                     _uiState.value =
-                            _uiState.value.copy(isLoading = false, error = result.exception.message)
+                        _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -183,15 +191,17 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
             when (val result = authRepository.sendPasswordResetEmail(email)) {
                 is Result.Success -> {
                     _uiState.value =
-                            _uiState.value.copy(
-                                    isLoading = false,
-                                    successMessage = "Password reset email sent"
-                            )
+                        _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Password reset email sent"
+                        )
                 }
+
                 is Result.Error -> {
                     _uiState.value =
-                            _uiState.value.copy(isLoading = false, error = result.exception.message)
+                        _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -238,9 +248,9 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
 /** UI state for authentication screens. */
 data class AuthUiState(
-        val isLoading: Boolean = false,
-        val isLoggedIn: Boolean = false,
-        val user: User? = null,
-        val error: String? = null,
-        val successMessage: String? = null
+    val isLoading: Boolean = false,
+    val isLoggedIn: Boolean = false,
+    val user: User? = null,
+    val error: String? = null,
+    val successMessage: String? = null
 )

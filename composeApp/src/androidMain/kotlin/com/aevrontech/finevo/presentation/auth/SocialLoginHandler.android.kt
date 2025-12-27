@@ -17,10 +17,10 @@ import com.google.android.gms.tasks.Task
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import java.security.MessageDigest
-import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.security.MessageDigest
+import java.util.UUID
 
 /**
  * Android implementation of SocialLoginHandler. Uses Credential Manager first, falls back to legacy
@@ -62,12 +62,12 @@ actual class SocialLoginHandler {
             } catch (e: ApiException) {
                 Log.e(TAG, "Legacy sign-in failed: ${e.statusCode}", e)
                 val message =
-                        when (e.statusCode) {
-                            12501 -> "Sign-in was cancelled"
-                            12502 -> "Sign-in failed. Please try again."
-                            10 -> "Developer error. Check your configuration."
-                            else -> "Google Sign-In failed (${e.statusCode})"
-                        }
+                    when (e.statusCode) {
+                        12501 -> "Sign-in was cancelled"
+                        12502 -> "Sign-in failed. Please try again."
+                        10 -> "Developer error. Check your configuration."
+                        else -> "Google Sign-In failed (${e.statusCode})"
+                    }
                 pendingOnError?.invoke(message)
             } finally {
                 pendingOnSuccess = null
@@ -79,11 +79,11 @@ actual class SocialLoginHandler {
     // Get Web Client ID from BuildConfig
     private val googleWebClientId: String
         get() =
-                try {
-                    com.aevrontech.finevo.BuildConfig.GOOGLE_WEB_CLIENT_ID
-                } catch (e: Exception) {
-                    ""
-                }
+            try {
+                com.aevrontech.finevo.BuildConfig.GOOGLE_WEB_CLIENT_ID
+            } catch (e: Exception) {
+                ""
+            }
 
     private var googleSignInClient: GoogleSignInClient? = null
 
@@ -95,9 +95,9 @@ actual class SocialLoginHandler {
      * token and nonce (needed for Supabase).
      */
     actual suspend fun signInWithGoogle(
-            activity: Any,
-            onSuccess: (idToken: String, nonce: String?) -> Unit,
-            onError: (message: String) -> Unit
+        activity: Any,
+        onSuccess: (idToken: String, nonce: String?) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         if (activity !is Activity) {
             onError("Invalid context. Activity required for Google Sign-In.")
@@ -125,9 +125,9 @@ actual class SocialLoginHandler {
     }
 
     private suspend fun signInWithCredentialManager(
-            activity: Activity,
-            onSuccess: (idToken: String, nonce: String?) -> Unit,
-            onError: (message: String) -> Unit
+        activity: Activity,
+        onSuccess: (idToken: String, nonce: String?) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         withContext(Dispatchers.Main) {
             val credentialManager = CredentialManager.create(activity)
@@ -145,12 +145,12 @@ actual class SocialLoginHandler {
             Log.d(TAG, "Hashed nonce: ${hashedNonce.take(20)}...")
 
             val googleIdOption =
-                    GetGoogleIdOption.Builder()
-                            .setFilterByAuthorizedAccounts(false)
-                            .setServerClientId(googleWebClientId)
-                            .setAutoSelectEnabled(false)
-                            .setNonce(hashedNonce) // Send hashed nonce to Google
-                            .build()
+                GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(googleWebClientId)
+                    .setAutoSelectEnabled(false)
+                    .setNonce(hashedNonce) // Send hashed nonce to Google
+                    .build()
 
             val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
@@ -162,17 +162,17 @@ actual class SocialLoginHandler {
     }
 
     private fun signInWithLegacy(
-            activity: Activity,
-            onSuccess: (idToken: String, nonce: String?) -> Unit,
-            onError: (message: String) -> Unit
+        activity: Activity,
+        onSuccess: (idToken: String, nonce: String?) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         Log.d(TAG, "Using legacy Google Sign-In (no nonce)...")
 
         val gso =
-                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(googleWebClientId)
-                        .requestEmail()
-                        .build()
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(googleWebClientId)
+                .requestEmail()
+                .build()
 
         googleSignInClient = GoogleSignIn.getClient(activity, gso)
 
@@ -192,10 +192,10 @@ actual class SocialLoginHandler {
     }
 
     private fun handleCredentialResult(
-            result: GetCredentialResponse,
-            rawNonce: String,
-            onSuccess: (idToken: String, nonce: String?) -> Unit,
-            onError: (message: String) -> Unit
+        result: GetCredentialResponse,
+        rawNonce: String,
+        onSuccess: (idToken: String, nonce: String?) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         Log.d(TAG, "Handling credential result...")
 
@@ -216,6 +216,7 @@ actual class SocialLoginHandler {
                     onError("Unexpected credential type: ${credential.type}")
                 }
             }
+
             else -> {
                 onError("Unexpected credential type")
             }
@@ -223,9 +224,9 @@ actual class SocialLoginHandler {
     }
 
     actual suspend fun signInWithApple(
-            activity: Any,
-            onSuccess: (idToken: String, nonce: String) -> Unit,
-            onError: (message: String) -> Unit
+        activity: Any,
+        onSuccess: (idToken: String, nonce: String) -> Unit,
+        onError: (message: String) -> Unit
     ) {
         onError("Apple Sign-In is only available on iOS devices")
     }

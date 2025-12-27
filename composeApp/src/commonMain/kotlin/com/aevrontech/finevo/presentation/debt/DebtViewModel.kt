@@ -3,11 +3,20 @@ package com.aevrontech.finevo.presentation.debt
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.core.util.Result
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.Debt
+import com.aevrontech.finevo.domain.model.DebtPayment
+import com.aevrontech.finevo.domain.model.DebtType
+import com.aevrontech.finevo.domain.model.PayoffPlan
+import com.aevrontech.finevo.domain.model.PayoffStrategy
 import com.aevrontech.finevo.domain.repository.DebtRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.*
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 
 /** ViewModel for Debt Payoff Planner feature. */
 class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
@@ -37,33 +46,33 @@ class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
     }
 
     fun addDebt(
-            name: String,
-            type: DebtType,
-            originalAmount: Double,
-            currentBalance: Double,
-            interestRate: Double,
-            minimumPayment: Double,
-            dueDay: Int
+        name: String,
+        type: DebtType,
+        originalAmount: Double,
+        currentBalance: Double,
+        interestRate: Double,
+        minimumPayment: Double,
+        dueDay: Int
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
             val debt =
-                    Debt(
-                            id = generateId(),
-                            userId = "local",
-                            name = name,
-                            type = type,
-                            originalAmount = originalAmount,
-                            currentBalance = currentBalance,
-                            interestRate = interestRate,
-                            minimumPayment = minimumPayment,
-                            dueDay = dueDay,
-                            startDate = today,
-                            createdAt = now,
-                            updatedAt = now
-                    )
+                Debt(
+                    id = generateId(),
+                    userId = "local",
+                    name = name,
+                    type = type,
+                    originalAmount = originalAmount,
+                    currentBalance = currentBalance,
+                    interestRate = interestRate,
+                    minimumPayment = minimumPayment,
+                    dueDay = dueDay,
+                    startDate = today,
+                    createdAt = now,
+                    updatedAt = now
+                )
 
             when (val result = debtRepository.addDebt(debt)) {
                 is Result.Success -> {
@@ -71,9 +80,11 @@ class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
                         it.copy(successMessage = "Debt added!", showAddDialog = false)
                     }
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -89,24 +100,26 @@ class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
             val principalAmount = amount - interestAmount
 
             val payment =
-                    DebtPayment(
-                            id = generateId(),
-                            debtId = debtId,
-                            amount = amount,
-                            principalAmount = principalAmount,
-                            interestAmount = interestAmount,
-                            date = today,
-                            isExtraPayment = isExtraPayment,
-                            createdAt = now
-                    )
+                DebtPayment(
+                    id = generateId(),
+                    debtId = debtId,
+                    amount = amount,
+                    principalAmount = principalAmount,
+                    interestAmount = interestAmount,
+                    date = today,
+                    isExtraPayment = isExtraPayment,
+                    createdAt = now
+                )
 
             when (val result = debtRepository.addPayment(payment)) {
                 is Result.Success -> {
                     _uiState.update { it.copy(successMessage = "Payment recorded!") }
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -118,9 +131,11 @@ class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
                 is Result.Success -> {
                     _uiState.update { it.copy(successMessage = "Debt deleted") }
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -140,9 +155,11 @@ class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
                 is Result.Success -> {
                     _uiState.update { it.copy(payoffPlan = result.data) }
                 }
+
                 is Result.Error -> {
                     // Ignore for now
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -166,21 +183,21 @@ class DebtViewModel(private val debtRepository: DebtRepository) : ViewModel() {
 
     private fun generateId(): String {
         return Clock.System.now().toEpochMilliseconds().toString() +
-                (1000..9999).random().toString()
+            (1000..9999).random().toString()
     }
 }
 
 /** UI state for Debt screen. */
 data class DebtUiState(
-        val isLoading: Boolean = true,
-        val debts: List<Debt> = emptyList(),
-        val totalDebt: Double = 0.0,
-        val payoffPlan: PayoffPlan? = null,
-        val selectedStrategy: PayoffStrategy = PayoffStrategy.AVALANCHE,
-        val extraMonthlyPayment: Double = 0.0,
-        val showAddDialog: Boolean = false,
-        val error: String? = null,
-        val successMessage: String? = null
+    val isLoading: Boolean = true,
+    val debts: List<Debt> = emptyList(),
+    val totalDebt: Double = 0.0,
+    val payoffPlan: PayoffPlan? = null,
+    val selectedStrategy: PayoffStrategy = PayoffStrategy.AVALANCHE,
+    val extraMonthlyPayment: Double = 0.0,
+    val showAddDialog: Boolean = false,
+    val error: String? = null,
+    val successMessage: String? = null
 ) {
     val debtCount: Int
         get() = debts.size

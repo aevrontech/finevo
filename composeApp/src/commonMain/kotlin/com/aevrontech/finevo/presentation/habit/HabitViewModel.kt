@@ -3,11 +3,18 @@ package com.aevrontech.finevo.presentation.habit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.core.util.Result
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.DailyHabitSummary
+import com.aevrontech.finevo.domain.model.Habit
+import com.aevrontech.finevo.domain.model.HabitFrequency
 import com.aevrontech.finevo.domain.repository.HabitRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.*
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 
 /** ViewModel for Habit Tracker feature. */
 class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel() {
@@ -46,6 +53,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
                 is Result.Success -> {
                     _uiState.update { it.copy(dailySummary = result.data) }
                 }
+
                 else -> {}
             }
         }
@@ -61,9 +69,11 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
                     is Result.Success -> {
                         // UI will update via flow
                     }
+
                     is Result.Error -> {
                         _uiState.update { it.copy(error = result.exception.message) }
                     }
+
                     is Result.Loading -> {}
                 }
             } else {
@@ -75,9 +85,11 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
                             it.copy(successMessage = "+${habit?.xpReward ?: 10} XP! 🎉")
                         }
                     }
+
                     is Result.Error -> {
                         _uiState.update { it.copy(error = result.exception.message) }
                     }
+
                     is Result.Loading -> {}
                 }
             }
@@ -88,27 +100,27 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
     }
 
     fun addHabit(
-            name: String,
-            icon: String,
-            color: String,
-            frequency: HabitFrequency = HabitFrequency.DAILY,
-            xpReward: Int = 10
+        name: String,
+        icon: String,
+        color: String,
+        frequency: HabitFrequency = HabitFrequency.DAILY,
+        xpReward: Int = 10
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
 
             val habit =
-                    Habit(
-                            id = generateId(),
-                            userId = "local",
-                            name = name,
-                            icon = icon,
-                            color = color,
-                            frequency = frequency,
-                            xpReward = xpReward,
-                            createdAt = now,
-                            updatedAt = now
-                    )
+                Habit(
+                    id = generateId(),
+                    userId = "local",
+                    name = name,
+                    icon = icon,
+                    color = color,
+                    frequency = frequency,
+                    xpReward = xpReward,
+                    createdAt = now,
+                    updatedAt = now
+                )
 
             when (val result = habitRepository.addHabit(habit)) {
                 is Result.Success -> {
@@ -116,9 +128,11 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
                         it.copy(successMessage = "Habit created!", showAddDialog = false)
                     }
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -130,9 +144,11 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
                 is Result.Success -> {
                     _uiState.update { it.copy(successMessage = "Habit deleted") }
                 }
+
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
+
                 is Result.Loading -> {}
             }
         }
@@ -156,19 +172,19 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
     private fun generateId(): String {
         return Clock.System.now().toEpochMilliseconds().toString() +
-                (1000..9999).random().toString()
+            (1000..9999).random().toString()
     }
 }
 
 /** UI state for Habit screen. */
 data class HabitUiState(
-        val isLoading: Boolean = true,
-        val habits: List<Habit> = emptyList(),
-        val completedHabitIds: Set<String> = emptySet(),
-        val dailySummary: DailyHabitSummary? = null,
-        val showAddDialog: Boolean = false,
-        val error: String? = null,
-        val successMessage: String? = null
+    val isLoading: Boolean = true,
+    val habits: List<Habit> = emptyList(),
+    val completedHabitIds: Set<String> = emptySet(),
+    val dailySummary: DailyHabitSummary? = null,
+    val showAddDialog: Boolean = false,
+    val error: String? = null,
+    val successMessage: String? = null
 ) {
     val completedCount: Int
         get() = completedHabitIds.size

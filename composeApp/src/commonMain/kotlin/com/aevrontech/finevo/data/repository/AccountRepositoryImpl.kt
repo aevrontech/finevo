@@ -4,11 +4,11 @@ import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.AccountType
 import com.aevrontech.finevo.domain.repository.AccountRepository
-import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlin.random.Random
 
 /** Implementation of AccountRepository using SQLDelight. */
 class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : AccountRepository {
@@ -34,33 +34,33 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
     }
 
     override suspend fun createAccount(
-            userId: String,
-            name: String,
-            initialBalance: Double,
-            currency: String,
-            type: AccountType,
-            color: String,
-            icon: String,
-            isDefault: Boolean
+        userId: String,
+        name: String,
+        initialBalance: Double,
+        currency: String,
+        type: AccountType,
+        color: String,
+        icon: String,
+        isDefault: Boolean
     ): Account {
         val now = Clock.System.now()
         val account =
-                Account(
-                        id = generateId(),
-                        userId = userId,
-                        name = name,
-                        balance = initialBalance,
-                        currency = currency,
-                        type = type,
-                        color = color,
-                        icon = icon,
-                        isDefault = isDefault,
-                        isActive = true,
-                        isExcludedFromTotal = false,
-                        sortOrder = 0,
-                        createdAt = now,
-                        updatedAt = now
-                )
+            Account(
+                id = generateId(),
+                userId = userId,
+                name = name,
+                balance = initialBalance,
+                currency = currency,
+                type = type,
+                color = color,
+                icon = icon,
+                isDefault = isDefault,
+                isActive = true,
+                isExcludedFromTotal = false,
+                sortOrder = 0,
+                createdAt = now,
+                updatedAt = now
+            )
 
         localDataSource.insertAccount(account.toEntity())
         return account
@@ -73,9 +73,9 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
 
     override suspend fun updateAccountBalance(accountId: String, newBalance: Double) {
         localDataSource.updateAccountBalance(
-                accountId,
-                newBalance,
-                Clock.System.now().toEpochMilliseconds()
+            accountId,
+            newBalance,
+            Clock.System.now().toEpochMilliseconds()
         )
     }
 
@@ -89,10 +89,10 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
         accounts.forEach { account ->
             if (account.is_default == 1L && account.id != accountId) {
                 localDataSource.insertAccount(
-                        account.copy(
-                                is_default = 0,
-                                updated_at = Clock.System.now().toEpochMilliseconds()
-                        )
+                    account.copy(
+                        is_default = 0,
+                        updated_at = Clock.System.now().toEpochMilliseconds()
+                    )
                 )
             }
         }
@@ -101,10 +101,10 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
         val targetAccount = localDataSource.getAccountById(accountId)
         if (targetAccount != null) {
             localDataSource.insertAccount(
-                    targetAccount.copy(
-                            is_default = 1,
-                            updated_at = Clock.System.now().toEpochMilliseconds()
-                    )
+                targetAccount.copy(
+                    is_default = 1,
+                    updated_at = Clock.System.now().toEpochMilliseconds()
+                )
             )
         }
     }
@@ -124,23 +124,23 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
     override suspend fun getTotalAssets(userId: String): Double {
         val accounts = localDataSource.getActiveAccountsSync(userId)
         return accounts
-                .filter { it.is_excluded_from_total == 0L }
-                .filter {
-                    AccountType.fromString(it.type) !in
-                            listOf(AccountType.CREDIT_CARD, AccountType.LOAN, AccountType.MORTGAGE)
-                }
-                .sumOf { it.balance }
+            .filter { it.is_excluded_from_total == 0L }
+            .filter {
+                AccountType.fromString(it.type) !in
+                    listOf(AccountType.CREDIT_CARD, AccountType.LOAN, AccountType.MORTGAGE)
+            }
+            .sumOf { it.balance }
     }
 
     override suspend fun getTotalLiabilities(userId: String): Double {
         val accounts = localDataSource.getActiveAccountsSync(userId)
         return accounts
-                .filter { it.is_excluded_from_total == 0L }
-                .filter {
-                    AccountType.fromString(it.type) in
-                            listOf(AccountType.CREDIT_CARD, AccountType.LOAN, AccountType.MORTGAGE)
-                }
-                .sumOf { it.balance }
+            .filter { it.is_excluded_from_total == 0L }
+            .filter {
+                AccountType.fromString(it.type) in
+                    listOf(AccountType.CREDIT_CARD, AccountType.LOAN, AccountType.MORTGAGE)
+            }
+            .sumOf { it.balance }
     }
 
     override suspend fun getNetWorth(userId: String): Double {
@@ -150,39 +150,39 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
     // Extension functions for mapping
     private fun com.aevrontech.finevo.data.local.Accounts.toDomainModel(): Account {
         return Account(
-                id = id,
-                userId = user_id,
-                name = name,
-                balance = balance,
-                currency = currency,
-                type = AccountType.fromString(type),
-                color = color,
-                icon = icon,
-                isDefault = is_default == 1L,
-                isActive = is_active == 1L,
-                isExcludedFromTotal = is_excluded_from_total == 1L,
-                sortOrder = sort_order.toInt(),
-                createdAt = Instant.fromEpochMilliseconds(created_at),
-                updatedAt = Instant.fromEpochMilliseconds(updated_at)
+            id = id,
+            userId = user_id,
+            name = name,
+            balance = balance,
+            currency = currency,
+            type = AccountType.fromString(type),
+            color = color,
+            icon = icon,
+            isDefault = is_default == 1L,
+            isActive = is_active == 1L,
+            isExcludedFromTotal = is_excluded_from_total == 1L,
+            sortOrder = sort_order.toInt(),
+            createdAt = Instant.fromEpochMilliseconds(created_at),
+            updatedAt = Instant.fromEpochMilliseconds(updated_at)
         )
     }
 
     private fun Account.toEntity(): com.aevrontech.finevo.data.local.Accounts {
         return com.aevrontech.finevo.data.local.Accounts(
-                id = id,
-                user_id = userId,
-                name = name,
-                balance = balance,
-                currency = currency,
-                type = type.name,
-                color = color,
-                icon = icon,
-                is_default = if (isDefault) 1L else 0L,
-                is_active = if (isActive) 1L else 0L,
-                is_excluded_from_total = if (isExcludedFromTotal) 1L else 0L,
-                sort_order = sortOrder.toLong(),
-                created_at = createdAt.toEpochMilliseconds(),
-                updated_at = updatedAt.toEpochMilliseconds()
+            id = id,
+            user_id = userId,
+            name = name,
+            balance = balance,
+            currency = currency,
+            type = type.name,
+            color = color,
+            icon = icon,
+            is_default = if (isDefault) 1L else 0L,
+            is_active = if (isActive) 1L else 0L,
+            is_excluded_from_total = if (isExcludedFromTotal) 1L else 0L,
+            sort_order = sortOrder.toLong(),
+            created_at = createdAt.toEpochMilliseconds(),
+            updated_at = updatedAt.toEpochMilliseconds()
         )
     }
 

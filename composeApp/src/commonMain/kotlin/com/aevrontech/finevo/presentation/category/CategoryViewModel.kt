@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.domain.model.Category
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.domain.repository.CategoryRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
@@ -27,9 +30,9 @@ class CategoryViewModel(private val categoryRepository: CategoryRepository) : Vi
 
                 _uiState.update {
                     it.copy(
-                            expenseCategories = expenseCategories,
-                            incomeCategories = incomeCategories,
-                            isLoading = false
+                        expenseCategories = expenseCategories,
+                        incomeCategories = incomeCategories,
+                        isLoading = false
                     )
                 }
             }
@@ -55,19 +58,19 @@ class CategoryViewModel(private val categoryRepository: CategoryRepository) : Vi
     fun addCategory(name: String, icon: String, color: String, type: TransactionType) {
         viewModelScope.launch {
             val newCategory =
-                    Category(
-                            id = "cat_${Clock.System.now().toEpochMilliseconds()}",
-                            userId = "local_user", // User-created categories have userId
-                            name = name,
-                            icon = icon,
-                            color = color,
-                            type = type,
-                            isDefault = false,
-                            order =
-                                    if (type == TransactionType.EXPENSE)
-                                            _uiState.value.expenseCategories.size
-                                    else _uiState.value.incomeCategories.size
-                    )
+                Category(
+                    id = "cat_${Clock.System.now().toEpochMilliseconds()}",
+                    userId = "local_user", // User-created categories have userId
+                    name = name,
+                    icon = icon,
+                    color = color,
+                    type = type,
+                    isDefault = false,
+                    order =
+                        if (type == TransactionType.EXPENSE)
+                            _uiState.value.expenseCategories.size
+                        else _uiState.value.incomeCategories.size
+                )
             categoryRepository.insertCategory(newCategory)
             hideDialog()
         }
@@ -95,11 +98,11 @@ class CategoryViewModel(private val categoryRepository: CategoryRepository) : Vi
             val isDeletable = categoryRepository.isDeletable(category.id)
             _uiState.update {
                 it.copy(
-                        showDeleteConfirmation = true,
-                        categoryToDelete = category,
-                        deleteError =
-                                if (!isDeletable) "System default categories cannot be deleted"
-                                else null
+                    showDeleteConfirmation = true,
+                    categoryToDelete = category,
+                    deleteError =
+                        if (!isDeletable) "System default categories cannot be deleted"
+                        else null
                 )
             }
         }
@@ -114,13 +117,13 @@ class CategoryViewModel(private val categoryRepository: CategoryRepository) : Vi
 
 /** UI State for Category Management screen. */
 data class CategoryUiState(
-        val expenseCategories: List<Category> = emptyList(),
-        val incomeCategories: List<Category> = emptyList(),
-        val selectedTab: TransactionType = TransactionType.EXPENSE,
-        val isLoading: Boolean = true,
-        val showAddEditDialog: Boolean = false,
-        val editingCategory: Category? = null,
-        val showDeleteConfirmation: Boolean = false,
-        val categoryToDelete: Category? = null,
-        val deleteError: String? = null
+    val expenseCategories: List<Category> = emptyList(),
+    val incomeCategories: List<Category> = emptyList(),
+    val selectedTab: TransactionType = TransactionType.EXPENSE,
+    val isLoading: Boolean = true,
+    val showAddEditDialog: Boolean = false,
+    val editingCategory: Category? = null,
+    val showDeleteConfirmation: Boolean = false,
+    val categoryToDelete: Category? = null,
+    val deleteError: String? = null
 )

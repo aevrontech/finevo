@@ -24,20 +24,20 @@ enum class AccountType(val icon: String, val displayName: String) {
 
 /** Account data class representing a financial account. */
 data class Account(
-        val id: String,
-        val userId: String,
-        val name: String,
-        val balance: Double,
-        val currency: String,
-        val type: AccountType,
-        val color: String,
-        val icon: String,
-        val isDefault: Boolean = false,
-        val isActive: Boolean = true,
-        val isExcludedFromTotal: Boolean = false,
-        val sortOrder: Int = 0,
-        val createdAt: Instant,
-        val updatedAt: Instant
+    val id: String,
+    val userId: String,
+    val name: String,
+    val balance: Double,
+    val currency: String,
+    val type: AccountType,
+    val color: String,
+    val icon: String,
+    val isDefault: Boolean = false,
+    val isActive: Boolean = true,
+    val isExcludedFromTotal: Boolean = false,
+    val sortOrder: Int = 0,
+    val createdAt: Instant,
+    val updatedAt: Instant
 ) {
     /** Get formatted balance with currency symbol. */
     fun formattedBalance(): String {
@@ -72,15 +72,15 @@ data class Account(
 
         /** Default colors for account creation. */
         val defaultColors =
-                listOf(
-                        "#00D9FF", // Cyan
-                        "#7C4DFF", // Purple
-                        "#00E5A0", // Green
-                        "#FF6B6B", // Red
-                        "#FFD93D", // Yellow
-                        "#FF8C00", // Orange
-                        "#4ECDC4", // Teal
-                        "#A855F7" // Violet
-                )
+            listOf(
+                "#00D9FF", // Cyan
+                "#7C4DFF", // Purple
+                "#00E5A0", // Green
+                "#FF6B6B", // Red
+                "#FFD93D", // Yellow
+                "#FF8C00", // Orange
+                "#4ECDC4", // Teal
+                "#A855F7" // Violet
+            )
     }
 }

@@ -1,12 +1,15 @@
 package com.aevrontech.finevo.presentation.expense
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -14,7 +17,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aevrontech.finevo.ui.theme.*
+import com.aevrontech.finevo.ui.theme.Error
+import com.aevrontech.finevo.ui.theme.OnPrimary
+import com.aevrontech.finevo.ui.theme.OnSurface
+import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
+import com.aevrontech.finevo.ui.theme.Primary
+import com.aevrontech.finevo.ui.theme.Secondary
+import com.aevrontech.finevo.ui.theme.SurfaceContainer
 
 /**
  * Professional calculator keypad for entering transaction amounts. Supports basic arithmetic
@@ -22,18 +31,18 @@ import com.aevrontech.finevo.ui.theme.*
  */
 @Composable
 fun CalculatorKeypad(
-        expression: String,
-        onExpressionChange: (String) -> Unit,
-        onEquals: () -> Unit,
-        modifier: Modifier = Modifier
+    expression: String,
+    onExpressionChange: (String) -> Unit,
+    onEquals: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Row 1: 7 8 9 ÷
         Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             NumberButton("7", Modifier.weight(1f)) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -55,8 +64,8 @@ fun CalculatorKeypad(
 
         // Row 2: 4 5 6 ×
         Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             NumberButton("4", Modifier.weight(1f)) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -78,8 +87,8 @@ fun CalculatorKeypad(
 
         // Row 3: 1 2 3 −
         Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             NumberButton("1", Modifier.weight(1f)) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -101,8 +110,8 @@ fun CalculatorKeypad(
 
         // Row 4: . 0 ⌫ +
         Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             NumberButton(".", Modifier.weight(1f)) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -110,9 +119,9 @@ fun CalculatorKeypad(
                 val lastNumber = expression.split(Regex("[÷×−+]")).lastOrNull() ?: ""
                 if (!lastNumber.contains(".")) {
                     onExpressionChange(
-                            if (expression.isEmpty() || expression.last() in "÷×−+")
-                                    expression + "0."
-                            else expression + "."
+                        if (expression.isEmpty() || expression.last() in "÷×−+")
+                            expression + "0."
+                        else expression + "."
                     )
                 }
             }
@@ -134,8 +143,8 @@ fun CalculatorKeypad(
 
         // Row 5: Clear and Equals
         Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ClearButton(Modifier.weight(1f)) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -152,10 +161,10 @@ fun CalculatorKeypad(
 @Composable
 private fun NumberButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(12.dp),
-            color = SurfaceContainer,
-            modifier = modifier.height(56.dp)
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainer,
+        modifier = modifier.height(56.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = OnSurface)
@@ -166,10 +175,10 @@ private fun NumberButton(text: String, modifier: Modifier = Modifier, onClick: (
 @Composable
 private fun OperatorButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(12.dp),
-            color = Secondary.copy(alpha = 0.2f),
-            modifier = modifier.height(56.dp)
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = Secondary.copy(alpha = 0.2f),
+        modifier = modifier.height(56.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Secondary)
@@ -180,10 +189,10 @@ private fun OperatorButton(text: String, modifier: Modifier = Modifier, onClick:
 @Composable
 private fun BackspaceButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(12.dp),
-            color = Error.copy(alpha = 0.15f),
-            modifier = modifier.height(56.dp)
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = Error.copy(alpha = 0.15f),
+        modifier = modifier.height(56.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text = "⌫", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Error)
@@ -194,17 +203,17 @@ private fun BackspaceButton(modifier: Modifier = Modifier, onClick: () -> Unit) 
 @Composable
 private fun ClearButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(12.dp),
-            color = OnSurfaceVariant.copy(alpha = 0.15f),
-            modifier = modifier.height(56.dp)
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = OnSurfaceVariant.copy(alpha = 0.15f),
+        modifier = modifier.height(56.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
-                    text = "C",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = OnSurfaceVariant
+                text = "C",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = OnSurfaceVariant
             )
         }
     }
@@ -213,10 +222,10 @@ private fun ClearButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
 @Composable
 private fun EqualsButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(12.dp),
-            color = Primary,
-            modifier = modifier.height(56.dp)
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = Primary,
+        modifier = modifier.height(56.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text = "=", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = OnPrimary)

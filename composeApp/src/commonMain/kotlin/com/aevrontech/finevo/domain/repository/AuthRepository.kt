@@ -32,10 +32,10 @@ interface AuthRepository {
 
     /** Update user profile */
     suspend fun updateProfile(
-            displayName: String? = null,
-            avatarUrl: String? = null,
-            country: String? = null,
-            currency: String? = null
+        displayName: String? = null,
+        avatarUrl: String? = null,
+        country: String? = null,
+        currency: String? = null
     ): Result<User>
 
     /** Delete user account */

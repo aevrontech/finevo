@@ -6,16 +6,32 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.aevrontech.finevo.presentation.auth.SocialLoginHandler
+import com.aevrontech.finevo.ui.theme.ThemeManager
+import com.aevrontech.finevo.ui.theme.initThemePreferences
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize theme preferences with context
+        initThemePreferences(this)
+
+        // Set up theme change callback to recreate activity
+        ThemeManager.onThemeChanged = { recreate() }
+
         // Enable edge-to-edge display
         enableEdgeToEdge()
 
         setContent { App() }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clear callback to avoid memory leak
+        if (isFinishing) {
+            ThemeManager.onThemeChanged = null
+        }
     }
 
     @Deprecated("Deprecated in Java")

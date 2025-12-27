@@ -3,7 +3,13 @@ package com.aevrontech.finevo.data.repository
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
 import com.aevrontech.finevo.data.local.LocalDataSource
-import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.domain.model.Achievement
+import com.aevrontech.finevo.domain.model.DailyHabitSummary
+import com.aevrontech.finevo.domain.model.Habit
+import com.aevrontech.finevo.domain.model.HabitCategory
+import com.aevrontech.finevo.domain.model.HabitLog
+import com.aevrontech.finevo.domain.model.UserStats
+import com.aevrontech.finevo.domain.model.WeeklyHabitAnalytics
 import com.aevrontech.finevo.domain.repository.HabitRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -11,8 +17,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
 
 /**
  * HabitRepository implementation using SQLDelight for local storage.
@@ -40,7 +44,7 @@ class HabitRepositoryImpl(
             val habit = localDataSource.getHabits()
                 .first()
                 .find { it.id == id }
-            
+
             if (habit != null) Result.success(habit)
             else Result.error(AppException.NotFound("Habit"))
         } catch (e: Exception) {
@@ -80,7 +84,7 @@ class HabitRepositoryImpl(
         return try {
             val habit = localDataSource.getHabits().first().find { it.id == id }
                 ?: return Result.error(AppException.NotFound("Habit"))
-            
+
             val archived = habit.copy(isArchived = true, updatedAt = Clock.System.now())
             localDataSource.insertHabit(archived)
             Result.success(archived)
@@ -116,10 +120,10 @@ class HabitRepositoryImpl(
                 createdAt = Clock.System.now()
             )
             localDataSource.insertHabitLog(log)
-            
+
             // Update streak
             updateStreakForHabit(habitId)
-            
+
             Result.success(log)
         } catch (e: Exception) {
             Result.error(AppException.DatabaseError(e.message ?: "Failed to complete habit"))
@@ -195,29 +199,33 @@ class HabitRepositoryImpl(
             val logs = localDataSource.getHabitLogsForDate(date).first()
             val habits = localDataSource.getActiveHabits().first()
             val completed = logs.count { !it.skipped }
-            
-            Result.success(DailyHabitSummary(
-                date = date,
-                habitsCompleted = completed,
-                habitsTotal = habits.size,
-                xpEarned = completed * 10,
-                isPerfectDay = completed == habits.size && habits.isNotEmpty()
-            ))
+
+            Result.success(
+                DailyHabitSummary(
+                    date = date,
+                    habitsCompleted = completed,
+                    habitsTotal = habits.size,
+                    xpEarned = completed * 10,
+                    isPerfectDay = completed == habits.size && habits.isNotEmpty()
+                )
+            )
         } catch (e: Exception) {
             Result.error(AppException.DatabaseError(e.message ?: "Unknown error"))
         }
     }
 
     override suspend fun getWeeklyAnalytics(weekStartDate: LocalDate): Result<WeeklyHabitAnalytics> {
-        return Result.success(WeeklyHabitAnalytics(
-            weekStartDate = weekStartDate,
-            dailySummaries = emptyList(),
-            totalXpEarned = 0,
-            perfectDays = 0,
-            averageCompletionRate = 0.0,
-            bestHabit = null,
-            needsImprovementHabit = null
-        ))
+        return Result.success(
+            WeeklyHabitAnalytics(
+                weekStartDate = weekStartDate,
+                dailySummaries = emptyList(),
+                totalXpEarned = 0,
+                perfectDays = 0,
+                averageCompletionRate = 0.0,
+                bestHabit = null,
+                needsImprovementHabit = null
+            )
+        )
     }
 
     override fun getStreakCalendar(habitId: String, month: LocalDate): Flow<Map<LocalDate, Boolean>> {
@@ -241,7 +249,7 @@ class HabitRepositoryImpl(
             val habit = localDataSource.getHabits().first().find { it.id == habitId } ?: return
             val newStreak = habit.currentStreak + 1
             val bestStreak = maxOf(habit.bestStreak, newStreak)
-            
+
             localDataSource.updateHabitStreak(
                 habitId = habitId,
                 currentStreak = newStreak,

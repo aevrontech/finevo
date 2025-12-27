@@ -13,23 +13,23 @@ class FinEvoApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        
+
         // Initialize Koin
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@FinEvoApplication)
             modules(platformModule(), appModule)
         }
-        
+
         // Initialize Supabase
         initializeSupabase()
     }
-    
+
     private fun initializeSupabase() {
         try {
             val supabaseUrl = BuildConfig.SUPABASE_URL
             val supabaseKey = BuildConfig.SUPABASE_ANON_KEY
-            
+
             if (supabaseUrl.isNotEmpty() && supabaseKey.isNotEmpty()) {
                 SupabaseConfig.initialize(supabaseUrl, supabaseKey)
             }

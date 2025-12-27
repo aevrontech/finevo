@@ -13,20 +13,20 @@ import kotlinx.coroutines.flow.map
 class AuthRepositoryImpl(private val authService: AuthService) : AuthRepository {
 
     override val currentUser: Flow<User?> =
-            authService.observeAuthState().map { state ->
-                when (state) {
-                    is AuthState.Authenticated -> state.user
-                    else -> null
-                }
+        authService.observeAuthState().map { state ->
+            when (state) {
+                is AuthState.Authenticated -> state.user
+                else -> null
             }
+        }
 
     override val isLoggedIn: Flow<Boolean> =
-            authService.observeAuthState().map { state -> state is AuthState.Authenticated }
+        authService.observeAuthState().map { state -> state is AuthState.Authenticated }
 
     override suspend fun signUp(
-            email: String,
-            password: String,
-            displayName: String?
+        email: String,
+        password: String,
+        displayName: String?
     ): Result<User> {
         return authService.signUpWithEmail(email, password)
     }
@@ -52,10 +52,10 @@ class AuthRepositoryImpl(private val authService: AuthService) : AuthRepository 
     }
 
     override suspend fun updateProfile(
-            displayName: String?,
-            avatarUrl: String?,
-            country: String?,
-            currency: String?
+        displayName: String?,
+        avatarUrl: String?,
+        country: String?,
+        currency: String?
     ): Result<User> {
         // TODO: Implement profile update in AuthService
         return Result.error(AppException.Unknown("Profile update not yet implemented"))

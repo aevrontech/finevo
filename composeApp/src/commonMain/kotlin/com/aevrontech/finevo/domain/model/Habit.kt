@@ -125,16 +125,16 @@ data class Achievement(
 sealed class AchievementRequirement {
     @Serializable
     data class StreakDays(val days: Int) : AchievementRequirement()
-    
+
     @Serializable
     data class TotalCompletions(val count: Int) : AchievementRequirement()
-    
+
     @Serializable
     data class PerfectDays(val count: Int) : AchievementRequirement()
-    
+
     @Serializable
     data class LevelReached(val level: Int) : AchievementRequirement()
-    
+
     @Serializable
     data class HabitsCreated(val count: Int) : AchievementRequirement()
 }
@@ -149,8 +149,9 @@ data class DailyHabitSummary(
     val xpEarned: Int,
     val isPerfectDay: Boolean
 ) {
-    val completionRate: Double get() = 
-        if (habitsTotal > 0) habitsCompleted.toDouble() / habitsTotal else 0.0
+    val completionRate: Double
+        get() =
+            if (habitsTotal > 0) habitsCompleted.toDouble() / habitsTotal else 0.0
 }
 
 /**
