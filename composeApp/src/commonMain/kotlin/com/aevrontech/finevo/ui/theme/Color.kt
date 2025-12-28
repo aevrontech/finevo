@@ -54,7 +54,7 @@ val OnTertiaryContainer = Color(0xFFFFDAE4)
 
 // Deep Space - Background colors
 val Background = Color(0xFF0A0E1A)
-val BackgroundLight = Color(0xFF121829)
+val BackgroundLight = Color(0xFFF8F9FD)
 val BackgroundElevated = Color(0xFF1A2038)
 val Surface = Color(0xFF121829)
 val SurfaceVariant = Color(0xFF1A2038)
@@ -125,6 +125,12 @@ val HabitStreak = Color(0xFFFFB74D)
 val HabitComplete = Color(0xFF00E676)
 val HabitMissed = Color(0xFFFF5252)
 val HabitSkipped = Color(0xFFA8ACBF)
+
+// Habit Progress Card Gradient (Blue - matching reference design)
+val HabitGradientStart = Color(0xFF5DADE2) // Light blue
+val HabitGradientEnd = Color(0xFF3498DB) // Medium blue
+val HabitProgressTrack = Color(0xFFD6EAF8) // Light blue track
+val HabitProgressFill = Color(0xFFFFFFFF) // White progress
 
 // ============================================
 // GRADIENT COLORS

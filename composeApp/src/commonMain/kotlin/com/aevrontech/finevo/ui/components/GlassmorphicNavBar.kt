@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aevrontech.finevo.ui.theme.GlassShadow
 import com.aevrontech.finevo.ui.theme.NavBarInactiveIcon
-import com.aevrontech.finevo.ui.theme.Primary
 
 /**
  * Glassmorphic Floating Bottom Navigation Bar
@@ -51,170 +50,178 @@ import com.aevrontech.finevo.ui.theme.Primary
  */
 @Composable
 fun GlassmorphicNavBar(
-    items: List<NavBarItem>,
-    selectedIndex: Int,
-    onItemSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
+        items: List<NavBarItem>,
+        selectedIndex: Int,
+        onItemSelected: (Int) -> Unit,
+        modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
-        // Main glass container
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(80.dp) // Increased height for label
-                    .shadow(
-                        elevation = 20.dp,
-                        shape = RoundedCornerShape(40.dp),
-                        ambientColor = GlassShadow,
-                        spotColor = GlassShadow
-                    )
-                    .clip(RoundedCornerShape(40.dp))
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        Color.White.copy(
-                                            alpha =
-                                                0.25f
-                                        ),
-                                        Color.White.copy(
-                                            alpha =
-                                                0.15f
+        Box(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                // Main glass container
+                Box(
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .height(66.dp) // Reduced height from 80dp
+                                        .shadow(
+                                                elevation = 20.dp,
+                                                shape = RoundedCornerShape(33.dp),
+                                                ambientColor = GlassShadow,
+                                                spotColor = GlassShadow
                                         )
-                                    )
-                            )
-                    )
-                    // Glass border effect
-                    .background(
-                        brush =
-                            Brush.linearGradient(
-                                colors =
-                                    listOf(
-                                        Color.White.copy(
-                                            alpha = 0.3f
-                                        ),
-                                        Color.White.copy(
-                                            alpha = 0.1f
+                                        .clip(RoundedCornerShape(33.dp))
+                                        .background(
+                                                brush =
+                                                        Brush.verticalGradient(
+                                                                colors =
+                                                                        listOf(
+                                                                                Color.White.copy(
+                                                                                        alpha =
+                                                                                                0.25f
+                                                                                ),
+                                                                                Color.White.copy(
+                                                                                        alpha =
+                                                                                                0.15f
+                                                                                )
+                                                                        )
+                                                        )
                                         )
-                                    )
-                            ),
-                        shape = RoundedCornerShape(40.dp)
-                    )
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items.forEachIndexed { index, item ->
-                    GlassNavItem(
-                        item = item,
-                        isSelected = index == selectedIndex,
-                        onClick = { onItemSelected(index) }
-                    )
+                                        // Glass border effect
+                                        .background(
+                                                brush =
+                                                        Brush.linearGradient(
+                                                                colors =
+                                                                        listOf(
+                                                                                Color.White.copy(
+                                                                                        alpha = 0.3f
+                                                                                ),
+                                                                                Color.White.copy(
+                                                                                        alpha = 0.1f
+                                                                                )
+                                                                        )
+                                                        ),
+                                                shape = RoundedCornerShape(33.dp)
+                                        )
+                ) {
+                        Row(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                items.forEachIndexed { index, item ->
+                                        GlassNavItem(
+                                                item = item,
+                                                isSelected = index == selectedIndex,
+                                                onClick = { onItemSelected(index) }
+                                        )
+                                }
+                        }
                 }
-            }
         }
-    }
 }
 
 @Composable
 private fun GlassNavItem(item: NavBarItem, isSelected: Boolean, onClick: () -> Unit) {
-    val scale by
-    animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1f,
-        animationSpec =
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            ),
-        label = "scale"
-    )
-
-    val iconAlpha by
-    animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0.6f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "alpha"
-    )
-
-    Column(
-        modifier =
-            Modifier.clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
-                .width(64.dp)
-                .padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Icon with Bubble - fixed size container for centering
-        Box(
-            modifier =
-                Modifier.size(48.dp).graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            // Bubble background (only visible when selected)
-            if (isSelected) {
-                Box(
-                    modifier =
-                        Modifier.size(48.dp)
-                            .shadow(
-                                elevation = 12.dp,
-                                shape = CircleShape,
-                                ambientColor =
-                                    Primary.copy(alpha = 0.3f),
-                                spotColor =
-                                    Primary.copy(alpha = 0.2f)
-                            )
-                            .clip(CircleShape)
-                            .background(
-                                brush =
-                                    Brush.radialGradient(
-                                        colors =
-                                            listOf(
-                                                Color.White
-                                                    .copy(
-                                                        alpha =
-                                                            0.98f
-                                                    ),
-                                                Color.White
-                                                    .copy(
-                                                        alpha =
-                                                            0.9f
-                                                    )
-                                            )
-                                    )
-                            )
+        val scale by
+                animateFloatAsState(
+                        targetValue = if (isSelected) 1.1f else 1f,
+                        animationSpec =
+                                spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                ),
+                        label = "scale"
                 )
-            }
 
-            // Icon - centered
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.label,
-                modifier = Modifier.size(24.dp).graphicsLayer { alpha = iconAlpha },
-                tint = if (isSelected) Primary else NavBarInactiveIcon
-            )
+        val iconAlpha by
+                animateFloatAsState(
+                        targetValue = if (isSelected) 1f else 0.6f,
+                        animationSpec = spring(stiffness = Spring.StiffnessLow),
+                        label = "alpha"
+                )
+
+        Column(
+                modifier =
+                        Modifier.clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = onClick
+                                )
+                                .width(56.dp)
+                                .padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+        ) {
+                // Icon with Bubble - fixed size container for centering
+                Box(
+                        modifier =
+                                Modifier.size(40.dp).graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                },
+                        contentAlignment = Alignment.Center
+                ) {
+                        // Bubble background (only visible when selected)
+                        if (isSelected) {
+                                Box(
+                                        modifier =
+                                                Modifier.size(40.dp)
+                                                        .shadow(
+                                                                elevation = 8.dp,
+                                                                shape = CircleShape,
+                                                                ambientColor =
+                                                                        com.aevrontech.finevo.ui
+                                                                                .theme
+                                                                                .HabitGradientStart
+                                                                                .copy(alpha = 0.5f),
+                                                                spotColor =
+                                                                        com.aevrontech.finevo.ui
+                                                                                .theme
+                                                                                .HabitGradientStart
+                                                                                .copy(alpha = 0.3f)
+                                                        )
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                                brush =
+                                                                        Brush.linearGradient(
+                                                                                colors =
+                                                                                        listOf(
+                                                                                                com.aevrontech
+                                                                                                        .finevo
+                                                                                                        .ui
+                                                                                                        .theme
+                                                                                                        .HabitGradientStart,
+                                                                                                com.aevrontech
+                                                                                                        .finevo
+                                                                                                        .ui
+                                                                                                        .theme
+                                                                                                        .HabitGradientEnd
+                                                                                        )
+                                                                        )
+                                                        )
+                                )
+                        }
+
+                        // Icon - centered
+                        Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                modifier = Modifier.size(22.dp).graphicsLayer { alpha = iconAlpha },
+                                tint = if (isSelected) Color.White else NavBarInactiveIcon
+                        )
+                }
+
+                // Label - always visible
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                        text = item.label,
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        color =
+                                if (isSelected) com.aevrontech.finevo.ui.theme.HabitGradientStart
+                                else NavBarInactiveIcon.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                )
         }
-
-        // Label - always visible
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = item.label,
-            fontSize = 10.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (isSelected) Primary else NavBarInactiveIcon.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center,
-            maxLines = 1
-        )
-    }
 }
 
 /** Data class representing a navigation bar item */
