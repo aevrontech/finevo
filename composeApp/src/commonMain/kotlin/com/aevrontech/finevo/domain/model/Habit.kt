@@ -5,9 +5,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.serialization.Serializable
 
-/**
- * Habit domain model
- */
+/** Habit domain model */
 @Serializable
 data class Habit(
     val id: String,
@@ -17,9 +15,16 @@ data class Habit(
     val icon: String, // Emoji or icon name
     val color: String, // Hex color
     val categoryId: String? = null,
+    val subCategory: String? = null, // SubCategory key for pre-defined habits
     val frequency: HabitFrequency,
-    val targetDays: List<Int> = emptyList(), // 1-7 (Mon-Sun) for specific days
+    val targetDays: List<Int> = emptyList(), // 1-7 (Mon-Sun) for weekly, 1-31 for monthly
     val targetCount: Int = 1, // Times per period
+    val goalValue: Int = 1, // Target value (e.g., 8 for 8 glasses)
+    val goalUnit: String = "count", // Unit: count, steps, ml, min, etc. (supports custom)
+    val timeOfDay: TimeOfDay = TimeOfDay.ANYTIME,
+    val gestureMode: String = "MARK_AS_DONE", // MARK_AS_DONE or INPUT_VALUE
+    val startDate: LocalDate? = null, // Habit start date
+    val endDate: LocalDate? = null, // Habit end date (null = ongoing)
     val reminderTime: LocalTime? = null,
     val reminderEnabled: Boolean = false,
     val currentStreak: Int = 0,
@@ -34,20 +39,16 @@ data class Habit(
     val updatedAt: Instant
 )
 
-/**
- * Habit frequency options
- */
+/** Habit frequency options */
 @Serializable
 enum class HabitFrequency {
-    DAILY,           // Every day
-    SPECIFIC_DAYS,   // Specific days of week
-    WEEKLY,          // X times per week
-    MONTHLY          // X times per month
+    DAILY, // Every day
+    SPECIFIC_DAYS, // Specific days of week
+    WEEKLY, // X times per week
+    MONTHLY // X times per month
 }
 
-/**
- * Habit completion log
- */
+/** Habit completion log */
 @Serializable
 data class HabitLog(
     val id: String,
@@ -59,9 +60,7 @@ data class HabitLog(
     val createdAt: Instant
 )
 
-/**
- * Habit category
- */
+/** Habit category */
 @Serializable
 data class HabitCategory(
     val id: String,
@@ -72,9 +71,7 @@ data class HabitCategory(
     val order: Int = 0
 )
 
-/**
- * Time of day grouping for habits
- */
+/** Time of day grouping for habits */
 @Serializable
 enum class TimeOfDay {
     MORNING,
@@ -83,9 +80,7 @@ enum class TimeOfDay {
     ANYTIME
 }
 
-/**
- * Gamification - User stats
- */
+/** Gamification - User stats */
 @Serializable
 data class UserStats(
     val userId: String,
@@ -98,14 +93,15 @@ data class UserStats(
     val achievements: List<String> = emptyList(),
     val lastActiveDate: LocalDate? = null
 ) {
-    val xpForNextLevel: Int get() = level * 100
-    val xpProgress: Int get() = totalXp % 100
-    val levelProgress: Double get() = xpProgress.toDouble() / xpForNextLevel
+    val xpForNextLevel: Int
+        get() = level * 100
+    val xpProgress: Int
+        get() = totalXp % 100
+    val levelProgress: Double
+        get() = xpProgress.toDouble() / xpForNextLevel
 }
 
-/**
- * Achievement definition
- */
+/** Achievement definition */
 @Serializable
 data class Achievement(
     val id: String,
@@ -118,9 +114,7 @@ data class Achievement(
     val unlockedAt: Instant? = null
 )
 
-/**
- * Achievement requirement types
- */
+/** Achievement requirement types */
 @Serializable
 sealed class AchievementRequirement {
     @Serializable
@@ -139,9 +133,7 @@ sealed class AchievementRequirement {
     data class HabitsCreated(val count: Int) : AchievementRequirement()
 }
 
-/**
- * Daily habit summary
- */
+/** Daily habit summary */
 data class DailyHabitSummary(
     val date: LocalDate,
     val habitsCompleted: Int,
@@ -150,13 +142,10 @@ data class DailyHabitSummary(
     val isPerfectDay: Boolean
 ) {
     val completionRate: Double
-        get() =
-            if (habitsTotal > 0) habitsCompleted.toDouble() / habitsTotal else 0.0
+        get() = if (habitsTotal > 0) habitsCompleted.toDouble() / habitsTotal else 0.0
 }
 
-/**
- * Weekly habit analytics
- */
+/** Weekly habit analytics */
 data class WeeklyHabitAnalytics(
     val weekStartDate: LocalDate,
     val dailySummaries: List<DailyHabitSummary>,

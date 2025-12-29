@@ -39,6 +39,53 @@ class HomeScreen : Screen {
 
         @Composable
         override fun Content() {
+                // Shared state for Add Transaction overlay at HomeScreen level
+                var showAddTransactionOverlay by remember { mutableStateOf(false) }
+                var overlayTransactionType by remember {
+                        mutableStateOf(com.aevrontech.finevo.domain.model.TransactionType.EXPENSE)
+                }
+
+                // State for Edit Transaction overlay
+                var transactionToEdit by remember {
+                        mutableStateOf<com.aevrontech.finevo.domain.model.Transaction?>(null)
+                }
+
+                // State for Add/Edit Account overlay
+                var showAddAccountOverlay by remember { mutableStateOf(false) }
+                var accountToEdit by remember {
+                        mutableStateOf<com.aevrontech.finevo.domain.model.Account?>(null)
+                }
+                var defaultAccountCurrency by remember { mutableStateOf("MYR") }
+
+                // State for Add Habit overlay (two-screen flow)
+                var showHabitCategorySelection by remember { mutableStateOf(false) }
+                var showAddHabitScreen by remember { mutableStateOf(false) }
+                var selectedHabitSubCategory by remember {
+                        mutableStateOf<com.aevrontech.finevo.domain.model.HabitSubCategory?>(null)
+                }
+                var habitToEdit by remember {
+                        mutableStateOf<com.aevrontech.finevo.domain.model.Habit?>(null)
+                }
+                var showHabitReport by remember { mutableStateOf(false) }
+
+                // ViewModel for expense operations
+                val expenseViewModel: com.aevrontech.finevo.presentation.expense.ExpenseViewModel =
+                        koinViewModel()
+                val accountViewModel: com.aevrontech.finevo.presentation.expense.AccountViewModel =
+                        koinViewModel()
+                val expenseState by expenseViewModel.uiState.collectAsState()
+
+                // Check if any overlay is visible
+                val anyOverlayVisible =
+                        showAddTransactionOverlay ||
+                                transactionToEdit != null ||
+                                showAddAccountOverlay ||
+                                accountToEdit != null ||
+                                showHabitCategorySelection ||
+                                showAddHabitScreen ||
+                                habitToEdit != null ||
+                                showHabitReport
+
                 TabNavigator(
                         tab = DashboardTab,
                         tabDisposable = {
@@ -65,45 +112,550 @@ class HomeScreen : Screen {
                         ) {
                                 // Content area
                                 Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-                                        CurrentTab()
+                                        // Pass the overlay trigger to ExpenseTabContent via
+                                        // callback
+                                        when (tabNavigator.current) {
+                                                ExpenseTab ->
+                                                        ExpenseTabContent(
+                                                                onAddTransactionClick = {
+                                                                        overlayTransactionType =
+                                                                                expenseState
+                                                                                        .selectedTransactionType
+                                                                        showAddTransactionOverlay =
+                                                                                true
+                                                                },
+                                                                onEditTransactionClick = { tx ->
+                                                                        transactionToEdit = tx
+                                                                },
+                                                                onAddAccountClick = {
+                                                                        defaultAccountCurrency =
+                                                                                expenseState
+                                                                                        .selectedAccount
+                                                                                        ?.currency
+                                                                                        ?: "MYR"
+                                                                        showAddAccountOverlay = true
+                                                                },
+                                                                onEditAccountClick = { acc ->
+                                                                        accountToEdit = acc
+                                                                }
+                                                        )
+                                                HabitTab ->
+                                                        HabitTabContent(
+                                                                onAddHabitClick = {
+                                                                        showHabitCategorySelection =
+                                                                                true
+                                                                },
+                                                                onEditHabitClick = { habit ->
+                                                                        habitToEdit = habit
+                                                                },
+                                                                onReportClick = {
+                                                                        showHabitReport = true
+                                                                }
+                                                        )
+                                                else -> CurrentTab()
+                                        }
                                 }
 
-                                // Glassmorphic Floating Navigation Bar
-                                Box(
-                                        modifier =
-                                                Modifier.fillMaxWidth()
-                                                        .align(Alignment.BottomCenter)
-                                                        .navigationBarsPadding() // Respect system
-                                        // navigation bars
+                                // Glassmorphic Floating Navigation Bar - only show when no overlay
+                                if (!anyOverlayVisible) {
+                                        Box(
+                                                modifier =
+                                                        Modifier.fillMaxWidth()
+                                                                .align(Alignment.BottomCenter)
+                                                                .navigationBarsPadding()
                                         ) {
-                                        GlassmorphicNavBar(
-                                                items =
-                                                        listOf(
-                                                                NavBarItem(
-                                                                        Icons.Filled.Home,
-                                                                        "Home"
+                                                GlassmorphicNavBar(
+                                                        items =
+                                                                listOf(
+                                                                        NavBarItem(
+                                                                                Icons.Filled.Home,
+                                                                                "Home"
+                                                                        ),
+                                                                        NavBarItem(
+                                                                                Icons.Filled.List,
+                                                                                "Expenses"
+                                                                        ),
+                                                                        NavBarItem(
+                                                                                Icons.Filled
+                                                                                        .ShoppingCart,
+                                                                                "Debts"
+                                                                        ),
+                                                                        NavBarItem(
+                                                                                Icons.Filled
+                                                                                        .CheckCircle,
+                                                                                "Habits"
+                                                                        ),
+                                                                        NavBarItem(
+                                                                                Icons.Filled
+                                                                                        .Settings,
+                                                                                "Settings"
+                                                                        )
                                                                 ),
-                                                                NavBarItem(
-                                                                        Icons.Filled.List,
-                                                                        "Expenses"
-                                                                ),
-                                                                NavBarItem(
-                                                                        Icons.Filled.ShoppingCart,
-                                                                        "Debts"
-                                                                ),
-                                                                NavBarItem(
-                                                                        Icons.Filled.CheckCircle,
-                                                                        "Habits"
-                                                                ),
-                                                                NavBarItem(
-                                                                        Icons.Filled.Settings,
-                                                                        "Settings"
-                                                                )
+                                                        selectedIndex = selectedIndex,
+                                                        onItemSelected = { index ->
+                                                                tabNavigator.current = tabs[index]
+                                                        }
+                                                )
+                                        }
+                                }
+
+                                // Fullscreen Add Transaction Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = showAddTransactionOverlay,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
                                                         ),
-                                                selectedIndex = selectedIndex,
-                                                onItemSelected = { index ->
-                                                        tabNavigator.current = tabs[index]
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        com.aevrontech.finevo.presentation.expense
+                                                .AddTransactionScreen(
+                                                        transactionType = overlayTransactionType,
+                                                        accounts = expenseState.accounts,
+                                                        categories = expenseState.categories,
+                                                        selectedAccount =
+                                                                expenseState.selectedAccount,
+                                                        onDismiss = {
+                                                                showAddTransactionOverlay = false
+                                                        },
+                                                        onConfirm = {
+                                                                type,
+                                                                amount,
+                                                                accountId,
+                                                                categoryId,
+                                                                note,
+                                                                date,
+                                                                _ ->
+                                                                expenseViewModel.addTransaction(
+                                                                        type,
+                                                                        amount,
+                                                                        accountId,
+                                                                        categoryId,
+                                                                        note,
+                                                                        date
+                                                                )
+                                                                showAddTransactionOverlay = false
+                                                        }
+                                                )
+                                }
+
+                                // Fullscreen Edit Transaction Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = transactionToEdit != null,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        transactionToEdit?.let { tx ->
+                                                com.aevrontech.finevo.presentation.expense
+                                                        .AddTransactionScreen(
+                                                                transactionType = tx.type,
+                                                                accounts = expenseState.accounts,
+                                                                categories =
+                                                                        expenseState.categories,
+                                                                selectedAccount =
+                                                                        expenseState.accounts.find {
+                                                                                it.id ==
+                                                                                        tx.accountId
+                                                                        },
+                                                                editingTransaction = tx,
+                                                                onDismiss = {
+                                                                        transactionToEdit = null
+                                                                },
+                                                                onConfirm = {
+                                                                        type,
+                                                                        amount,
+                                                                        accountId,
+                                                                        categoryId,
+                                                                        note,
+                                                                        date,
+                                                                        _ ->
+                                                                        expenseViewModel
+                                                                                .updateTransaction(
+                                                                                        tx.id,
+                                                                                        type,
+                                                                                        amount,
+                                                                                        accountId,
+                                                                                        categoryId,
+                                                                                        note,
+                                                                                        date
+                                                                                )
+                                                                        transactionToEdit = null
+                                                                }
+                                                        )
+                                        }
+                                }
+
+                                // Fullscreen Add Account Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = showAddAccountOverlay,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        com.aevrontech.finevo.presentation.expense.AddAccountScreen(
+                                                onDismiss = { showAddAccountOverlay = false },
+                                                onConfirm = { name, balance, currency, type, color
+                                                        ->
+                                                        accountViewModel.createAccount(
+                                                                name,
+                                                                balance,
+                                                                currency,
+                                                                type,
+                                                                color
+                                                        )
+                                                        showAddAccountOverlay = false
+                                                },
+                                                defaultCurrency = defaultAccountCurrency
+                                        )
+                                }
+
+                                // Fullscreen Edit Account Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = accountToEdit != null,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        accountToEdit?.let { acc ->
+                                                com.aevrontech.finevo.presentation.expense
+                                                        .AddAccountScreen(
+                                                                onDismiss = {
+                                                                        accountToEdit = null
+                                                                },
+                                                                onConfirm = {
+                                                                        name,
+                                                                        balance,
+                                                                        currency,
+                                                                        type,
+                                                                        color ->
+                                                                        accountViewModel
+                                                                                .updateAccount(
+                                                                                        acc.id,
+                                                                                        name,
+                                                                                        balance,
+                                                                                        currency,
+                                                                                        type,
+                                                                                        color
+                                                                                )
+                                                                        accountToEdit = null
+                                                                },
+                                                                defaultCurrency = acc.currency,
+                                                                editingAccount = acc
+                                                        )
+                                        }
+                                }
+
+                                // Fullscreen Habit Category Selection Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = showHabitCategorySelection,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        com.aevrontech.finevo.presentation.habit
+                                                .HabitCategorySelectionScreen(
+                                                        onDismiss = {
+                                                                showHabitCategorySelection = false
+                                                        },
+                                                        onSubCategorySelected = { subCategory ->
+                                                                selectedHabitSubCategory =
+                                                                        subCategory
+                                                                showHabitCategorySelection = false
+                                                                showAddHabitScreen = true
+                                                        }
+                                                )
+                                }
+
+                                // Fullscreen Add Habit Screen Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = showAddHabitScreen,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        val habitViewModel:
+                                                com.aevrontech.finevo.presentation.habit.HabitViewModel =
+                                                koinViewModel()
+                                        com.aevrontech.finevo.presentation.habit.AddHabitScreen(
+                                                selectedSubCategory = selectedHabitSubCategory,
+                                                onDismiss = {
+                                                        showAddHabitScreen = false
+                                                        selectedHabitSubCategory = null
+                                                },
+                                                onSave = {
+                                                        name,
+                                                        icon,
+                                                        color,
+                                                        frequency,
+                                                        targetDays,
+                                                        goalValue,
+                                                        goalUnit,
+                                                        timeOfDay,
+                                                        gestureMode,
+                                                        reminderEnabled,
+                                                        reminderTime,
+                                                        startDate,
+                                                        endDate ->
+                                                        habitViewModel.createHabit(
+                                                                name = name,
+                                                                icon = icon,
+                                                                color = color,
+                                                                frequency = frequency,
+                                                                targetDays = targetDays,
+                                                                goalValue = goalValue,
+                                                                goalUnit = goalUnit,
+                                                                timeOfDay = timeOfDay,
+                                                                gestureMode = gestureMode,
+                                                                reminderEnabled = reminderEnabled,
+                                                                reminderTime = reminderTime,
+                                                                startDate = startDate,
+                                                                endDate = endDate,
+                                                                subCategory =
+                                                                        selectedHabitSubCategory
+                                                                                ?.name
+                                                        )
+                                                        showAddHabitScreen = false
+                                                        selectedHabitSubCategory = null
                                                 }
+                                        )
+                                }
+
+                                // Fullscreen Edit Habit Screen Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = habitToEdit != null,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        val habitViewModel:
+                                                com.aevrontech.finevo.presentation.habit.HabitViewModel =
+                                                koinViewModel()
+                                        habitToEdit?.let { habit ->
+                                                com.aevrontech.finevo.presentation.habit
+                                                        .AddHabitScreen(
+                                                                selectedSubCategory = null,
+                                                                habitToEdit = habit,
+                                                                onDismiss = { habitToEdit = null },
+                                                                onSave = {
+                                                                        name,
+                                                                        icon,
+                                                                        color,
+                                                                        frequency,
+                                                                        targetDays,
+                                                                        goalValue,
+                                                                        goalUnit,
+                                                                        timeOfDay,
+                                                                        gestureMode,
+                                                                        reminderEnabled,
+                                                                        reminderTime,
+                                                                        startDate,
+                                                                        endDate ->
+                                                                        habitViewModel.updateHabit(
+                                                                                id = habit.id,
+                                                                                name = name,
+                                                                                icon = icon,
+                                                                                color = color,
+                                                                                frequency =
+                                                                                        frequency,
+                                                                                targetDays =
+                                                                                        targetDays,
+                                                                                goalValue =
+                                                                                        goalValue,
+                                                                                goalUnit = goalUnit,
+                                                                                timeOfDay =
+                                                                                        timeOfDay,
+                                                                                gestureMode =
+                                                                                        gestureMode,
+                                                                                reminderEnabled =
+                                                                                        reminderEnabled,
+                                                                                reminderTime =
+                                                                                        reminderTime,
+                                                                                startDate =
+                                                                                        startDate,
+                                                                                endDate = endDate
+                                                                        )
+                                                                        habitToEdit = null
+                                                                }
+                                                        )
+                                        }
+                                }
+
+                                // Fullscreen Habit Report Screen Overlay
+                                androidx.compose.animation.AnimatedVisibility(
+                                        visible = showHabitReport,
+                                        enter =
+                                                androidx.compose.animation.slideInVertically(
+                                                        initialOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeIn(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        ),
+                                        exit =
+                                                androidx.compose.animation.slideOutVertically(
+                                                        targetOffsetY = { it },
+                                                        animationSpec =
+                                                                androidx.compose.animation.core
+                                                                        .tween(300)
+                                                ) +
+                                                        androidx.compose.animation.fadeOut(
+                                                                animationSpec =
+                                                                        androidx.compose.animation
+                                                                                .core.tween(300)
+                                                        )
+                                ) {
+                                        com.aevrontech.finevo.presentation.habit.HabitReportScreen(
+                                                onDismiss = { showHabitReport = false }
                                         )
                                 }
                         }
@@ -634,110 +1186,20 @@ private fun QuickActionButton(
 // ============================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExpenseTabContent() {
+private fun ExpenseTabContent(
+        onAddTransactionClick: () -> Unit = {},
+        onEditTransactionClick: (com.aevrontech.finevo.domain.model.Transaction) -> Unit = {},
+        onAddAccountClick: () -> Unit = {},
+        onEditAccountClick: (com.aevrontech.finevo.domain.model.Account) -> Unit = {}
+) {
         val expenseViewModel: ExpenseViewModel = koinViewModel()
         val accountViewModel: com.aevrontech.finevo.presentation.expense.AccountViewModel =
                 koinViewModel()
         val expenseState by expenseViewModel.uiState.collectAsState()
 
-        var showAddTransaction by remember { mutableStateOf(false) }
-        var showAddAccount by remember { mutableStateOf(false) }
-        var transactionToEdit by remember {
-                mutableStateOf<com.aevrontech.finevo.domain.model.Transaction?>(null)
-        }
-
-        // Show Edit Transaction screen
-        if (transactionToEdit != null) {
-                val tx = transactionToEdit!!
-                com.aevrontech.finevo.presentation.expense.AddTransactionScreen(
-                        transactionType = tx.type,
-                        accounts = expenseState.accounts,
-                        categories = expenseState.categories,
-                        selectedAccount = expenseState.accounts.find { it.id == tx.accountId },
-                        editingTransaction = tx,
-                        onDismiss = { transactionToEdit = null },
-                        onConfirm = { type, amount, accountId, categoryId, note, date, time ->
-                                expenseViewModel.updateTransaction(
-                                        tx.id,
-                                        type,
-                                        amount,
-                                        accountId,
-                                        categoryId,
-                                        note,
-                                        date
-                                )
-                                transactionToEdit = null
-                        }
-                )
-                return
-        }
-
-        // Show AddTransaction screen
-        if (showAddTransaction) {
-                com.aevrontech.finevo.presentation.expense.AddTransactionScreen(
-                        transactionType = expenseState.selectedTransactionType,
-                        accounts = expenseState.accounts,
-                        categories = expenseState.categories,
-                        selectedAccount = expenseState.selectedAccount,
-                        onDismiss = { showAddTransaction = false },
-                        onConfirm = { type, amount, accountId, categoryId, note, date, time ->
-                                expenseViewModel.addTransaction(
-                                        type,
-                                        amount,
-                                        accountId,
-                                        categoryId,
-                                        note,
-                                        date
-                                )
-                                showAddTransaction = false
-                        }
-                )
-                return
-        }
-
         // Account options dialog (for long-press edit/delete)
         var accountToManage by remember {
                 mutableStateOf<com.aevrontech.finevo.domain.model.Account?>(null)
-        }
-        var showEditAccount by remember { mutableStateOf(false) }
-
-        // Show Edit Account screen
-        if (showEditAccount && accountToManage != null) {
-                val acc = accountToManage!!
-                com.aevrontech.finevo.presentation.expense.AddAccountScreen(
-                        onDismiss = {
-                                showEditAccount = false
-                                accountToManage = null
-                        },
-                        onConfirm = { name, balance, currency, type, color ->
-                                accountViewModel.updateAccount(
-                                        acc.id,
-                                        name,
-                                        balance,
-                                        currency,
-                                        type,
-                                        color
-                                )
-                                showEditAccount = false
-                                accountToManage = null
-                        },
-                        defaultCurrency = acc.currency,
-                        editingAccount = acc
-                )
-                return
-        }
-
-        // Show AddAccount screen
-        if (showAddAccount) {
-                com.aevrontech.finevo.presentation.expense.AddAccountScreen(
-                        onDismiss = { showAddAccount = false },
-                        onConfirm = { name, balance, currency, type, color ->
-                                accountViewModel.createAccount(name, balance, currency, type, color)
-                                showAddAccount = false
-                        },
-                        defaultCurrency = expenseState.selectedAccount?.currency ?: "MYR"
-                )
-                return
         }
 
         // Account options dialog (after long-press)
@@ -751,9 +1213,12 @@ private fun ExpenseTabContent() {
                                 )
                         },
                         confirmButton = {
-                                TextButton(onClick = { showEditAccount = true }) {
-                                        Text("Edit", color = Primary)
-                                }
+                                TextButton(
+                                        onClick = {
+                                                accountToManage?.let { onEditAccountClick(it) }
+                                                accountToManage = null
+                                        }
+                                ) { Text("Edit", color = Primary) }
                         },
                         dismissButton = {
                                 Row {
@@ -809,7 +1274,7 @@ private fun ExpenseTabContent() {
                                         onAccountLongClick = { account ->
                                                 accountToManage = account
                                         },
-                                        onAddAccountClick = { showAddAccount = true }
+                                        onAddAccountClick = onAddAccountClick
                                 )
                         }
 
@@ -886,7 +1351,7 @@ private fun ExpenseTabContent() {
 
                                 groupedTransactionItems(
                                         groups = groupedTransactions,
-                                        onTransactionClick = { tx -> transactionToEdit = tx },
+                                        onTransactionClick = { tx -> onEditTransactionClick(tx) },
                                         onTransactionDelete = { tx ->
                                                 expenseViewModel.deleteTransaction(tx.id)
                                         }
@@ -900,11 +1365,11 @@ private fun ExpenseTabContent() {
                 // FAB at bottom right
                 // Gradient FAB
                 GradientFab(
-                        onClick = { showAddTransaction = true },
+                        onClick = onAddTransactionClick,
                         icon = Icons.Default.Add,
                         modifier =
                                 Modifier.align(Alignment.BottomEnd)
-                                        .padding(bottom = 100.dp, end = 20.dp)
+                                        .padding(bottom = 130.dp, end = 20.dp)
                 )
         }
 }
@@ -941,6 +1406,22 @@ fun GradientFab(onClick: () -> Unit, icon: ImageVector, modifier: Modifier = Mod
                         modifier = Modifier.size(24.dp)
                 )
         }
+}
+
+// ============================================
+// HABIT TAB CONTENT
+// ============================================
+@Composable
+private fun HabitTabContent(
+        onAddHabitClick: () -> Unit = {},
+        onEditHabitClick: (com.aevrontech.finevo.domain.model.Habit) -> Unit = {},
+        onReportClick: () -> Unit = {}
+) {
+        com.aevrontech.finevo.presentation.habit.HabitTabScreen(
+                onAddHabitClick = onAddHabitClick,
+                onEditHabitClick = onEditHabitClick,
+                onReportClick = onReportClick
+        )
 }
 
 @Composable
