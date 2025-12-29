@@ -53,7 +53,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
                 // Debug: Log all habits and their configurations
                 println(
-                        "=== DEBUG: Loading habits for date: $selectedDate (${selectedDate.dayOfWeek}) ==="
+                    "=== DEBUG: Loading habits for date: $selectedDate (${selectedDate.dayOfWeek}) ==="
                 )
                 println("=== DEBUG: dayOfWeek ordinal: ${selectedDate.dayOfWeek.ordinal} ===")
                 val dateIndex = ((selectedDate.dayOfWeek.ordinal + 1) % 7) + 1
@@ -61,24 +61,24 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
                 allHabits.forEach { habit ->
                     println(
-                            "  Habit: ${habit.name}, frequency: ${habit.frequency}, targetDays: ${habit.targetDays}"
+                        "  Habit: ${habit.name}, frequency: ${habit.frequency}, targetDays: ${habit.targetDays}"
                     )
                 }
 
                 // Filter habits that should appear for selected date
                 val habitsForDate =
-                        allHabits.filter { habit -> isScheduledForDate(habit, selectedDate) }
+                    allHabits.filter { habit -> isScheduledForDate(habit, selectedDate) }
 
                 println(
-                        "=== DEBUG: Habits scheduled for $selectedDate: ${habitsForDate.map { it.name }} ==="
+                    "=== DEBUG: Habits scheduled for $selectedDate: ${habitsForDate.map { it.name }} ==="
                 )
 
                 _uiState.update {
                     it.copy(
-                            habits = habitsForDate,
-                            allHabits = allHabits, // Keep all for reporting
-                            selectedDate = selectedDate,
-                            isLoading = false
+                        habits = habitsForDate,
+                        allHabits = allHabits, // Keep all for reporting
+                        selectedDate = selectedDate,
+                        isLoading = false
                     )
                 }
             }
@@ -93,24 +93,24 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
         // Check frequency
         val result =
-                when (habit.frequency) {
-                    HabitFrequency.DAILY -> true
-                    HabitFrequency.WEEKLY, HabitFrequency.SPECIFIC_DAYS -> {
-                        // targetDays uses: Sunday=1, Monday=2, ... Saturday=7
-                        // kotlinx.datetime.DayOfWeek: MONDAY=0, TUESDAY=1, ... SUNDAY=6
-                        // Convert: Sunday(ordinal=6) -> 1, Monday(ordinal=0) -> 2, etc.
-                        val dayOfWeek = ((date.dayOfWeek.ordinal + 1) % 7) + 1
-                        val matches = habit.targetDays.contains(dayOfWeek)
-                        println(
-                                "    Checking ${habit.name}: dayOfWeek=$dayOfWeek, targetDays=${habit.targetDays}, matches=$matches"
-                        )
-                        matches
-                    }
-                    HabitFrequency.MONTHLY -> {
-                        // targetDays contains day of month (1-31)
-                        habit.targetDays.contains(date.dayOfMonth)
-                    }
+            when (habit.frequency) {
+                HabitFrequency.DAILY -> true
+                HabitFrequency.WEEKLY, HabitFrequency.SPECIFIC_DAYS -> {
+                    // targetDays uses: Sunday=1, Monday=2, ... Saturday=7
+                    // kotlinx.datetime.DayOfWeek: MONDAY=0, TUESDAY=1, ... SUNDAY=6
+                    // Convert: Sunday(ordinal=6) -> 1, Monday(ordinal=0) -> 2, etc.
+                    val dayOfWeek = ((date.dayOfWeek.ordinal + 1) % 7) + 1
+                    val matches = habit.targetDays.contains(dayOfWeek)
+                    println(
+                        "    Checking ${habit.name}: dayOfWeek=$dayOfWeek, targetDays=${habit.targetDays}, matches=$matches"
+                    )
+                    matches
                 }
+                HabitFrequency.MONTHLY -> {
+                    // targetDays contains day of month (1-31)
+                    habit.targetDays.contains(date.dayOfMonth)
+                }
+            }
         return result
     }
 
@@ -174,18 +174,18 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
     fun toggleHabitWithValue(habitId: String, value: Int) {
         viewModelScope.launch {
             when (val result =
-                            habitRepository.completeHabit(habitId, selectedDate, value.toString())
+                habitRepository.completeHabit(habitId, selectedDate, value.toString())
             ) {
                 is Result.Success -> {
                     val habit = _uiState.value.habits.find { it.id == habitId }
                     val percentage =
-                            if (habit != null && habit.goalValue > 0)
-                                    (value * 100 / habit.goalValue)
-                            else 100
+                        if (habit != null && habit.goalValue > 0)
+                            (value * 100 / habit.goalValue)
+                        else 100
                     _uiState.update {
                         it.copy(
-                                successMessage =
-                                        "+${habit?.xpReward ?: 10} XP! Completed $value ${habit?.goalUnit ?: ""} ($percentage%) 🎉"
+                            successMessage =
+                                "+${habit?.xpReward ?: 10} XP! Completed $value ${habit?.goalUnit ?: ""} ($percentage%) 🎉"
                         )
                     }
                 }
@@ -199,27 +199,27 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
     }
 
     fun addHabit(
-            name: String,
-            icon: String,
-            color: String,
-            frequency: HabitFrequency = HabitFrequency.DAILY,
-            xpReward: Int = 10
+        name: String,
+        icon: String,
+        color: String,
+        frequency: HabitFrequency = HabitFrequency.DAILY,
+        xpReward: Int = 10
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
 
             val habit =
-                    Habit(
-                            id = generateId(),
-                            userId = "local",
-                            name = name,
-                            icon = icon,
-                            color = color,
-                            frequency = frequency,
-                            xpReward = xpReward,
-                            createdAt = now,
-                            updatedAt = now
-                    )
+                Habit(
+                    id = generateId(),
+                    userId = "local",
+                    name = name,
+                    icon = icon,
+                    color = color,
+                    frequency = frequency,
+                    xpReward = xpReward,
+                    createdAt = now,
+                    updatedAt = now
+                )
 
             when (val result = habitRepository.addHabit(habit)) {
                 is Result.Success -> {
@@ -237,47 +237,47 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
     /** Create a habit with all configuration options from the new Add Habit flow */
     fun createHabit(
-            name: String,
-            icon: String,
-            color: String,
-            frequency: HabitFrequency,
-            targetDays: List<Int>,
-            goalValue: Int,
-            goalUnit: String,
-            timeOfDay: com.aevrontech.finevo.domain.model.TimeOfDay,
-            gestureMode: String,
-            reminderEnabled: Boolean,
-            reminderTime: kotlinx.datetime.LocalTime?,
-            startDate: kotlinx.datetime.LocalDate?,
-            endDate: kotlinx.datetime.LocalDate?,
-            subCategory: String? = null
+        name: String,
+        icon: String,
+        color: String,
+        frequency: HabitFrequency,
+        targetDays: List<Int>,
+        goalValue: Int,
+        goalUnit: String,
+        timeOfDay: com.aevrontech.finevo.domain.model.TimeOfDay,
+        gestureMode: String,
+        reminderEnabled: Boolean,
+        reminderTime: kotlinx.datetime.LocalTime?,
+        startDate: kotlinx.datetime.LocalDate?,
+        endDate: kotlinx.datetime.LocalDate?,
+        subCategory: String? = null
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
 
             val habit =
-                    Habit(
-                            id = generateId(),
-                            userId = "local",
-                            name = name,
-                            icon = icon,
-                            color = color,
-                            subCategory = subCategory,
-                            frequency = frequency,
-                            targetDays = targetDays,
-                            targetCount = 1,
-                            goalValue = goalValue,
-                            goalUnit = goalUnit,
-                            timeOfDay = timeOfDay,
-                            gestureMode = gestureMode,
-                            startDate = startDate,
-                            endDate = endDate,
-                            reminderEnabled = reminderEnabled,
-                            reminderTime = reminderTime,
-                            xpReward = 10,
-                            createdAt = now,
-                            updatedAt = now
-                    )
+                Habit(
+                    id = generateId(),
+                    userId = "local",
+                    name = name,
+                    icon = icon,
+                    color = color,
+                    subCategory = subCategory,
+                    frequency = frequency,
+                    targetDays = targetDays,
+                    targetCount = 1,
+                    goalValue = goalValue,
+                    goalUnit = goalUnit,
+                    timeOfDay = timeOfDay,
+                    gestureMode = gestureMode,
+                    startDate = startDate,
+                    endDate = endDate,
+                    reminderEnabled = reminderEnabled,
+                    reminderTime = reminderTime,
+                    xpReward = 10,
+                    createdAt = now,
+                    updatedAt = now
+                )
 
             when (val result = habitRepository.addHabit(habit)) {
                 is Result.Success -> {
@@ -309,20 +309,20 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
     /** Update an existing habit with new values */
     fun updateHabit(
-            id: String,
-            name: String,
-            icon: String,
-            color: String,
-            frequency: HabitFrequency,
-            targetDays: List<Int>,
-            goalValue: Int,
-            goalUnit: String,
-            timeOfDay: TimeOfDay,
-            gestureMode: String,
-            reminderEnabled: Boolean,
-            reminderTime: kotlinx.datetime.LocalTime?,
-            startDate: kotlinx.datetime.LocalDate?,
-            endDate: kotlinx.datetime.LocalDate?
+        id: String,
+        name: String,
+        icon: String,
+        color: String,
+        frequency: HabitFrequency,
+        targetDays: List<Int>,
+        goalValue: Int,
+        goalUnit: String,
+        timeOfDay: TimeOfDay,
+        gestureMode: String,
+        reminderEnabled: Boolean,
+        reminderTime: kotlinx.datetime.LocalTime?,
+        startDate: kotlinx.datetime.LocalDate?,
+        endDate: kotlinx.datetime.LocalDate?
     ) {
         viewModelScope.launch {
             val existingHabit = _uiState.value.habits.find { it.id == id }
@@ -333,22 +333,22 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
             val now = Clock.System.now()
             val updatedHabit =
-                    existingHabit.copy(
-                            name = name,
-                            icon = icon,
-                            color = color,
-                            frequency = frequency,
-                            targetDays = targetDays,
-                            goalValue = goalValue,
-                            goalUnit = goalUnit,
-                            timeOfDay = timeOfDay,
-                            gestureMode = gestureMode,
-                            reminderEnabled = reminderEnabled,
-                            reminderTime = reminderTime,
-                            startDate = startDate,
-                            endDate = endDate,
-                            updatedAt = now
-                    )
+                existingHabit.copy(
+                    name = name,
+                    icon = icon,
+                    color = color,
+                    frequency = frequency,
+                    targetDays = targetDays,
+                    goalValue = goalValue,
+                    goalUnit = goalUnit,
+                    timeOfDay = timeOfDay,
+                    gestureMode = gestureMode,
+                    reminderEnabled = reminderEnabled,
+                    reminderTime = reminderTime,
+                    startDate = startDate,
+                    endDate = endDate,
+                    updatedAt = now
+                )
 
             when (val result = habitRepository.updateHabit(updatedHabit)) {
                 is Result.Success -> {
@@ -403,25 +403,25 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
 
     private fun generateId(): String {
         return Clock.System.now().toEpochMilliseconds().toString() +
-                (1000..9999).random().toString()
+            (1000..9999).random().toString()
     }
 }
 
 /** UI state for Habit screen. */
 data class HabitUiState(
-        val isLoading: Boolean = true,
-        val habits: List<Habit> = emptyList(), // Habits for selected date (filtered)
-        val allHabits: List<Habit> = emptyList(), // All active habits (for reporting)
-        val selectedDate: kotlinx.datetime.LocalDate =
-                kotlinx.datetime.Clock.System.todayIn(
-                        kotlinx.datetime.TimeZone.currentSystemDefault()
-                ),
-        val completedHabitIds: Set<String> = emptySet(),
-        val dailySummary: DailyHabitSummary? = null,
-        val showAddDialog: Boolean = false,
-        val editingHabit: Habit? = null,
-        val error: String? = null,
-        val successMessage: String? = null
+    val isLoading: Boolean = true,
+    val habits: List<Habit> = emptyList(), // Habits for selected date (filtered)
+    val allHabits: List<Habit> = emptyList(), // All active habits (for reporting)
+    val selectedDate: kotlinx.datetime.LocalDate =
+        kotlinx.datetime.Clock.System.todayIn(
+            kotlinx.datetime.TimeZone.currentSystemDefault()
+        ),
+    val completedHabitIds: Set<String> = emptySet(),
+    val dailySummary: DailyHabitSummary? = null,
+    val showAddDialog: Boolean = false,
+    val editingHabit: Habit? = null,
+    val error: String? = null,
+    val successMessage: String? = null
 ) {
     val completedCount: Int
         get() = completedHabitIds.size

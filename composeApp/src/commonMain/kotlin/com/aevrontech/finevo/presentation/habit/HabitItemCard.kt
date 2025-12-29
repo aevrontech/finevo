@@ -31,35 +31,35 @@ import com.aevrontech.finevo.ui.theme.Primary
 /** Individual habit item card with circular progress indicator. */
 @Composable
 fun HabitItemCard(
-        habit: Habit,
-        isCompleted: Boolean,
-        progress: Float = if (isCompleted) 1f else 0f,
-        onClick: () -> Unit,
-        modifier: Modifier = Modifier
+    habit: Habit,
+    isCompleted: Boolean,
+    progress: Float = if (isCompleted) 1f else 0f,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val habitColor = parseHabitColor(habit.color)
 
     Card(
-            modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
-            colors =
-                    CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-            shape = RoundedCornerShape(16.dp)
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 // Colored icon container
                 Box(
-                        modifier =
-                                Modifier.size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(habitColor.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier.size(48.dp)
+                            .clip(CircleShape)
+                            .background(habitColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
                 ) { Text(text = habit.icon, style = MaterialTheme.typography.headlineSmall) }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -67,32 +67,32 @@ fun HabitItemCard(
                 Column {
                     // Habit name
                     Text(
-                            text = habit.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                        text = habit.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     // Status text with checkmark if completed
                     Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                                text =
-                                        when {
-                                            isCompleted -> "Completed"
-                                            else -> habit.frequency.toDisplayText()
-                                        },
-                                style = MaterialTheme.typography.bodySmall,
-                                color =
-                                        if (isCompleted) HabitComplete
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                            text =
+                                when {
+                                    isCompleted -> "Completed"
+                                    else -> habit.frequency.toDisplayText()
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color =
+                                if (isCompleted) HabitComplete
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (isCompleted) {
                             Text(
-                                    text = "✓",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = HabitComplete
+                                text = "✓",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HabitComplete
                             )
                         }
                     }
@@ -100,12 +100,12 @@ fun HabitItemCard(
                     // Time display (if reminder is set)
                     habit.reminderTime?.let { time ->
                         Text(
-                                text = formatTime(time),
-                                style = MaterialTheme.typography.labelSmall,
-                                color =
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.7f
-                                        )
+                            text = formatTime(time),
+                            style = MaterialTheme.typography.labelSmall,
+                            color =
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
                         )
                     }
                 }
@@ -113,20 +113,20 @@ fun HabitItemCard(
 
             // Circular progress indicator
             HabitCircularProgress(
-                    progress = progress,
-                    color = if (isCompleted) HabitComplete else habitColor
+                progress = progress,
+                color = if (isCompleted) HabitComplete else habitColor
             )
         }
     }
 }
 
 private fun HabitFrequency.toDisplayText(): String =
-        when (this) {
-            HabitFrequency.DAILY -> "Repeat every day"
-            HabitFrequency.WEEKLY -> "Weekly"
-            HabitFrequency.MONTHLY -> "Monthly"
-            HabitFrequency.SPECIFIC_DAYS -> "Specific days"
-        }
+    when (this) {
+        HabitFrequency.DAILY -> "Repeat every day"
+        HabitFrequency.WEEKLY -> "Weekly"
+        HabitFrequency.MONTHLY -> "Monthly"
+        HabitFrequency.SPECIFIC_DAYS -> "Specific days"
+    }
 
 private fun formatTime(time: kotlinx.datetime.LocalTime): String {
     val hour = if (time.hour > 12) time.hour - 12 else if (time.hour == 0) 12 else time.hour

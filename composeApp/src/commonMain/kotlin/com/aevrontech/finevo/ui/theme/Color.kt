@@ -136,6 +136,11 @@ val HabitProgressFill = Color(0xFFFFFFFF) // White progress
 // GRADIENT COLORS
 // ============================================
 
+// Onboarding Background Gradient (Blue)
+val OnboardingGradientStart = Color(0xFF2196F3)
+val OnboardingGradientMid = Color(0xFF1976D2)
+val OnboardingGradientEnd = Color(0xFF0D47A1)
+
 // Primary gradient (Electric Violet to Cyber Cyan)
 val GradientStart = Color(0xFF6C63FF)
 val GradientMid = Color(0xFF00D9FF)

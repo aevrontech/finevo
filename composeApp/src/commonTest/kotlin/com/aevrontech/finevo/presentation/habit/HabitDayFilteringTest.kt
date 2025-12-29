@@ -1,11 +1,11 @@
 package com.aevrontech.finevo.presentation.habit
 
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlinx.datetime.DayOfWeek
-import kotlinx.datetime.LocalDate
 
 /**
  * Unit tests for habit day filtering logic.
@@ -100,8 +100,8 @@ class HabitDayFilteringTest {
 
         val dayIndex = dayOfWeekToSelectorIndex(sundayDate.dayOfWeek)
         assertFalse(
-                targetDays.contains(dayIndex),
-                "Sunday should NOT be in targetDays for Monday habit"
+            targetDays.contains(dayIndex),
+            "Sunday should NOT be in targetDays for Monday habit"
         )
     }
 

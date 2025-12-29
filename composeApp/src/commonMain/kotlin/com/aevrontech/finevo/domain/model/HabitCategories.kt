@@ -13,136 +13,136 @@ enum class HabitCategoryType(val displayName: String, val icon: String, val desc
 
 /** Pre-defined sub-categories (habit templates) with icons */
 enum class HabitSubCategory(
-        val displayName: String,
-        val icon: String,
-        val categories: List<HabitCategoryType>,
-        val defaultUnit: String = "count",
-        val defaultGoalValue: Int = 1
+    val displayName: String,
+    val icon: String,
+    val categories: List<HabitCategoryType>,
+    val defaultUnit: String = "count",
+    val defaultGoalValue: Int = 1
 ) {
     // Most Popular / Health / Sports
     WALK(
-            "Walk",
-            "🚶",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.SPORTS
-            ),
-            "steps",
-            10000
+        "Walk",
+        "🚶",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.SPORTS
+        ),
+        "steps",
+        10000
     ),
     SLEEP("Sleep", "🛌", listOf(HabitCategoryType.MOST_POPULAR, HabitCategoryType.HEALTH), "hr", 8),
     DRINK_WATER(
-            "Drink Water",
-            "💧",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.LIFESTYLE
-            ),
-            "ml",
-            2000
+        "Drink Water",
+        "💧",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.LIFESTYLE
+        ),
+        "ml",
+        2000
     ),
     MEDITATION(
-            "Meditation",
-            "🧘",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.LIFESTYLE
-            ),
-            "min",
-            10
+        "Meditation",
+        "🧘",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.LIFESTYLE
+        ),
+        "min",
+        10
     ),
     RUN("Run", "🏃", listOf(HabitCategoryType.MOST_POPULAR, HabitCategoryType.SPORTS), "km", 5),
     STAND(
-            "Stand",
-            "🧍",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.SPORTS
-            ),
-            "count",
-            12
+        "Stand",
+        "🧍",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.SPORTS
+        ),
+        "count",
+        12
     ),
     CYCLING(
-            "Cycling",
-            "🚴",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.SPORTS
-            ),
-            "km",
-            10
+        "Cycling",
+        "🚴",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.SPORTS
+        ),
+        "km",
+        10
     ),
     WORKOUT(
-            "Workout",
-            "💪",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.SPORTS
-            ),
-            "min",
-            30
+        "Workout",
+        "💪",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.SPORTS
+        ),
+        "min",
+        30
     ),
     BURN_CALORIE(
-            "Burn Calorie",
-            "🔥",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.SPORTS
-            ),
-            "Cal",
-            500
+        "Burn Calorie",
+        "🔥",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.SPORTS
+        ),
+        "Cal",
+        500
     ),
     EXERCISE(
-            "Exercise",
-            "🏋️",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.SPORTS
-            ),
-            "min",
-            30
+        "Exercise",
+        "🏋️",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.SPORTS
+        ),
+        "min",
+        30
     ),
     READ_BOOK(
-            "Read a Book",
-            "📚",
-            listOf(HabitCategoryType.MOST_POPULAR, HabitCategoryType.LIFESTYLE),
-            "min",
-            30
+        "Read a Book",
+        "📚",
+        listOf(HabitCategoryType.MOST_POPULAR, HabitCategoryType.LIFESTYLE),
+        "min",
+        30
     ),
     DRINK_LESS_ALCOHOL(
-            "Drink Less Alcohol",
-            "🍺",
-            listOf(HabitCategoryType.MOST_POPULAR, HabitCategoryType.QUIT),
-            "drink",
-            0
+        "Drink Less Alcohol",
+        "🍺",
+        listOf(HabitCategoryType.MOST_POPULAR, HabitCategoryType.QUIT),
+        "drink",
+        0
     ),
     DRINK_LESS_CAFFEINE(
-            "Drink Less Caffeine",
-            "☕",
-            listOf(
-                    HabitCategoryType.MOST_POPULAR,
-                    HabitCategoryType.HEALTH,
-                    HabitCategoryType.QUIT
-            ),
-            "drink",
-            2
+        "Drink Less Caffeine",
+        "☕",
+        listOf(
+            HabitCategoryType.MOST_POPULAR,
+            HabitCategoryType.HEALTH,
+            HabitCategoryType.QUIT
+        ),
+        "drink",
+        2
     ),
 
     // Health specific
     LESS_CARBOHYDRATE(
-            "Less Carbohydrate",
-            "🍞",
-            listOf(HabitCategoryType.HEALTH, HabitCategoryType.QUIT),
-            "g",
-            100
+        "Less Carbohydrate",
+        "🍞",
+        listOf(HabitCategoryType.HEALTH, HabitCategoryType.QUIT),
+        "g",
+        100
     ),
 
     // Sports specific
@@ -154,11 +154,11 @@ enum class HabitSubCategory(
     TRACK_EXPENSES("Track Expenses", "💰", listOf(HabitCategoryType.LIFESTYLE), "count", 1),
     SAVE_MONEY("Save Money", "🐷", listOf(HabitCategoryType.LIFESTYLE), "count", 1),
     EAT_LESS_SUGAR(
-            "Eat Less Sugar",
-            "🍬",
-            listOf(HabitCategoryType.LIFESTYLE, HabitCategoryType.QUIT),
-            "count",
-            1
+        "Eat Less Sugar",
+        "🍬",
+        listOf(HabitCategoryType.LIFESTYLE, HabitCategoryType.QUIT),
+        "count",
+        1
     ),
     BREATH("Breath", "🌬️", listOf(HabitCategoryType.LIFESTYLE), "min", 5),
     LEARNING("Learning", "🎓", listOf(HabitCategoryType.LIFESTYLE), "min", 30),
