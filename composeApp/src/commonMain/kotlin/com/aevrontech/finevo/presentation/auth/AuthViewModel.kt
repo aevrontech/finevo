@@ -55,12 +55,10 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
                             error = null
                         )
                 }
-
                 is Result.Error -> {
                     _uiState.value =
                         _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
-
                 is Result.Loading -> {
                     // Already handled
                 }
@@ -86,7 +84,6 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
                             successMessage = "Account created successfully!"
                         )
                 }
-
                 is Result.Error -> {
                     val message = result.exception.message
                     // Check if it's a "confirm email" case
@@ -104,7 +101,6 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
                         _uiState.value = _uiState.value.copy(isLoading = false, error = message)
                     }
                 }
-
                 is Result.Loading -> {
                     // Already handled
                 }
@@ -129,12 +125,10 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
                                 "Welcome, ${result.data.displayName ?: "User"}!"
                         )
                 }
-
                 is Result.Error -> {
                     _uiState.value =
                         _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
-
                 is Result.Loading -> {}
             }
         }
@@ -157,12 +151,10 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
                                 "Welcome, ${result.data.displayName ?: "User"}!"
                         )
                 }
-
                 is Result.Error -> {
                     _uiState.value =
                         _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
-
                 is Result.Loading -> {}
             }
         }
@@ -196,12 +188,10 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
                             successMessage = "Password reset email sent"
                         )
                 }
-
                 is Result.Error -> {
                     _uiState.value =
                         _uiState.value.copy(isLoading = false, error = result.exception.message)
                 }
-
                 is Result.Loading -> {}
             }
         }
@@ -212,6 +202,15 @@ class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
         viewModelScope.launch {
             authRepository.signOut()
             _uiState.value = AuthUiState()
+        }
+    }
+
+    /** Sign out the current user and call onComplete when done. */
+    fun signOutWithCallback(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            authRepository.signOut()
+            _uiState.value = AuthUiState()
+            onComplete()
         }
     }
 

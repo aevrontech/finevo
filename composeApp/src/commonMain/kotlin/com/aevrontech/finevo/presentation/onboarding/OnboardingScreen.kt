@@ -25,7 +25,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,90 +59,83 @@ class OnboardingScreen : Screen {
         val viewModel: OnboardingViewModel = koinViewModel()
         val scope = rememberCoroutineScope()
 
-        val pages = listOf(
-            OnboardingPage(
-                title = "Track Your Finances",
-                description = "Monitor income, expenses, and budgets with beautiful analytics. Get insights into your spending patterns.",
-                emoji = "💰"
-            ),
-            OnboardingPage(
-                title = "Crush Your Debt",
-                description = "Create payoff plans with Avalanche or Snowball strategies. Visualize your journey to debt freedom.",
-                emoji = "🎯"
-            ),
-            OnboardingPage(
-                title = "Build Better Habits",
-                description = "Track daily habits, earn XP, and level up! Stay motivated with streaks and achievements.",
-                emoji = "🚀"
+        // Prevent double-click crashes on navigation buttons
+        var isNavigating by remember { mutableStateOf(false) }
+
+        val pages =
+            listOf(
+                OnboardingPage(
+                    title = "Track Your Finances",
+                    description =
+                        "Monitor income, expenses, and budgets with beautiful analytics. Get insights into your spending patterns.",
+                    emoji = "💰"
+                ),
+                OnboardingPage(
+                    title = "Crush Your Debt",
+                    description =
+                        "Create payoff plans with Avalanche or Snowball strategies. Visualize your journey to debt freedom.",
+                    emoji = "🎯"
+                ),
+                OnboardingPage(
+                    title = "Build Better Habits",
+                    description =
+                        "Track daily habits, earn XP, and level up! Stay motivated with streaks and achievements.",
+                    emoji = "🚀"
+                )
             )
-        )
 
         val pagerState = rememberPagerState(pageCount = { pages.size })
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Background)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
+        Box(modifier = Modifier.fillMaxSize().background(Background)) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 // Skip button
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(
                         onClick = {
-                            navigator.replace(LoginScreen())
+                            if (!isNavigating) {
+                                isNavigating = true
+                                viewModel.completeOnboarding()
+                                navigator.replace(LoginScreen())
+                            }
                         }
-                    ) {
-                        Text(
-                            text = "Skip",
-                            color = OnSurfaceVariant
-                        )
-                    }
+                    ) { Text(text = "Skip", color = OnSurfaceVariant) }
                 }
 
                 // Pager
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) { page ->
-                    OnboardingPageContent(pages[page])
-                }
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                ) { page -> OnboardingPageContent(pages[page]) }
 
                 // Page indicators
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     repeat(pages.size) { index ->
                         val isSelected = pagerState.currentPage == index
                         Box(
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .size(if (isSelected) 10.dp else 8.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) Primary else OnSurfaceVariant.copy(alpha = 0.3f)
-                                )
+                            modifier =
+                                Modifier.padding(4.dp)
+                                    .size(if (isSelected) 10.dp else 8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) Primary
+                                        else OnSurfaceVariant.copy(alpha = 0.3f)
+                                    )
                         )
                     }
                 }
 
                 // Bottom buttons
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .padding(bottom = 32.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .padding(bottom = 32.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     // Back button (hidden on first page)
@@ -153,12 +150,11 @@ class OnboardingScreen : Screen {
                                     pagerState.animateScrollToPage(pagerState.currentPage - 1)
                                 }
                             },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = OnSurface
-                            )
-                        ) {
-                            Text("Back")
-                        }
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = OnSurface
+                                )
+                        ) { Text("Back") }
                     }
 
                     if (pagerState.currentPage == 0) {
@@ -173,16 +169,20 @@ class OnboardingScreen : Screen {
                                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                 }
                             } else {
-                                navigator.replace(LoginScreen())
+                                if (!isNavigating) {
+                                    isNavigating = true
+                                    viewModel.completeOnboarding()
+                                    navigator.replace(LoginScreen())
+                                }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Primary
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
                         modifier = Modifier.height(48.dp)
                     ) {
                         Text(
-                            text = if (pagerState.currentPage < pages.size - 1) "Next" else "Get Started",
+                            text =
+                                if (pagerState.currentPage < pages.size - 1) "Next"
+                                else "Get Started",
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -195,18 +195,12 @@ class OnboardingScreen : Screen {
 @Composable
 private fun OnboardingPageContent(page: OnboardingPage) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         // Emoji icon
-        Text(
-            text = page.emoji,
-            fontSize = 80.sp,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
+        Text(text = page.emoji, fontSize = 80.sp, modifier = Modifier.padding(bottom = 32.dp))
 
         // Title with gradient
         Text(
@@ -214,11 +208,10 @@ private fun OnboardingPageContent(page: OnboardingPage) {
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                brush = Brush.linearGradient(
-                    colors = listOf(Primary, Secondary)
-                )
-            ),
+            style =
+                MaterialTheme.typography.headlineMedium.copy(
+                    brush = Brush.linearGradient(colors = listOf(Primary, Secondary))
+                ),
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -233,8 +226,4 @@ private fun OnboardingPageContent(page: OnboardingPage) {
     }
 }
 
-data class OnboardingPage(
-    val title: String,
-    val description: String,
-    val emoji: String
-)
+data class OnboardingPage(val title: String, val description: String, val emoji: String)

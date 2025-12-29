@@ -26,7 +26,7 @@ import com.aevrontech.finevo.presentation.habit.HabitViewModel
 import com.aevrontech.finevo.presentation.home.HomeViewModel
 import com.aevrontech.finevo.presentation.onboarding.OnboardingViewModel
 import com.aevrontech.finevo.presentation.settings.SettingsViewModel
-import com.aevrontech.finevo.presentation.splash.SplashViewModel
+import com.aevrontech.finevo.presentation.settings.UserProfileViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -41,7 +41,7 @@ val appModule = module {
     single { AuthService() }
 
     // Repositories
-    single<AuthRepository> { AuthRepositoryImpl(get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get()) }
     single<DebtRepository> { DebtRepositoryImpl(get()) }
     single<HabitRepository> { HabitRepositoryImpl(get()) }
@@ -50,8 +50,7 @@ val appModule = module {
     single<SettingsRepository> { SettingsRepositoryImpl() }
 
     // ViewModels
-    viewModel { SplashViewModel(get()) }
-    viewModel { OnboardingViewModel() }
+    viewModel { OnboardingViewModel(get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { HomeViewModel() }
     viewModel { ExpenseViewModel(get(), get()) } // ExpenseRepo + AccountRepo
@@ -60,6 +59,7 @@ val appModule = module {
     viewModel { SettingsViewModel(get()) }
     viewModel { AccountViewModel(get()) }
     viewModel { CategoryViewModel(get()) }
+    viewModel { UserProfileViewModel(get()) }
 }
 
 /** Platform-specific module - override this in each platform. */

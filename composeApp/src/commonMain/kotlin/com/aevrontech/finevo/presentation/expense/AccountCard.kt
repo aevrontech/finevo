@@ -160,10 +160,22 @@ fun AccountSummaryCard(
             (expense / account.balance * 100).coerceIn(0.0, 100.0)
         } else 0.0
 
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = SurfaceContainer,
-        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp)
+    Box(
+        modifier =
+            modifier.fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    brush =
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors =
+                                listOf(
+                                    DashboardGradientStart,
+                                    DashboardGradientMid,
+                                    DashboardGradientEnd
+                                )
+                        )
+                )
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -179,9 +191,9 @@ fun AccountSummaryCard(
                     account?.name ?: "All Accounts",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = OnSurface
+                    color = Color.White
                 )
-                Text("This Month", fontSize = 12.sp, color = OnSurfaceVariant)
+                Text("This Month", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
             }
 
             // Progress bar (optional)
@@ -193,13 +205,13 @@ fun AccountSummaryCard(
                             Modifier.fillMaxWidth()
                                 .height(8.dp)
                                 .clip(RoundedCornerShape(4.dp)),
-                        color = if (percentageUsed > 80) Error else Primary,
-                        trackColor = SurfaceContainerHighest
+                        color = Color.White,
+                        trackColor = Color.White.copy(alpha = 0.3f)
                     )
                     Text(
                         "${percentageUsed.toInt()}% of balance spent",
                         fontSize = 11.sp,
-                        color = OnSurfaceVariant
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -209,22 +221,22 @@ fun AccountSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SummaryItem(
+                SummaryItemWhite(
                     label = "Income",
                     amount = income,
-                    color = Success,
+                    isPositive = true,
                     currency = account?.currency ?: "MYR"
                 )
-                SummaryItem(
+                SummaryItemWhite(
                     label = "Expense",
                     amount = expense,
-                    color = Error,
+                    isPositive = false,
                     currency = account?.currency ?: "MYR"
                 )
-                SummaryItem(
+                SummaryItemWhite(
                     label = "Net",
                     amount = remaining,
-                    color = if (remaining >= 0) Success else Error,
+                    isPositive = remaining >= 0,
                     currency = account?.currency ?: "MYR"
                 )
             }
@@ -242,6 +254,20 @@ private fun SummaryItem(label: String, amount: Double, color: Color, currency: S
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = color
+        )
+    }
+}
+
+@Composable
+private fun SummaryItemWhite(label: String, amount: Double, isPositive: Boolean, currency: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "${getCurrencySymbol(currency)} ${formatAmount(kotlin.math.abs(amount))}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
         )
     }
 }
@@ -278,7 +304,6 @@ private fun parseAccountColor(hex: String): Color {
                 val b = colorString.substring(4, 6).toInt(16)
                 Color(red = r, green = g, blue = b, alpha = 255)
             }
-
             else -> Primary
         }
     } catch (e: Exception) {

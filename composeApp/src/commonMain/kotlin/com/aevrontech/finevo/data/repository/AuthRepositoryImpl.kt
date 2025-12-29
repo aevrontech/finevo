@@ -2,48 +2,102 @@ package com.aevrontech.finevo.data.repository
 
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
+import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.data.remote.AuthService
-import com.aevrontech.finevo.data.remote.AuthState
 import com.aevrontech.finevo.domain.model.User
 import com.aevrontech.finevo.domain.repository.AuthRepository
+import com.aevrontech.finevo.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
-/** AuthRepository implementation using Supabase Auth. */
-class AuthRepositoryImpl(private val authService: AuthService) : AuthRepository {
+/**
+ * Offline-First AuthRepository Implementation.
+ *
+ * - Source of truth: LocalDataSource (SQLDelight)
+ * - Remote calls: Only for login, signup, logout
+ * - Session state: SettingsRepository (SharedPrefs)
+ * - Token refresh: Handled automatically by Supabase SDK
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class AuthRepositoryImpl(
+    private val authService: AuthService,
+    private val localDataSource: LocalDataSource,
+    private val settingsRepository: SettingsRepository
+) : AuthRepository {
 
+    // Internal state to track current user ID for Flow switching
+    private val _currentUserId = MutableStateFlow(settingsRepository.getCurrentUserId())
+
+    /** Flow that emits the cached user from local DB */
     override val currentUser: Flow<User?> =
-        authService.observeAuthState().map { state ->
-            when (state) {
-                is AuthState.Authenticated -> state.user
-                else -> null
+        _currentUserId.flatMapLatest { userId ->
+            if (userId != null) {
+                localDataSource.getUser(userId)
+            } else {
+                flowOf(null)
             }
         }
 
-    override val isLoggedIn: Flow<Boolean> =
-        authService.observeAuthState().map { state -> state is AuthState.Authenticated }
+    override val isLoggedIn: Flow<Boolean> = _currentUserId.map { it != null }
 
     override suspend fun signUp(
         email: String,
         password: String,
         displayName: String?
     ): Result<User> {
-        return authService.signUpWithEmail(email, password)
+        return when (val result = authService.signUpWithEmail(email, password)) {
+            is Result.Success -> {
+                handleLoginSuccess(result.data)
+                result
+            }
+            is Result.Error -> result
+            is Result.Loading -> result
+        }
     }
 
     override suspend fun signIn(email: String, password: String): Result<User> {
-        return authService.signInWithEmail(email, password)
+        return when (val result = authService.signInWithEmail(email, password)) {
+            is Result.Success -> {
+                handleLoginSuccess(result.data)
+                result
+            }
+            is Result.Error -> result
+            is Result.Loading -> result
+        }
     }
 
     override suspend fun signInWithGoogle(idToken: String, nonce: String?): Result<User> {
-        return authService.signInWithGoogle(idToken, nonce)
+        return when (val result = authService.signInWithGoogle(idToken, nonce)) {
+            is Result.Success -> {
+                handleLoginSuccess(result.data)
+                result
+            }
+            is Result.Error -> result
+            is Result.Loading -> result
+        }
     }
 
     override suspend fun signInWithApple(idToken: String, nonce: String): Result<User> {
-        return authService.signInWithApple(idToken, nonce)
+        return when (val result = authService.signInWithApple(idToken, nonce)) {
+            is Result.Success -> {
+                handleLoginSuccess(result.data)
+                result
+            }
+            is Result.Error -> result
+            is Result.Loading -> result
+        }
     }
 
     override suspend fun signOut(): Result<Unit> {
+        // Clear local session state first (fast)
+        settingsRepository.setLoggedIn(false)
+        settingsRepository.setCurrentUserId(null)
+        _currentUserId.value = null
+
+        // Then call remote logout (can be slow/fail, but local state is already cleared)
         return authService.signOut()
     }
 
@@ -62,27 +116,44 @@ class AuthRepositoryImpl(private val authService: AuthService) : AuthRepository 
     }
 
     override suspend fun deleteAccount(): Result<Unit> {
-        // TODO: Implement account deletion
+        // Clear local data first
+        _currentUserId.value?.let { localDataSource.deleteUser(it) }
+        signOut()
         return Result.error(AppException.Unknown("Account deletion not yet implemented"))
     }
 
     override suspend fun refreshToken(): Result<Unit> {
-        // Supabase handles token refresh automatically
+        // Supabase SDK handles token refresh automatically
         return Result.success(Unit)
     }
 
     override fun isBiometricAvailable(): Boolean {
-        // TODO: Check platform-specific biometric availability
         return false
     }
 
     override suspend fun enableBiometric(): Result<Unit> {
-        // TODO: Implement biometric enrollment
         return Result.success(Unit)
     }
 
     override suspend fun authenticateWithBiometric(): Result<Boolean> {
-        // TODO: Implement biometric authentication
         return Result.success(false)
+    }
+
+    /**
+     * Handle successful login/signup:
+     * 1. Cache user in local DB
+     * 2. Set session flags
+     * 3. Update internal state
+     */
+    private suspend fun handleLoginSuccess(user: User) {
+        // 1. Cache user in local database
+        localDataSource.insertUser(user)
+
+        // 2. Set session flags for fast startup
+        settingsRepository.setCurrentUserId(user.id)
+        settingsRepository.setLoggedIn(true)
+
+        // 3. Update internal Flow state
+        _currentUserId.value = user.id
     }
 }

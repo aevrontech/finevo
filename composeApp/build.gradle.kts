@@ -91,6 +91,9 @@ kotlin {
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.realtime)
             implementation(libs.supabase.storage)
+
+            // Settings
+            implementation(libs.multiplatform.settings)
         }
 
         commonTest.dependencies {
@@ -119,15 +122,15 @@ kotlin {
 
             // Security
             implementation(libs.androidx.security.crypto)
-            
+
             // Credential Manager for Google Sign-In
             implementation("androidx.credentials:credentials:1.3.0")
             implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
             implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-            
+
             // Legacy Google Sign-In (fallback for emulators)
             implementation("com.google.android.gms:play-services-auth:21.2.0")
-            
+
             // Google Fonts for Inter font family
             implementation("androidx.compose.ui:ui-text-google-fonts:1.7.6")
         }
@@ -156,7 +159,9 @@ android {
         // Inject secrets from local.properties
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "")}\"")
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")}\"")
+        buildConfigField("String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")}\"")
     }
 
     packaging {
@@ -173,6 +178,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Use debug signing for testing release performance
+            signingConfig = signingConfigs.getByName("debug")
         }
         getByName("debug") {
             isMinifyEnabled = false

@@ -4,6 +4,7 @@ import android.app.Application
 import com.aevrontech.finevo.data.remote.SupabaseConfig
 import com.aevrontech.finevo.di.appModule
 import com.aevrontech.finevo.di.platformModule
+import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -13,16 +14,36 @@ class FinEvoApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        val appStart = System.currentTimeMillis()
+        android.util.Log.i("StartupTiming", "▶ Application.onCreate START")
 
-        // Initialize Koin
+        // Initialize Koin first (required for DI)
+        val koinStart = System.currentTimeMillis()
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@FinEvoApplication)
             modules(platformModule(), appModule)
         }
+        android.util.Log.i(
+            "StartupTiming",
+            "  Koin init: ${System.currentTimeMillis() - koinStart}ms"
+        )
 
-        // Initialize Supabase
-        initializeSupabase()
+        // Initialize Supabase in background - NOT blocking startup
+        // Auth will be available when needed (login/signup)
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val supabaseStart = System.currentTimeMillis()
+            initializeSupabase()
+            android.util.Log.i(
+                "StartupTiming",
+                "  Supabase init (background): ${System.currentTimeMillis() - supabaseStart}ms"
+            )
+        }
+
+        android.util.Log.i(
+            "StartupTiming",
+            "◀ Application.onCreate END: ${System.currentTimeMillis() - appStart}ms"
+        )
     }
 
     private fun initializeSupabase() {

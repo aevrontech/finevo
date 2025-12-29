@@ -39,7 +39,6 @@ class AuthService {
                         AuthState.NotAuthenticated
                     }
                 }
-
                 is SessionStatus.NotAuthenticated -> AuthState.NotAuthenticated
                 is SessionStatus.Initializing -> AuthState.Loading
                 is SessionStatus.RefreshFailure -> AuthState.NotAuthenticated

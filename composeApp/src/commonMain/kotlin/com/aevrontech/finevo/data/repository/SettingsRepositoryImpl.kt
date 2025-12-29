@@ -6,17 +6,49 @@ import com.aevrontech.finevo.domain.repository.ExportFormat
 import com.aevrontech.finevo.domain.repository.SettingsRepository
 import com.aevrontech.finevo.domain.repository.StorageInfo
 import com.aevrontech.finevo.domain.repository.UpdateInfo
+import com.russhwolf.settings.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/**
- * Stub implementation of SettingsRepository for Phase 1.
- */
+/** Stub implementation of SettingsRepository for Phase 1. */
 class SettingsRepositoryImpl : SettingsRepository {
 
     private val _preferences = MutableStateFlow(UserPreferences(userId = ""))
+    private val settings: Settings = Settings()
 
     override fun getPreferences(): Flow<UserPreferences> = _preferences
+
+    override fun hasCompletedOnboarding(): Boolean {
+        return settings.getBoolean("onboarding_completed", false)
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        settings.putBoolean("onboarding_completed", completed)
+    }
+
+    // ============================================
+    // SESSION STATE (Offline-First)
+    // ============================================
+
+    override fun isLoggedIn(): Boolean {
+        return settings.getBoolean("is_logged_in", false)
+    }
+
+    override fun setLoggedIn(loggedIn: Boolean) {
+        settings.putBoolean("is_logged_in", loggedIn)
+    }
+
+    override fun getCurrentUserId(): String? {
+        return settings.getStringOrNull("current_user_id")
+    }
+
+    override fun setCurrentUserId(userId: String?) {
+        if (userId == null) {
+            settings.remove("current_user_id")
+        } else {
+            settings.putString("current_user_id", userId)
+        }
+    }
 
     override suspend fun updatePreferences(preferences: UserPreferences): Result<UserPreferences> {
         _preferences.value = preferences

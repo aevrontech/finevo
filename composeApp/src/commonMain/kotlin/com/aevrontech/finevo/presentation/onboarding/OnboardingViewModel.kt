@@ -1,16 +1,16 @@
 package com.aevrontech.finevo.presentation.onboarding
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.aevrontech.finevo.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-data class OnboardingUiState(
-    val currentPage: Int = 0,
-    val isCompleted: Boolean = false
-)
+data class OnboardingUiState(val currentPage: Int = 0, val isCompleted: Boolean = false)
 
-class OnboardingViewModel : ViewModel() {
+class OnboardingViewModel(private val settingsRepository: SettingsRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
@@ -20,7 +20,9 @@ class OnboardingViewModel : ViewModel() {
     }
 
     fun completeOnboarding() {
-        _uiState.value = _uiState.value.copy(isCompleted = true)
-        // TODO: Save to preferences that onboarding is complete
+        viewModelScope.launch {
+            settingsRepository.setOnboardingCompleted(true)
+            _uiState.value = _uiState.value.copy(isCompleted = true)
+        }
     }
 }
