@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.AccountType
+import com.aevrontech.finevo.domain.model.CurrencyProvider
 import com.aevrontech.finevo.ui.theme.*
 
 /** Elegant, minimalist screen for creating/editing an account. */
@@ -35,8 +36,7 @@ fun AddAccountScreen(
         balance: Double,
         currency: String,
         type: AccountType,
-        color: String
-    ) -> Unit,
+        color: String) -> Unit,
     defaultCurrency: String = "MYR",
     editingAccount: Account? = null
 ) {
@@ -44,13 +44,9 @@ fun AddAccountScreen(
 
     var name by remember { mutableStateOf(editingAccount?.name ?: "") }
     var balanceText by remember {
-        mutableStateOf(
-            if (isEditing) String.format("%.2f", editingAccount?.balance ?: 0.0) else ""
-        )
+        mutableStateOf(if (isEditing) String.format("%.2f", editingAccount?.balance ?: 0.0) else "")
     }
-    var selectedCurrency by remember {
-        mutableStateOf(editingAccount?.currency ?: defaultCurrency)
-    }
+    var selectedCurrency by remember { mutableStateOf(editingAccount?.currency ?: defaultCurrency) }
     var selectedType by remember { mutableStateOf(editingAccount?.type ?: AccountType.CASH) }
     var selectedColor by remember { mutableStateOf(editingAccount?.color ?: "#00D9FF") }
     var showCurrencyPicker by remember { mutableStateOf(false) }
@@ -58,8 +54,7 @@ fun AddAccountScreen(
     val isValid =
         name.isNotBlank() && (balanceText.isEmpty() || balanceText.toDoubleOrNull() != null)
 
-    val currencies =
-        listOf("MYR", "USD", "EUR", "GBP", "SGD", "JPY", "CNY", "AUD", "THB", "IDR")
+    // Use centralized Currency enum
     val colors =
         listOf(
             "#00D9FF",
@@ -83,17 +78,13 @@ fun AddAccountScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Close"
-                        )
+                        Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 },
                 actions = {
                     TextButton(
                         onClick = {
-                            val balance =
-                                balanceText.toDoubleOrNull() ?: 0.0
+                            val balance = balanceText.toDoubleOrNull() ?: 0.0
                             onConfirm(
                                 name,
                                 balance,
@@ -106,9 +97,7 @@ fun AddAccountScreen(
                     ) {
                         Text(
                             "Save",
-                            color =
-                                if (isValid) Primary
-                                else OnSurfaceVariant,
+                            color = if (isValid) Primary else OnSurfaceVariant,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -173,15 +162,9 @@ fun AddAccountScreen(
                         modifier = Modifier.width(80.dp)
                     ) {
                         Row(
-                            modifier =
-                                Modifier.padding(
-                                    horizontal = 12.dp,
-                                    vertical = 16.dp
-                                ),
-                            horizontalArrangement =
-                                Arrangement.SpaceBetween,
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 selectedCurrency,
@@ -201,13 +184,7 @@ fun AddAccountScreen(
                     OutlinedTextField(
                         value = balanceText,
                         onValueChange = {
-                            if (it.isEmpty() ||
-                                it.matches(
-                                    Regex(
-                                        "^\\d*\\.?\\d*$"
-                                    )
-                                )
-                            ) {
+                            if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
                                 balanceText = it
                             }
                         },
@@ -217,17 +194,11 @@ fun AddAccountScreen(
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Primary,
-                                unfocusedBorderColor =
-                                    SurfaceContainer,
-                                focusedContainerColor =
-                                    SurfaceContainer,
-                                unfocusedContainerColor =
-                                    SurfaceContainer
+                                unfocusedBorderColor = SurfaceContainer,
+                                focusedContainerColor = SurfaceContainer,
+                                unfocusedContainerColor = SurfaceContainer
                             ),
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Decimal
-                            ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
                     )
                 }
@@ -297,14 +268,14 @@ fun AddAccountScreen(
                     color = OnSurface
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                currencies.forEach { currency ->
+                CurrencyProvider.getAllCurrencies().forEach { currency ->
                     Surface(
                         onClick = {
-                            selectedCurrency = currency
+                            selectedCurrency = currency.code
                             showCurrencyPicker = false
                         },
                         color =
-                            if (currency == selectedCurrency)
+                            if (currency.code == selectedCurrency)
                                 Primary.copy(alpha = 0.1f)
                             else Color.Transparent,
                         shape = RoundedCornerShape(8.dp)
@@ -312,26 +283,29 @@ fun AddAccountScreen(
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .padding(
-                                        vertical = 14.dp,
-                                        horizontal = 12.dp
-                                    ),
-                            horizontalArrangement =
-                                Arrangement.SpaceBetween,
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                getCurrencyName(currency),
-                                color = OnSurface
-                            )
-                            if (currency == selectedCurrency) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    currency.symbol,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface,
+                                    modifier = Modifier.width(40.dp)
+                                )
+                                Text(
+                                    "${currency.code} - ${currency.displayName}",
+                                    color = OnSurface
+                                )
+                            }
+                            if (currency.code == selectedCurrency) {
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = null,
                                     tint = Primary,
-                                    modifier =
-                                        Modifier.size(20.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -363,8 +337,7 @@ private fun AccountTypeCard(type: AccountType, isSelected: Boolean, onClick: () 
             Text(
                 type.displayName,
                 fontSize = 11.sp,
-                fontWeight =
-                    if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (isSelected) Primary else OnSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 2
@@ -411,26 +384,9 @@ private fun parseHexColor(hex: String): Color {
                 val b = colorString.substring(4, 6).toInt(16)
                 Color(red = r, green = g, blue = b, alpha = 255)
             }
-
             else -> Primary
         }
     } catch (e: Exception) {
         Primary
-    }
-}
-
-private fun getCurrencyName(code: String): String {
-    return when (code) {
-        "MYR" -> "🇲🇾 MYR - Malaysian Ringgit"
-        "USD" -> "🇺🇸 USD - US Dollar"
-        "EUR" -> "🇪🇺 EUR - Euro"
-        "GBP" -> "🇬🇧 GBP - British Pound"
-        "SGD" -> "🇸🇬 SGD - Singapore Dollar"
-        "JPY" -> "🇯🇵 JPY - Japanese Yen"
-        "CNY" -> "🇨🇳 CNY - Chinese Yuan"
-        "AUD" -> "🇦🇺 AUD - Australian Dollar"
-        "THB" -> "🇹🇭 THB - Thai Baht"
-        "IDR" -> "🇮🇩 IDR - Indonesian Rupiah"
-        else -> code
     }
 }

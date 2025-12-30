@@ -41,7 +41,7 @@ data class Account(
 ) {
     /** Get formatted balance with currency symbol. */
     fun formattedBalance(): String {
-        val symbol = getCurrencySymbol(currency)
+        val symbol = CurrencyProvider.getCurrency(currency)?.symbol ?: currency
         return "$symbol ${String.format("%.2f", balance)}"
     }
 
@@ -50,24 +50,12 @@ data class Account(
         get() = type in listOf(AccountType.CREDIT_CARD, AccountType.LOAN, AccountType.MORTGAGE)
 
     companion object {
+        /**
+         * Get currency symbol from code.
+         * @deprecated Use CurrencyProvider.getCurrency(code)?.symbol instead
+         */
         fun getCurrencySymbol(currency: String): String {
-            return when (currency.uppercase()) {
-                "MYR" -> "RM"
-                "USD" -> "$"
-                "EUR" -> "€"
-                "GBP" -> "£"
-                "JPY" -> "¥"
-                "CNY" -> "¥"
-                "SGD" -> "S$"
-                "THB" -> "฿"
-                "IDR" -> "Rp"
-                "PHP" -> "₱"
-                "VND" -> "₫"
-                "INR" -> "₹"
-                "KRW" -> "₩"
-                "AUD" -> "A$"
-                else -> currency
-            }
+            return CurrencyProvider.getCurrency(currency)?.symbol ?: currency
         }
 
         /** Default colors for account creation. */

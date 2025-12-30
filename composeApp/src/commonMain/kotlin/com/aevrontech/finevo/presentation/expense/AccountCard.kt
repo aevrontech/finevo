@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aevrontech.finevo.domain.model.Account
+import com.aevrontech.finevo.domain.model.CurrencyProvider
 import com.aevrontech.finevo.ui.theme.*
 
 /** Horizontal scrollable row of account cards. */
@@ -250,7 +251,7 @@ private fun SummaryItem(label: String, amount: Double, color: Color, currency: S
         Text(label, fontSize = 12.sp, color = OnSurfaceVariant)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "${getCurrencySymbol(currency)} ${formatAmount(kotlin.math.abs(amount))}",
+            "${CurrencyProvider.getCurrency(currency)?.symbol ?: currency} ${formatAmount(kotlin.math.abs(amount))}",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = color
@@ -264,7 +265,7 @@ private fun SummaryItemWhite(label: String, amount: Double, isPositive: Boolean,
         Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "${getCurrencySymbol(currency)} ${formatAmount(kotlin.math.abs(amount))}",
+            "${CurrencyProvider.getCurrency(currency)?.symbol ?: currency} ${formatAmount(kotlin.math.abs(amount))}",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color.White
@@ -273,22 +274,11 @@ private fun SummaryItemWhite(label: String, amount: Double, isPositive: Boolean,
 }
 
 private fun formatAccountBalance(account: Account): String {
-    val symbol = getCurrencySymbol(account.currency)
+    val symbol = CurrencyProvider.getCurrency(account.currency)?.symbol ?: account.currency
     return "$symbol ${formatAmount(account.balance)}"
 }
 
-private fun getCurrencySymbol(currency: String): String {
-    return when (currency.uppercase()) {
-        "MYR" -> "RM"
-        "USD" -> "$"
-        "EUR" -> "€"
-        "GBP" -> "£"
-        "JPY" -> "¥"
-        "CNY" -> "¥"
-        "SGD" -> "S$"
-        else -> currency
-    }
-}
+// getCurrencySymbol removed - use Currency.fromCode(code).symbol
 
 private fun formatAmount(amount: Double): String {
     return String.format("%.2f", amount)

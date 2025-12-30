@@ -49,6 +49,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 class UserProfileScreen : Screen {
 
+    override val key: cafe.adriel.voyager.core.screen.ScreenKey = "UserProfileScreen"
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {

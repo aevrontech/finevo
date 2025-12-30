@@ -65,17 +65,11 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.aevrontech.finevo.core.util.Platform
 import com.aevrontech.finevo.presentation.home.HomeScreen
-import com.aevrontech.finevo.ui.theme.Background
+import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
+import com.aevrontech.finevo.ui.theme.DashboardGradientMid
+import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 import com.aevrontech.finevo.ui.theme.Error
-import com.aevrontech.finevo.ui.theme.ErrorContainer
-import com.aevrontech.finevo.ui.theme.OnErrorContainer
 import com.aevrontech.finevo.ui.theme.OnPrimary
-import com.aevrontech.finevo.ui.theme.OnSurface
-import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
-import com.aevrontech.finevo.ui.theme.Outline
-import com.aevrontech.finevo.ui.theme.Primary
-import com.aevrontech.finevo.ui.theme.Secondary
-import com.aevrontech.finevo.ui.theme.SurfaceVariant
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -132,31 +126,48 @@ class LoginScreen : Screen {
             }
         }
 
+        // Dashboard gradient for interactive elements
+        val dashboardGradient =
+            Brush.linearGradient(
+                colors =
+                    listOf(
+                        DashboardGradientStart,
+                        DashboardGradientMid,
+                        DashboardGradientEnd
+                    )
+            )
+
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState) { data ->
                     Snackbar(
                         snackbarData = data,
                         containerColor =
-                            if (uiState.error != null) ErrorContainer
-                            else SurfaceVariant,
+                            if (uiState.error != null)
+                                MaterialTheme.colorScheme
+                                    .errorContainer
+                            else
+                                MaterialTheme.colorScheme
+                                    .surfaceVariant,
                         contentColor =
-                            if (uiState.error != null) OnErrorContainer
-                            else OnSurface,
+                            if (uiState.error != null)
+                                MaterialTheme.colorScheme
+                                    .onErrorContainer
+                            else MaterialTheme.colorScheme.onSurface,
                         actionColor =
                             if (uiState.error != null) Error
-                            else Primary,
+                            else DashboardGradientStart,
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
             },
-            containerColor = Background
+            containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             Box(
                 modifier =
                     Modifier.fillMaxSize()
                         .padding(paddingValues)
-                        .background(Background)
+                        .background(MaterialTheme.colorScheme.background)
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -164,21 +175,14 @@ class LoginScreen : Screen {
                 ) {
                     Spacer(modifier = Modifier.height(60.dp))
 
-                    // Logo
+                    // Logo with dashboard gradient
                     Text(
                         text = "FinEvo",
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold,
                         style =
                             MaterialTheme.typography.displayMedium.copy(
-                                brush =
-                                    Brush.linearGradient(
-                                        colors =
-                                            listOf(
-                                                Primary,
-                                                Secondary
-                                            )
-                                    )
+                                brush = dashboardGradient
                             )
                     )
 
@@ -189,7 +193,7 @@ class LoginScreen : Screen {
                             if (isLoginMode) "Welcome back!"
                             else "Create your account",
                         fontSize = 16.sp,
-                        color = OnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(48.dp))
@@ -223,9 +227,29 @@ class LoginScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Primary,
-                                unfocusedBorderColor = Outline,
-                                focusedLabelColor = Primary,
+                                focusedTextColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurface,
+                                unfocusedTextColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurface,
+                                focusedBorderColor =
+                                    DashboardGradientStart,
+                                unfocusedBorderColor =
+                                    MaterialTheme.colorScheme
+                                        .outline,
+                                focusedLabelColor =
+                                    DashboardGradientStart,
+                                unfocusedLabelColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant,
+                                cursorColor =
+                                    DashboardGradientStart,
+                                focusedLeadingIconColor =
+                                    DashboardGradientStart,
+                                unfocusedLeadingIconColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant,
                                 errorBorderColor = Error
                             ),
                         shape = RoundedCornerShape(12.dp)
@@ -299,9 +323,35 @@ class LoginScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Primary,
-                                unfocusedBorderColor = Outline,
-                                focusedLabelColor = Primary,
+                                focusedTextColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurface,
+                                unfocusedTextColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurface,
+                                focusedBorderColor =
+                                    DashboardGradientStart,
+                                unfocusedBorderColor =
+                                    MaterialTheme.colorScheme
+                                        .outline,
+                                focusedLabelColor =
+                                    DashboardGradientStart,
+                                unfocusedLabelColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant,
+                                cursorColor =
+                                    DashboardGradientStart,
+                                focusedLeadingIconColor =
+                                    DashboardGradientStart,
+                                unfocusedLeadingIconColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant,
+                                focusedTrailingIconColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant,
+                                unfocusedTrailingIconColor =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant,
                                 errorBorderColor = Error
                             ),
                         shape = RoundedCornerShape(12.dp)
@@ -329,7 +379,12 @@ class LoginScreen : Screen {
                         ) {
                             Text(
                                 text = "Forgot password?",
-                                color = Primary,
+                                style =
+                                    MaterialTheme.typography
+                                        .bodyMedium.copy(
+                                            brush =
+                                                dashboardGradient
+                                        ),
                                 fontSize = 14.sp
                             )
                         }
@@ -346,13 +401,17 @@ class LoginScreen : Screen {
                             colors =
                                 CardDefaults.cardColors(
                                     containerColor =
-                                        ErrorContainer
+                                        MaterialTheme
+                                            .colorScheme
+                                            .errorContainer
                                 ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
                                 text = error,
-                                color = OnErrorContainer,
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onErrorContainer,
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(12.dp)
@@ -360,7 +419,7 @@ class LoginScreen : Screen {
                         }
                     }
 
-                    // Login/Signup button
+                    // Login/Signup button with dashboard gradient
                     Button(
                         onClick = {
                             if (isLoginMode) {
@@ -376,7 +435,12 @@ class LoginScreen : Screen {
                                 password.isNotBlank(),
                         colors =
                             ButtonDefaults.buttonColors(
-                                containerColor = Primary
+                                containerColor =
+                                    DashboardGradientMid,
+                                disabledContainerColor =
+                                    DashboardGradientMid.copy(
+                                        alpha = 0.4f
+                                    )
                             ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -391,7 +455,8 @@ class LoginScreen : Screen {
                                     if (isLoginMode) "Sign In"
                                     else "Create Account",
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
                             )
                         }
                     }
@@ -405,16 +470,18 @@ class LoginScreen : Screen {
                     ) {
                         HorizontalDivider(
                             modifier = Modifier.weight(1f),
-                            color = Outline
+                            color = MaterialTheme.colorScheme.outline
                         )
                         Text(
                             text = "  or continue with  ",
-                            color = OnSurfaceVariant,
+                            color =
+                                MaterialTheme.colorScheme
+                                    .onSurfaceVariant,
                             fontSize = 14.sp
                         )
                         HorizontalDivider(
                             modifier = Modifier.weight(1f),
-                            color = Outline
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
 
@@ -535,7 +602,9 @@ class LoginScreen : Screen {
                                 if (isLoginMode)
                                     "Don't have an account?"
                                 else "Already have an account?",
-                            color = OnSurfaceVariant
+                            color =
+                                MaterialTheme.colorScheme
+                                    .onSurfaceVariant
                         )
                         TextButton(
                             onClick = {
@@ -547,7 +616,12 @@ class LoginScreen : Screen {
                                 text =
                                     if (isLoginMode) "Sign Up"
                                     else "Sign In",
-                                color = Primary,
+                                style =
+                                    MaterialTheme.typography
+                                        .bodyLarge.copy(
+                                            brush =
+                                                dashboardGradient
+                                        ),
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -572,7 +646,10 @@ private fun GoogleSignInButton(
         enabled = isEnabled,
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface)
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
     ) {
         Row(
             horizontalArrangement = Arrangement.Center,
@@ -649,7 +726,10 @@ private fun AppleSignInButton(
         enabled = isEnabled,
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface)
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
     ) {
         Row(
             horizontalArrangement = Arrangement.Center,
@@ -659,7 +739,7 @@ private fun AppleSignInButton(
             Text(
                 text = "", // Apple logo character
                 fontSize = 18.sp,
-                color = OnSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text("Sign in with Apple", fontSize = 14.sp)

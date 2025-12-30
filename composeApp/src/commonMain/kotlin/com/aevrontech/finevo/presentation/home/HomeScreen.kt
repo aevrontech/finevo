@@ -43,8 +43,10 @@ val LocalSignOutHandler = compositionLocalOf<(() -> Unit)?> { null }
 
 class HomeScreen : Screen {
 
-    // Stable key to prevent TabNavigator key collision when screen is recreated
-    override val key: cafe.adriel.voyager.core.screen.ScreenKey = "HomeScreen"
+    // Generate unique key per instance to prevent SlideTransition SaveableStateProvider
+    // collision
+    override val key: cafe.adriel.voyager.core.screen.ScreenKey =
+        "HomeScreen_${java.util.UUID.randomUUID()}"
 
     @Composable
     override fun Content() {
@@ -118,6 +120,7 @@ class HomeScreen : Screen {
         CompositionLocalProvider(LocalSignOutHandler provides signOutHandler) {
             TabNavigator(
                 tab = DashboardTab,
+                key = "HomeScreenTabNavigator",
                 tabDisposable = {
                     TabDisposable(
                         it,
@@ -154,6 +157,7 @@ class HomeScreen : Screen {
                         // Pass the overlay trigger to ExpenseTabContent via
                         // callback
                         when (tabNavigator.current) {
+                            DashboardTab -> DashboardContent()
                             ExpenseTab ->
                                 ExpenseTabContent(
                                     onAddTransactionClick = {
@@ -196,7 +200,8 @@ class HomeScreen : Screen {
                                             true
                                     }
                                 )
-                            else -> CurrentTab()
+                            DebtTab -> DebtTabContent()
+                            SettingsTab -> SettingsTabContent()
                         }
                     }
 

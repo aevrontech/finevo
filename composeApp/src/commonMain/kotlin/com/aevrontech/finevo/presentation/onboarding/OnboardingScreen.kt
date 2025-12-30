@@ -1,5 +1,6 @@
 package com.aevrontech.finevo.presentation.onboarding
 
+// LoginScreen import removed - now navigates to PreferencesSetupScreen
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -44,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.aevrontech.finevo.presentation.auth.LoginScreen
 import com.aevrontech.finevo.ui.theme.OnboardingGradientEnd
 import com.aevrontech.finevo.ui.theme.OnboardingGradientMid
 import com.aevrontech.finevo.ui.theme.OnboardingGradientStart
@@ -58,6 +58,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 class OnboardingScreen : Screen {
+
+    override val key: cafe.adriel.voyager.core.screen.ScreenKey = "OnboardingScreen"
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
@@ -168,8 +170,7 @@ class OnboardingScreen : Screen {
                                     .clickable {
                                         if (!isNavigating) {
                                             isNavigating = true
-                                            viewModel.completeOnboarding()
-                                            navigator.replace(LoginScreen())
+                                            navigator.replace(PreferencesSetupScreen())
                                         }
                                     },
                             contentAlignment = Alignment.Center
@@ -198,8 +199,9 @@ class OnboardingScreen : Screen {
                                         } else {
                                             if (!isNavigating) {
                                                 isNavigating = true
-                                                viewModel.completeOnboarding()
-                                                navigator.replace(LoginScreen())
+                                                navigator.replace(
+                                                    PreferencesSetupScreen()
+                                                )
                                             }
                                         }
                                     }
