@@ -126,7 +126,7 @@ presentation (UI) → domain (Business Logic) → data (Repositories)
 
 ## License
 
-Copyright © 2024 Aevrontech. All rights reserved.
+Copyright © 2026 Aevrontech. All rights reserved.
 
 ## Contact
 

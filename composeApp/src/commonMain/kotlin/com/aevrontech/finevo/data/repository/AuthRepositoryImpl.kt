@@ -111,8 +111,26 @@ class AuthRepositoryImpl(
         country: String?,
         currency: String?
     ): Result<User> {
-        // TODO: Implement profile update in AuthService
-        return Result.error(AppException.Unknown("Profile update not yet implemented"))
+        val userId = _currentUserId.value ?: return Result.error(AppException.Unauthorized)
+
+        // Get current user from local DB
+        val currentUser =
+            localDataSource.getUserSync(userId)
+                ?: return Result.error(AppException.NotFound("User"))
+
+        // Create updated user with new values
+        val updatedUser =
+            currentUser.copy(
+                displayName = displayName ?: currentUser.displayName,
+                avatarUrl = avatarUrl ?: currentUser.avatarUrl,
+                country = country ?: currentUser.country,
+                currency = currency ?: currentUser.currency
+            )
+
+        // Save to local DB
+        localDataSource.insertUser(updatedUser)
+
+        return Result.success(updatedUser)
     }
 
     override suspend fun deleteAccount(): Result<Unit> {

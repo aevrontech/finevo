@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import com.aevrontech.finevo.domain.repository.SettingsRepository
 import com.aevrontech.finevo.presentation.auth.LoginScreen
 import com.aevrontech.finevo.presentation.auth.SocialLoginHandler
+import com.aevrontech.finevo.presentation.common.ImagePicker
 import com.aevrontech.finevo.presentation.home.HomeScreen
 import com.aevrontech.finevo.presentation.onboarding.OnboardingScreen
 import com.aevrontech.finevo.ui.theme.ThemeManager
@@ -34,6 +35,9 @@ class MainActivity : ComponentActivity() {
 
         // Enable edge-to-edge display
         enableEdgeToEdge()
+
+        // Register ImagePicker launchers for camera/gallery access
+        ImagePicker.registerLaunchers(this)
 
         // Get SettingsRepository for fast local checks
         val injectStart = System.currentTimeMillis()

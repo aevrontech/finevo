@@ -46,6 +46,12 @@ class LocalDataSource(private val database: FinEvoDatabase) {
         }
     }
 
+    /** Get cached user by ID synchronously (for updates) */
+    suspend fun getUserSync(userId: String): User? =
+        withContext(Dispatchers.IO) {
+            queries.selectUserById(userId).executeAsOneOrNull()?.toDomainUser()
+        }
+
     /** Insert or update user in local cache */
     suspend fun insertUser(user: User) =
         withContext(Dispatchers.IO) {
@@ -73,10 +79,9 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getCategories(): Flow<List<Category>> {
-        return queries.selectAllCategories(defaultUserId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainCategory() } }
+        return queries.selectAllCategories(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list ->
+            list.map { it.toDomainCategory() }
+        }
     }
 
     fun getCategoriesByType(type: TransactionType): Flow<List<Category>> {
@@ -107,18 +112,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
             val expenseCategories =
                 listOf(
                     Triple("cat_food", "Food & Dining", "🍔" to "#FF5252"),
-                    Triple(
-                        "cat_transport",
-                        "Transportation",
-                        "🚗" to "#FF9800"
-                    ),
+                    Triple("cat_transport", "Transportation", "🚗" to "#FF9800"),
                     Triple("cat_shopping", "Shopping", "🛍️" to "#E91E63"),
                     Triple("cat_bills", "Bills & Utilities", "📄" to "#9C27B0"),
-                    Triple(
-                        "cat_entertainment",
-                        "Entertainment",
-                        "🎬" to "#673AB7"
-                    ),
+                    Triple("cat_entertainment", "Entertainment", "🎬" to "#673AB7"),
                     Triple("cat_health", "Health", "💊" to "#4CAF50"),
                     Triple("cat_education", "Education", "📚" to "#2196F3"),
                     Triple("cat_other_exp", "Other", "📦" to "#607D8B")
@@ -312,10 +309,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getBudgets(): Flow<List<Budget>> {
-        return queries.selectAllBudgets(defaultUserId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainBudget() } }
+        return queries.selectAllBudgets(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list
+            ->
+            list.map { it.toDomainBudget() }
+        }
     }
 
     suspend fun insertBudget(budget: Budget) =
@@ -342,17 +339,16 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getHabits(): Flow<List<Habit>> {
-        return queries.selectAllHabits(defaultUserId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainHabit() } }
+        return queries.selectAllHabits(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list
+            ->
+            list.map { it.toDomainHabit() }
+        }
     }
 
     fun getActiveHabits(): Flow<List<Habit>> {
-        return queries.selectActiveHabits(defaultUserId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainHabit() } }
+        return queries.selectActiveHabits(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list ->
+            list.map { it.toDomainHabit() }
+        }
     }
 
     suspend fun insertHabit(habit: Habit) =
@@ -403,8 +399,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
             )
         }
 
-    suspend fun deleteHabit(id: String) =
-        withContext(Dispatchers.IO) { queries.deleteHabit(id) }
+    suspend fun deleteHabit(id: String) = withContext(Dispatchers.IO) { queries.deleteHabit(id) }
 
     // ============================================
     // HABIT LOGS
@@ -418,10 +413,9 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     }
 
     fun getHabitLogsForHabit(habitId: String): Flow<List<HabitLog>> {
-        return queries.selectHabitLogsByHabitId(habitId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainHabitLog() } }
+        return queries.selectHabitLogsByHabitId(habitId).asFlow().mapToList(Dispatchers.IO).map { list ->
+            list.map { it.toDomainHabitLog() }
+        }
     }
 
     suspend fun insertHabitLog(log: HabitLog) =
@@ -445,17 +439,16 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getDebts(): Flow<List<Debt>> {
-        return queries.selectAllDebts(defaultUserId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainDebt() } }
+        return queries.selectAllDebts(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list
+            ->
+            list.map { it.toDomainDebt() }
+        }
     }
 
     fun getActiveDebts(): Flow<List<Debt>> {
-        return queries.selectActiveDebts(defaultUserId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainDebt() } }
+        return queries.selectActiveDebts(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list ->
+            list.map { it.toDomainDebt() }
+        }
     }
 
     suspend fun insertDebt(debt: Debt) =
@@ -494,10 +487,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getPaymentsForDebt(debtId: String): Flow<List<DebtPayment>> {
-        return queries.selectPaymentsByDebtId(debtId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { list -> list.map { it.toDomainDebtPayment() } }
+        return queries.selectPaymentsByDebtId(debtId).asFlow().mapToList(Dispatchers.IO).map { list
+            ->
+            list.map { it.toDomainDebtPayment() }
+        }
     }
 
     suspend fun insertDebtPayment(payment: DebtPayment) =
@@ -524,11 +517,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun setConfigValue(key: String, value: String) =
         withContext(Dispatchers.IO) {
-            queries.insertAppConfig(
-                key,
-                value,
-                Clock.System.now().toEpochMilliseconds()
-            )
+            queries.insertAppConfig(key, value, Clock.System.now().toEpochMilliseconds())
         }
 }
 
