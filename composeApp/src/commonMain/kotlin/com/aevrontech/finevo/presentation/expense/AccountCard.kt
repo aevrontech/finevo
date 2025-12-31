@@ -1,5 +1,7 @@
 package com.aevrontech.finevo.presentation.expense
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +38,9 @@ fun AccountCardsRow(
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp)
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        verticalAlignment =
+            Alignment.CenterVertically // Center align so size changes grow from center
     ) {
         items(accounts) { account ->
             AccountCard(
@@ -64,24 +69,30 @@ fun AccountCard(
     val cardColor = parseAccountColor(account.color)
     val borderColor = if (isSelected) Primary else Color.Transparent
 
+    val width by animateDpAsState(if (isSelected) 125.dp else 110.dp, label = "cardWidth")
+    val height by animateDpAsState(if (isSelected) 135.dp else 120.dp, label = "cardHeight")
+    val alpha by animateFloatAsState(if (isSelected) 1f else 0.3f, label = "cardAlpha")
+
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) cardColor.copy(alpha = 0.15f) else SurfaceContainer,
-        border = BorderStroke(1.5.dp, borderColor),
+        color = cardColor, // Always use the account's color
+        // border removed as requested
         modifier =
-            modifier.width(110.dp)
+            modifier.width(width)
+                .height(height) // Height animation
+                .alpha(alpha)
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Icon with colored background - compact
+            // Icon with white transparency background
             Box(
                 modifier =
                     Modifier.size(28.dp)
                         .clip(CircleShape)
-                        .background(cardColor.copy(alpha = 0.2f)),
+                        .background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) { Text(account.icon, fontSize = 14.sp) }
 
@@ -90,7 +101,7 @@ fun AccountCard(
                 account.name,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = OnSurface,
+                color = Color.White, // Assume colored bg needs white text
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -100,19 +111,26 @@ fun AccountCard(
                 formatAccountBalance(account),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (account.balance >= 0) OnSurface else Error,
+                color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             // Account type badge
-            Surface(shape = RoundedCornerShape(3.dp), color = cardColor.copy(alpha = 0.15f)) {
+            Surface(
+                shape = RoundedCornerShape(3.dp),
+                color = Color.White.copy(alpha = 0.2f)
+            ) {
                 Text(
                     account.type.displayName,
                     fontSize = 8.sp,
-                    color = cardColor,
+                    color = Color.White,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                    modifier =
+                        Modifier.padding(
+                            horizontal = 4.dp,
+                            vertical = 1.dp
+                        ),
                     maxLines = 1
                 )
             }
@@ -142,7 +160,12 @@ fun AddAccountCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Add", fontSize = 10.sp, color = Primary, fontWeight = FontWeight.Medium)
+            Text(
+                "Add",
+                fontSize = 10.sp,
+                color = Primary,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -194,14 +217,22 @@ fun AccountSummaryCard(
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
                 )
-                Text("This Month", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                Text(
+                    "This Month",
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             }
 
             // Progress bar (optional)
             if (account != null && account.balance > 0) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     LinearProgressIndicator(
-                        progress = { (percentageUsed / 100).toFloat().coerceIn(0f, 1f) },
+                        progress = {
+                            (percentageUsed / 100)
+                                .toFloat()
+                                .coerceIn(0f, 1f)
+                        },
                         modifier =
                             Modifier.fillMaxWidth()
                                 .height(8.dp)

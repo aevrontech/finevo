@@ -24,6 +24,7 @@ data class Transaction(
     val categoryName: String? = null,
     val categoryIcon: String? = null,
     val categoryColor: String? = null,
+    val accountName: String? = null,
     val description: String? = null,
     val note: String? = null,
     val date: LocalDate,

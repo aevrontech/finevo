@@ -198,6 +198,15 @@ val NavBarActiveIcon = Color(0xFF6C63FF) // Primary color
 val NavBarInactiveIcon = Color(0xFF8E8E93)
 
 // ============================================
+// EXPENSE TAB COLORS
+// ============================================
+val IncomeCardBg = Color(0xFFCFF5E9) // Mint Green (Darker than previous E8FFFA)
+val IncomeCardAccent = Color(0xFF3CBFA6) // Teal (Text/Icon)
+val ExpenseCardBg = Color(0xFFFFF1F1) // Light Pink
+val ExpenseCardAccent = Color(0xFFF26A6A) // Salmon Red
+
+
+// ============================================
 // LIGHT THEME COLORS (for future use)
 // ============================================
 

@@ -19,6 +19,13 @@ class ExpenseViewModel(
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
 
+    // Filter state
+    private val _filterPeriod = MutableStateFlow(FilterPeriod.MONTH)
+    val filterPeriod: StateFlow<FilterPeriod> = _filterPeriod.asStateFlow()
+
+    private val _periodOffset = MutableStateFlow(0)
+    val periodOffset: StateFlow<Int> = _periodOffset.asStateFlow()
+
     // Get current month date range
     private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     private val monthStart = LocalDate(today.year, today.month, 1)
@@ -33,7 +40,12 @@ class ExpenseViewModel(
     private fun loadAccounts() {
         viewModelScope.launch {
             accountRepository.getActiveAccounts("local_user").collect { accounts ->
-                val selectedAccount = _uiState.value.selectedAccount ?: accounts.firstOrNull()
+                val currentSelectedId = _uiState.value.selectedAccount?.id
+                // Find the updated account object from the new list, or default to first if none
+                // selected/found
+                val selectedAccount =
+                    accounts.find { it.id == currentSelectedId } ?: accounts.firstOrNull()
+
                 _uiState.update { it.copy(accounts = accounts, selectedAccount = selectedAccount) }
 
                 // Load transactions for selected account
@@ -94,21 +106,31 @@ class ExpenseViewModel(
     private fun enrichWithCategoryData(transactions: List<Transaction>): List<Transaction> {
         // Build category lookup map once - O(m)
         val categoryMap = _uiState.value.categories.associateBy { it.id }
+        val accountMap = _uiState.value.accounts.associateBy { it.id }
 
         // Enrich each transaction with O(1) lookup - O(n)
         return transactions.map { transaction ->
             val category = categoryMap[transaction.categoryId]
+            val account = accountMap[transaction.accountId]
+
+            var enriched = transaction
+
             if (category != null &&
                 (transaction.categoryName == null || transaction.categoryIcon == null)
             ) {
-                transaction.copy(
-                    categoryName = category.name,
-                    categoryIcon = category.icon,
-                    categoryColor = category.color
-                )
-            } else {
-                transaction
+                enriched =
+                    enriched.copy(
+                        categoryName = category.name,
+                        categoryIcon = category.icon,
+                        categoryColor = category.color
+                    )
             }
+
+            if (account != null && transaction.accountName == null) {
+                enriched = enriched.copy(accountName = account.name)
+            }
+
+            enriched
         }
     }
 
@@ -172,16 +194,31 @@ class ExpenseViewModel(
                         )
                     }
                     _uiState.update {
-                        it.copy(successMessage = "Transaction added!", showAddDialog = false)
+                        it.copy(
+                            successMessage = "Transaction added!",
+                            showAddDialog = false,
+                            // Switch to the account used for this transaction if it exists
+                            selectedAccount =
+                                if (selectedAccount != null)
+                                    selectedAccount.copy(
+                                        balance =
+                                            selectedAccount.balance +
+                                                (if (type ==
+                                                    TransactionType
+                                                        .EXPENSE
+                                                )
+                                                    -amount
+                                                else amount)
+                                    )
+                                else it.selectedAccount
+                        )
                     }
                     // Reload transactions
                     loadTransactions()
                 }
-
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
-
                 is Result.Loading -> {}
             }
         }
@@ -214,11 +251,9 @@ class ExpenseViewModel(
                     _uiState.update { it.copy(successMessage = "Transaction deleted") }
                     loadTransactions()
                 }
-
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
-
                 is Result.Loading -> {}
             }
         }
@@ -300,11 +335,9 @@ class ExpenseViewModel(
                     _uiState.update { it.copy(successMessage = "Transaction updated!") }
                     loadTransactions()
                 }
-
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
                 }
-
                 is Result.Loading -> {}
             }
         }
@@ -329,6 +362,170 @@ class ExpenseViewModel(
     private fun generateId(): String {
         return Clock.System.now().toEpochMilliseconds().toString() +
             (1000..9999).random().toString()
+    }
+
+    // Filter methods
+    fun setFilterPeriod(period: FilterPeriod) {
+        _filterPeriod.value = period
+        _periodOffset.value = 0 // Reset to current period
+    }
+
+    fun setPeriodOffset(offset: Int) {
+        _periodOffset.value = offset.coerceAtMost(0) // Can't go to future
+    }
+
+    /** Get transactions filtered by current filter period and offset */
+    fun getFilteredTransactions(): List<Transaction> {
+        val (startDate, endDate) = getDateRange(_filterPeriod.value, _periodOffset.value)
+        return _uiState.value.transactions
+            .filter { tx -> tx.date >= startDate && tx.date <= endDate }
+            .sortedByDescending { it.date }
+    }
+
+    /** Get income/expense totals for the filtered period */
+    fun getFilteredTotals(): Pair<Double, Double> {
+        val filtered = getFilteredTransactions()
+        val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+        val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+        return income to expense
+    }
+
+    /** Get category breakdown for pie chart */
+    fun getCategoryBreakdown(): List<CategoryBreakdown> {
+        val filtered = getFilteredTransactions().filter { it.type == TransactionType.EXPENSE }
+        val grouped = filtered.groupBy { it.categoryId }
+
+        return grouped
+            .map { (categoryId, transactions) ->
+                val category = _uiState.value.categories.find { it.id == categoryId }
+                CategoryBreakdown(
+                    categoryId = categoryId,
+                    categoryName = category?.name ?: "Other",
+                    categoryIcon = category?.icon ?: "💵",
+                    categoryColor = category?.color ?: "#808080",
+                    total = transactions.sumOf { it.amount },
+                    count = transactions.size
+                )
+            }
+            .sortedByDescending { it.total }
+    }
+
+    /** Get bar chart data (income vs expense by time periods) */
+    fun getBarChartData(): List<BarChartDataItem> {
+        val period = _filterPeriod.value
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val items = mutableListOf<BarChartDataItem>()
+
+        // For Month and Year, show 12 months. For Week, show 7 days
+        val count =
+            when (period) {
+                FilterPeriod.WEEK -> 7 // Days of week
+                FilterPeriod.MONTH -> 12 // Months of year (for selected year based on offset)
+                FilterPeriod.YEAR -> 12 // Months of year
+            }
+
+        for (i in 0 until count) {
+            val (rangeStart, rangeEnd) =
+                when (period) {
+                    FilterPeriod.WEEK -> {
+                        val weekStart =
+                            today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
+                                .plus(_periodOffset.value * 7, DateTimeUnit.DAY)
+                        val dayStart = weekStart.plus(i, DateTimeUnit.DAY)
+                        dayStart to dayStart
+                    }
+                    FilterPeriod.MONTH, FilterPeriod.YEAR -> {
+                        // For both Month and Year filters, show monthly data
+                        val targetYear = today.year + _periodOffset.value
+                        val month = i + 1
+                        val daysInMonth =
+                            when (month) {
+                                1, 3, 5, 7, 8, 10, 12 -> 31
+                                4, 6, 9, 11 -> 30
+                                2 ->
+                                    if (targetYear % 4 == 0 &&
+                                        (targetYear % 100 != 0 ||
+                                            targetYear % 400 == 0)
+                                    )
+                                        29
+                                    else 28
+                                else -> 30
+                            }
+                        LocalDate(targetYear, month, 1) to
+                            LocalDate(targetYear, month, daysInMonth)
+                    }
+                }
+
+            val periodTransactions =
+                _uiState.value.transactions.filter { tx ->
+                    tx.date >= rangeStart && tx.date <= rangeEnd
+                }
+
+            val income =
+                periodTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
+                    it.amount
+                }
+            val expense =
+                periodTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
+                    it.amount
+                }
+
+            val label =
+                when (period) {
+                    FilterPeriod.WEEK -> rangeStart.dayOfWeek.name.take(3)
+                    FilterPeriod.MONTH, FilterPeriod.YEAR -> Month(i + 1).name.take(3)
+                }
+
+            items.add(BarChartDataItem(label, income, expense))
+        }
+
+        return items
+    }
+
+    private fun getDateRange(period: FilterPeriod, offset: Int): Pair<LocalDate, LocalDate> {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+        return when (period) {
+            FilterPeriod.WEEK -> {
+                val weekStart =
+                    today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
+                        .plus(offset * 7, DateTimeUnit.DAY)
+                val weekEnd = weekStart.plus(6, DateTimeUnit.DAY)
+                weekStart to weekEnd
+            }
+            FilterPeriod.MONTH -> {
+                var targetYear = today.year
+                var targetMonth = today.monthNumber + offset
+                while (targetMonth < 1) {
+                    targetMonth += 12
+                    targetYear -= 1
+                }
+                while (targetMonth > 12) {
+                    targetMonth -= 12
+                    targetYear += 1
+                }
+
+                val monthStart = LocalDate(targetYear, targetMonth, 1)
+                val daysInMonth =
+                    when (targetMonth) {
+                        1, 3, 5, 7, 8, 10, 12 -> 31
+                        4, 6, 9, 11 -> 30
+                        2 ->
+                            if (targetYear % 4 == 0 &&
+                                (targetYear % 100 != 0 || targetYear % 400 == 0)
+                            )
+                                29
+                            else 28
+                        else -> 30
+                    }
+                val monthEnd = LocalDate(targetYear, targetMonth, daysInMonth)
+                monthStart to monthEnd
+            }
+            FilterPeriod.YEAR -> {
+                val targetYear = today.year + offset
+                LocalDate(targetYear, 1, 1) to LocalDate(targetYear, 12, 31)
+            }
+        }
     }
 }
 
@@ -374,3 +571,23 @@ data class ExpenseUiState(
             } else 0.0
         }
 }
+
+/** Filter period options for statistics */
+enum class FilterPeriod(val label: String) {
+    WEEK("Week"),
+    MONTH("Month"),
+    YEAR("Year")
+}
+
+/** Category breakdown data for pie chart */
+data class CategoryBreakdown(
+    val categoryId: String,
+    val categoryName: String,
+    val categoryIcon: String,
+    val categoryColor: String,
+    val total: Double,
+    val count: Int
+)
+
+/** Bar chart data item for income vs expense */
+data class BarChartDataItem(val label: String, val income: Double, val expense: Double)
