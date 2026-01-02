@@ -156,7 +156,11 @@ class ExpenseViewModel(
         accountId: String?,
         categoryId: String,
         note: String?,
-        date: LocalDate
+        date: LocalDate,
+        time: String? = null,
+        location: String? = null,
+        locationLat: Double? = null,
+        locationLng: Double? = null
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
@@ -179,6 +183,10 @@ class ExpenseViewModel(
                     description = note,
                     note = note,
                     date = date,
+                    time = time,
+                    location = location,
+                    locationLat = locationLat,
+                    locationLng = locationLng,
                     createdAt = now,
                     updatedAt = now
                 )
@@ -266,7 +274,11 @@ class ExpenseViewModel(
         accountId: String?,
         categoryId: String,
         note: String?,
-        date: LocalDate
+        date: LocalDate,
+        time: String? = null,
+        location: String? = null,
+        locationLat: Double? = null,
+        locationLng: Double? = null
     ) {
         viewModelScope.launch {
             // Find the old transaction to calculate balance delta
@@ -292,6 +304,10 @@ class ExpenseViewModel(
                     description = note,
                     note = note,
                     date = date,
+                    time = time,
+                    location = location,
+                    locationLat = locationLat,
+                    locationLng = locationLng,
                     createdAt = oldTransaction?.createdAt ?: now,
                     updatedAt = now
                 )

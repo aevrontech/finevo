@@ -113,6 +113,9 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 # Settings
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
 
+# Map
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version = "6.1.20" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }

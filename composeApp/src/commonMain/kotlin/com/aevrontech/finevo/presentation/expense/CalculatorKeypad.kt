@@ -164,10 +164,10 @@ private fun NumberButton(text: String, modifier: Modifier = Modifier, onClick: (
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = SurfaceContainer,
-        modifier = modifier.height(56.dp)
+        modifier = modifier.height(60.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = OnSurface)
+            Text(text = text, fontSize = 32.sp, fontWeight = FontWeight.Medium, color = OnSurface)
         }
     }
 }
@@ -178,10 +178,10 @@ private fun OperatorButton(text: String, modifier: Modifier = Modifier, onClick:
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = Secondary.copy(alpha = 0.2f),
-        modifier = modifier.height(56.dp)
+        modifier = modifier.height(60.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = text, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Secondary)
+            Text(text = text, fontSize = 32.sp, fontWeight = FontWeight.Medium, color = Secondary)
         }
     }
 }
@@ -192,10 +192,10 @@ private fun BackspaceButton(modifier: Modifier = Modifier, onClick: () -> Unit) 
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = Error.copy(alpha = 0.15f),
-        modifier = modifier.height(56.dp)
+        modifier = modifier.height(60.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = "⌫", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Error)
+            Text(text = "⌫", fontSize = 32.sp, fontWeight = FontWeight.Medium, color = Error)
         }
     }
 }
@@ -206,12 +206,12 @@ private fun ClearButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = OnSurfaceVariant.copy(alpha = 0.15f),
-        modifier = modifier.height(56.dp)
+        modifier = modifier.height(60.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = "C",
-                fontSize = 22.sp,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = OnSurfaceVariant
             )
@@ -225,10 +225,10 @@ private fun EqualsButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = Primary,
-        modifier = modifier.height(56.dp)
+        modifier = modifier.height(60.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = "=", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = OnPrimary)
+            Text(text = "=", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = OnPrimary)
         }
     }
 }

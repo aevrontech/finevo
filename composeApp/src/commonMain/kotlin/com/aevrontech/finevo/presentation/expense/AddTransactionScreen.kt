@@ -1,7 +1,12 @@
 package com.aevrontech.finevo.presentation.expense
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,70 +15,80 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.Category
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
-import com.aevrontech.finevo.ui.theme.Error
-import com.aevrontech.finevo.ui.theme.HabitGradientEnd
-import com.aevrontech.finevo.ui.theme.HabitGradientStart
-import com.aevrontech.finevo.ui.theme.Success
+import com.aevrontech.finevo.presentation.common.LocationHelper
+import com.aevrontech.finevo.presentation.common.LocationMapPreview
+import com.aevrontech.finevo.presentation.common.LocationPickerMap
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 
-/** Comprehensive transaction entry screen with calculator. */
+/** Comprehensive transaction entry screen with unified calculator and details. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionScreen(
@@ -91,37 +106,107 @@ fun AddTransactionScreen(
         categoryId: String,
         note: String?,
         date: LocalDate,
-        time: String?) -> Unit
+        time: String,
+        location: String?, // Location Name
+        locationLat: Double?,
+        locationLng: Double?) -> Unit
 ) {
     val isEditing = editingTransaction != null
 
     var expression by remember {
         mutableStateOf(
-            if (isEditing) String.format("%.2f", editingTransaction?.amount ?: 0.0) else ""
+            if (isEditing) String.format("%.2f", editingTransaction?.amount ?: 0.0)
+            else ""
         )
     }
     var computedAmount by remember { mutableStateOf(editingTransaction?.amount ?: 0.0) }
     var selectedAccountLocal by remember { mutableStateOf(selectedAccount) }
+    var selectedTime by remember {
+        mutableStateOf(
+            editingTransaction?.time?.let { timeString ->
+                try {
+                    // Parse "HH:mm" format back to LocalTime
+                    val parts = timeString.split(":")
+                    if (parts.size >= 2) {
+                        LocalTime(parts[0].toInt(), parts[1].toInt())
+                    } else {
+                        Clock.System.now()
+                            .toLocalDateTime(
+                                TimeZone.currentSystemDefault()
+                            )
+                            .time
+                    }
+                } catch (e: Exception) {
+                    Clock.System.now()
+                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                        .time
+                }
+            }
+                ?: Clock.System.now()
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+                    .time
+        )
+    }
     var selectedCategory by remember {
         mutableStateOf<Category?>(
-            if (isEditing) categories.find { it.id == editingTransaction?.categoryId } else null
+            if (isEditing) categories.find { it.id == editingTransaction?.categoryId }
+            else null
         )
     }
     var note by remember { mutableStateOf(editingTransaction?.note ?: "") }
     var selectedDate by remember {
         mutableStateOf(
-            editingTransaction?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+            editingTransaction?.date
+                ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
         )
     }
     var showCategoryPicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var showMapPicker by remember { mutableStateOf(false) }
+
+    // Location State
+    var locationLat by remember { mutableStateOf(editingTransaction?.locationLat) }
+    var locationLng by remember { mutableStateOf(editingTransaction?.locationLng) }
+    var locationName by remember {
+        mutableStateOf(editingTransaction?.location)
+    } // Could be init from note if structured, but simple for now
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val isGranted = permissions.values.all { it }
+            if (isGranted) {
+                coroutineScope.launch {
+                    val loc = LocationHelper.getCurrentLocation(context)
+                    if (loc != null) {
+                        locationLat = loc.latitude
+                        locationLng = loc.longitude
+                        // Show map picker after getting initial location
+                        showMapPicker = true
+                    } else {
+                        // Even if null, let them pick manually
+                        showMapPicker = true
+                    }
+                }
+            } else {
+                // Permission denied, still allow manual picking (maybe default to
+                // KL)
+                showMapPicker = true
+            }
+        }
+
+    var showNoteDialog by remember { mutableStateOf(false) }
     var type by remember { mutableStateOf(editingTransaction?.type ?: transactionType) }
 
     // Filter categories by type
     val filteredCategories = categories.filter { it.type == type }
 
-    // Select first category if none selected
+    // Select first category if none selected or type switched
     LaunchedEffect(filteredCategories) {
         if (selectedCategory == null || selectedCategory?.type != type) {
             selectedCategory = filteredCategories.firstOrNull()
@@ -131,317 +216,957 @@ fun AddTransactionScreen(
     val isValid = computedAmount > 0 && selectedCategory != null
 
     // Theme colors
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
-    val surfaceContainerHighestColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     val primaryColor = MaterialTheme.colorScheme.primary
+    // Colors
+    // Colors
+    val incomeColor = Color(0xFF069494)
+    val expenseColor = Color(0xFFB31B1B) // Cornell Red
+    val typeColor = if (type == TransactionType.EXPENSE) expenseColor else incomeColor
+    val animatedTypeColor by animateColorAsState(typeColor)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (isEditing) {
-                            if (type == TransactionType.EXPENSE) "Edit Expense"
-                            else "Edit Income"
-                        } else {
-                            if (type == TransactionType.EXPENSE) "Add Expense"
-                            else "Add Income"
-                        },
-                        fontWeight = FontWeight.SemiBold,
-                        color = onSurfaceColor
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = onSurfaceColor
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = surfaceColor)
-            )
-        },
-        containerColor = surfaceColor
-    ) { padding ->
-        var showCalculator by remember { mutableStateOf(true) }
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // ===== EXPENSE/INCOME TOGGLE =====
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Surface(shape = RoundedCornerShape(50), color = surfaceContainerColor) {
-                    Row(modifier = Modifier.padding(4.dp)) {
-                        TypeToggleButton(
-                            text = "Expense",
-                            isSelected = type == TransactionType.EXPENSE,
-                            color = Error,
-                            unselectedColor = onSurfaceVariantColor,
-                            onClick = { type = TransactionType.EXPENSE }
-                        )
-                        TypeToggleButton(
-                            text = "Income",
-                            isSelected = type == TransactionType.INCOME,
-                            color = Success,
-                            unselectedColor = onSurfaceVariantColor,
-                            onClick = { type = TransactionType.INCOME }
-                        )
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier =
+            Modifier.fillMaxSize().background(animatedTypeColor).clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* Block touches */ },
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // 1. Top Bar (Fixed)
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(
+                onClick = {
+                    if (pagerState.currentPage == 1) {
+                        scope.launch { pagerState.animateScrollToPage(0) }
+                    } else {
+                        onDismiss()
                     }
                 }
+            ) {
+                Icon(
+                    if (pagerState.currentPage == 1)
+                        Icons.AutoMirrored.Filled.ArrowBack
+                    else Icons.Default.Close,
+                    "Back or Close",
+                    tint = Color.White
+                )
             }
 
-            // ===== AMOUNT DISPLAY (Clickable to open calculator) =====
-            Surface(
-                onClick = { showCalculator = true },
-                modifier =
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color =
-                    if (type == TransactionType.EXPENSE) Error.copy(alpha = 0.1f)
-                    else Success.copy(alpha = 0.1f)
-            ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            // Tabs
+            if (pagerState.currentPage == 0) {
+                Row(
+                    modifier =
+                        Modifier.background(
+                            Color.White.copy(alpha = 0.2f),
+                            RoundedCornerShape(50)
+                        )
+                            .padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        selectedAccountLocal?.currency ?: "MYR",
-                        fontSize = 14.sp,
-                        color = onSurfaceVariantColor,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        if (expression.isEmpty()) "0.00" else expression,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (type == TransactionType.EXPENSE) Error else Success,
-                        maxLines = 1
-                    )
-                    if (expression.isNotEmpty() && expression.any { it in "÷×−+" }) {
-                        Text(
-                            "= ${formatAmount(computedAmount)}",
-                            fontSize = 16.sp,
-                            color = onSurfaceVariantColor,
-                            fontWeight = FontWeight.Medium
-                        )
+                    TypeTab("INCOME", type == TransactionType.INCOME) {
+                        type = TransactionType.INCOME
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Tap to open calculator",
-                        fontSize = 11.sp,
-                        color = onSurfaceVariantColor.copy(alpha = 0.6f)
-                    )
+                    TypeTab("EXPENSE", type == TransactionType.EXPENSE) {
+                        type = TransactionType.EXPENSE
+                    }
                 }
             }
 
-            // ===== SCROLLABLE FIELDS SECTION =====
-            Column(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            IconButton(
+                onClick = {
+                    selectedCategory?.let { cat ->
+                        onConfirm(
+                            type,
+                            computedAmount,
+                            selectedAccountLocal?.id,
+                            cat.id,
+                            note.takeIf { it.isNotBlank() },
+                            selectedDate,
+                            formatTime(selectedTime),
+                            locationName,
+                            locationLat,
+                            locationLng
+                        )
+                    }
+                },
+                enabled = isValid
             ) {
-                // Account Selector
-                if (accounts.isNotEmpty()) {
-                    FieldRow(
-                        icon = Icons.Default.Home,
-                        label = "Account",
-                        value = selectedAccountLocal?.name ?: "Select Account",
-                        surfaceColor = surfaceContainerColor,
-                        labelColor = onSurfaceVariantColor,
-                        valueColor = onSurfaceColor,
-                        onClick = {
-                            showCalculator = false
-                            showAccountPicker = true
-                        }
-                    )
-                }
-
-                // Category Selector
-                FieldRow(
-                    icon =
-                        if (selectedCategory != null) null
-                        else Icons.AutoMirrored.Filled.List,
-                    emoji = selectedCategory?.icon,
-                    label = "Category",
-                    value = selectedCategory?.name ?: "Select Category",
-                    surfaceColor = surfaceContainerColor,
-                    labelColor = onSurfaceVariantColor,
-                    valueColor = onSurfaceColor,
-                    onClick = {
-                        showCalculator = false
-                        showCategoryPicker = true
-                    }
-                )
-
-                // Date Selector
-                FieldRow(
-                    icon = Icons.Default.DateRange,
-                    label = "Date",
-                    value = formatDate(selectedDate),
-                    surfaceColor = surfaceContainerColor,
-                    labelColor = onSurfaceVariantColor,
-                    valueColor = onSurfaceColor,
-                    onClick = {
-                        showCalculator = false
-                        showDatePicker = true
-                    }
-                )
-
-                // Note Input
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    placeholder = { Text("Add note...") },
-                    modifier = Modifier.fillMaxWidth().clickable { showCalculator = false },
-                    shape = RoundedCornerShape(12.dp),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = primaryColor,
-                            unfocusedBorderColor = surfaceContainerColor,
-                            focusedContainerColor = surfaceContainerColor,
-                            unfocusedContainerColor = surfaceContainerColor
-                        ),
-                    maxLines = 2,
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = onSurfaceVariantColor
-                        )
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // ===== GRADIENT SAVE BUTTON =====
-            Box(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
-                        .height(56.dp)
-                        .shadow(
-                            elevation = if (isValid) 8.dp else 0.dp,
-                            shape = RoundedCornerShape(16.dp),
-                            ambientColor = HabitGradientStart.copy(alpha = 0.3f),
-                            spotColor = HabitGradientStart.copy(alpha = 0.2f)
-                        )
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            brush =
-                                if (isValid)
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            HabitGradientStart,
-                                            HabitGradientEnd
-                                        )
-                                    )
-                                else
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            onSurfaceVariantColor
-                                                .copy(
-                                                    alpha =
-                                                        0.3f
-                                                ),
-                                            onSurfaceVariantColor
-                                                .copy(
-                                                    alpha =
-                                                        0.3f
-                                                )
-                                        )
-                                    )
-                        )
-                        .clickable(enabled = isValid) {
-                            selectedCategory?.let { cat ->
-                                onConfirm(
-                                    type,
-                                    computedAmount,
-                                    selectedAccountLocal?.id,
-                                    cat.id,
-                                    note.takeIf { it.isNotBlank() },
-                                    selectedDate,
-                                    null
-                                )
-                            }
-                        },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    if (isEditing) "Update Transaction" else "Save Transaction",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
+                Icon(
+                    Icons.Default.Check,
+                    "Save",
+                    tint =
+                        if (isValid) Color.White
+                        else Color.White.copy(alpha = 0.3f)
                 )
             }
         }
 
-        // ===== CALCULATOR BOTTOM SHEET =====
-        if (showCalculator) {
-            ModalBottomSheet(
-                onDismissRequest = { showCalculator = false },
-                containerColor = surfaceContainerHighestColor,
-                dragHandle = {
+        // 2. Pager Content
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        ) { page ->
+            when (page) {
+                0 -> {
+                    // MAIN PAGE: Amount, Selectors, Calculator
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier =
-                                Modifier.width(40.dp)
-                                    .height(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(
-                                        onSurfaceVariantColor.copy(alpha = 0.4f)
+                        // Upper Section (Amount + Selectors)
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment =
+                                    Alignment
+                                        .CenterHorizontally,
+                                verticalArrangement =
+                                    Arrangement.Bottom
+                            ) {
+                                // Amount Display
+                                Text(
+                                    text =
+                                        if (expression
+                                                .isEmpty()
+                                        )
+                                            "0"
+                                        else expression,
+                                    fontSize = 70.sp,
+                                    fontWeight =
+                                        FontWeight.Light,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal =
+                                                16.dp
+                                        ),
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text =
+                                        selectedAccountLocal
+                                            ?.currency
+                                            ?: "MYR",
+                                    fontSize = 18.sp,
+                                    fontWeight =
+                                        FontWeight.Medium,
+                                    color =
+                                        Color.White.copy(
+                                            alpha = 0.7f
+                                        )
+                                )
+
+                                Spacer(Modifier.height(32.dp))
+
+                                // Selectors
+                                Row(
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .padding(
+                                                horizontal =
+                                                    24.dp
+                                            ),
+                                    horizontalArrangement =
+                                        Arrangement
+                                            .SpaceBetween
+                                ) {
+                                    // Account
+                                    Column(
+                                        horizontalAlignment =
+                                            Alignment
+                                                .Start,
+                                        modifier =
+                                            Modifier.clip(
+                                                RoundedCornerShape(
+                                                    8.dp
+                                                )
+                                            )
+                                                .clickable {
+                                                    showAccountPicker =
+                                                        true
+                                                }
+                                                .padding(
+                                                    8.dp
+                                                )
+                                    ) {
+                                        Text(
+                                            "Account",
+                                            fontSize =
+                                                12.sp,
+                                            color =
+                                                Color.White
+                                                    .copy(
+                                                        alpha =
+                                                            0.5f
+                                                    )
+                                        )
+                                        Row(
+                                            verticalAlignment =
+                                                Alignment
+                                                    .CenterVertically
+                                        ) {
+                                            Text(
+                                                selectedAccountLocal
+                                                    ?.name
+                                                    ?: "Select",
+                                                fontSize =
+                                                    16.sp,
+                                                fontWeight =
+                                                    FontWeight
+                                                        .Bold,
+                                                color =
+                                                    Color.White
+                                            )
+                                            Icon(
+                                                Icons.Default
+                                                    .KeyboardArrowDown,
+                                                null,
+                                                tint =
+                                                    Color.White,
+                                                modifier =
+                                                    Modifier.size(
+                                                        16.dp
+                                                    )
+                                            )
+                                        }
+                                    }
+
+                                    // Category
+                                    Column(
+                                        horizontalAlignment =
+                                            Alignment
+                                                .End,
+                                        modifier =
+                                            Modifier.clip(
+                                                RoundedCornerShape(
+                                                    8.dp
+                                                )
+                                            )
+                                                .clickable {
+                                                    showCategoryPicker =
+                                                        true
+                                                }
+                                                .padding(
+                                                    8.dp
+                                                )
+                                    ) {
+                                        Text(
+                                            "Category",
+                                            fontSize =
+                                                12.sp,
+                                            color =
+                                                Color.White
+                                                    .copy(
+                                                        alpha =
+                                                            0.5f
+                                                    )
+                                        )
+                                        Row(
+                                            verticalAlignment =
+                                                Alignment
+                                                    .CenterVertically
+                                        ) {
+                                            Text(
+                                                selectedCategory
+                                                    ?.name
+                                                    ?: "Select",
+                                                fontSize =
+                                                    16.sp,
+                                                fontWeight =
+                                                    FontWeight
+                                                        .Bold,
+                                                color =
+                                                    Color.White
+                                            )
+                                            Icon(
+                                                Icons.Default
+                                                    .KeyboardArrowDown,
+                                                null,
+                                                tint =
+                                                    Color.White,
+                                                modifier =
+                                                    Modifier.size(
+                                                        16.dp
+                                                    )
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(24.dp))
+                            }
+
+                            // Arrow Tab Overlay
+                            Box(
+                                modifier =
+                                    Modifier.align(
+                                        Alignment
+                                            .CenterEnd
                                     )
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                                        .background(
+                                            Color.White
+                                                .copy(
+                                                    alpha =
+                                                        0.1f
+                                                ),
+                                            RoundedCornerShape(
+                                                topStart =
+                                                    50.dp,
+                                                bottomStart =
+                                                    50.dp
+                                            )
+                                        )
+                                        .clickable {
+                                            scope
+                                                .launch {
+                                                    pagerState
+                                                        .animateScrollToPage(
+                                                            1
+                                                        )
+                                                }
+                                        }
+                                        .padding(
+                                            vertical =
+                                                24.dp,
+                                            horizontal =
+                                                4.dp
+                                        )
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled
+                                        .KeyboardArrowLeft,
+                                    "Details",
+                                    tint =
+                                        Color.White.copy(
+                                            alpha = 0.7f
+                                        )
+                                )
+                            }
+                        }
+
+                        // Calculator
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .navigationBarsPadding()
+                        ) {
+                            CalculatorKeypad(
+                                expression = expression,
+                                onExpressionChange = { newExpr ->
+                                    expression = newExpr
+                                    computedAmount =
+                                        evaluateExpression(
+                                            newExpr
+                                        )
+                                },
+                                onEquals = {
+                                    if (expression.isNotEmpty()
+                                    ) {
+                                        val result =
+                                            evaluateExpression(
+                                                expression
+                                            )
+                                        expression =
+                                            formatAmount(
+                                                result
+                                            )
+                                        computedAmount =
+                                            result
+                                    }
+                                },
+                                modifier =
+                                    Modifier.padding(
+                                        bottom = 24.dp,
+                                        top = 8.dp,
+                                        start = 12.dp,
+                                        end = 12.dp
+                                    )
+                            )
+                        }
                     }
                 }
-            ) {
-                CalculatorKeypad(
-                    expression = expression,
-                    onExpressionChange = { newExpr ->
-                        expression = newExpr
-                        computedAmount = evaluateExpression(newExpr)
-                    },
-                    onEquals = {
-                        if (expression.isNotEmpty()) {
-                            val result = evaluateExpression(expression)
-                            expression = formatAmount(result)
-                            computedAmount = result
+                1 -> {
+                    // DETAILS PAGE
+                    // DETAILS PAGE
+                    Column(
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .background(
+                                    MaterialTheme.colorScheme
+                                        .background
+                                )
+                                .padding(24.dp)
+                                .verticalScroll(
+                                    rememberScrollState()
+                                )
+                    ) {
+                        // Note
+                        Text(
+                            "Note",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onBackgroundColor.copy(alpha = 0.7f)
+                        )
+                        BasicTextField(
+                            value = note,
+                            onValueChange = { note = it },
+                            textStyle =
+                                MaterialTheme.typography.bodyLarge
+                                    .copy(
+                                        color =
+                                            onBackgroundColor
+                                    ),
+                            cursorBrush = SolidColor(primaryColor),
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (note.isEmpty()) {
+                                        Text(
+                                            "Description",
+                                            color =
+                                                onBackgroundColor
+                                                    .copy(
+                                                        alpha =
+                                                            0.5f
+                                                    ),
+                                            style =
+                                                MaterialTheme
+                                                    .typography
+                                                    .bodyLarge
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        HorizontalDivider(
+                            color =
+                                if (note.isNotEmpty()) primaryColor
+                                else
+                                    onBackgroundColor.copy(
+                                        alpha = 0.3f
+                                    )
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // Labels
+                        Text(
+                            "Labels",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onBackgroundColor.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement =
+                                Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Placeholder Labels
+                            AssistChip(
+                                onClick = {},
+                                label = { Text("Label2") },
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        null,
+                                        modifier =
+                                            Modifier.size(
+                                                16.dp
+                                            )
+                                    )
+                                },
+                                colors =
+                                    AssistChipDefaults
+                                        .assistChipColors(
+                                            containerColor =
+                                                primaryColor
+                                                    .copy(
+                                                        alpha =
+                                                            0.1f
+                                                    )
+                                        )
+                            )
+                            AssistChip(
+                                onClick = {},
+                                label = { Text("Add label") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        null,
+                                        modifier =
+                                            Modifier.size(
+                                                16.dp
+                                            )
+                                    )
+                                }
+                            )
                         }
-                        showCalculator = false
-                    },
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 32.dp)
-                )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(top = 16.dp),
+                            color = onBackgroundColor.copy(alpha = 0.1f)
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // Date & Time
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            // Date
+                            Column(
+                                modifier =
+                                    Modifier.weight(1f)
+                                        .clickable {
+                                            showDatePicker =
+                                                true
+                                        }
+                            ) {
+                                Text(
+                                    "Date",
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .labelSmall,
+                                    color =
+                                        onBackgroundColor
+                                            .copy(
+                                                alpha =
+                                                    0.7f
+                                            )
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                // Need formatted date
+                                Text(
+                                    formatDateShort(
+                                        selectedDate
+                                    ),
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .bodyLarge,
+                                    color = onBackgroundColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                HorizontalDivider(
+                                    modifier =
+                                        Modifier.padding(
+                                            top = 8.dp
+                                        ),
+                                    color =
+                                        onBackgroundColor
+                                            .copy(
+                                                alpha =
+                                                    0.3f
+                                            )
+                                )
+                            }
+
+                            Spacer(Modifier.width(24.dp))
+
+                            // Time
+                            Column(
+                                modifier =
+                                    Modifier.weight(1f)
+                                        .clickable {
+                                            showTimePicker =
+                                                true
+                                        }
+                            ) {
+                                Text(
+                                    "Time",
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .labelSmall,
+                                    color =
+                                        onBackgroundColor
+                                            .copy(
+                                                alpha =
+                                                    0.7f
+                                            )
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                // Need formatted time
+                                Text(
+                                    formatTimeDisplay(
+                                        selectedTime
+                                    ),
+                                    style =
+                                        MaterialTheme
+                                            .typography
+                                            .bodyLarge,
+                                    color = onBackgroundColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                HorizontalDivider(
+                                    modifier =
+                                        Modifier.padding(
+                                            top = 8.dp
+                                        ),
+                                    color =
+                                        onBackgroundColor
+                                            .copy(
+                                                alpha =
+                                                    0.3f
+                                            )
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // Place
+                        Text(
+                            "Place",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onBackgroundColor.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        var showMapPicker by remember {
+                            mutableStateOf(false)
+                        }
+
+                        AssistChip(
+                            onClick = {
+                                if (locationLat == null) {
+                                    // Request permission first
+                                    // to center map on user
+                                    locationPermissionLauncher
+                                        .launch(
+                                            arrayOf(
+                                                "android.permission.ACCESS_COARSE_LOCATION",
+                                                "android.permission.ACCESS_FINE_LOCATION"
+                                            )
+                                        )
+                                } else {
+                                    showMapPicker = true
+                                }
+                            },
+                            label = {
+                                Text(
+                                    locationName
+                                        ?: if (locationLat !=
+                                            null
+                                        )
+                                            "Edit Location"
+                                        else "Add Place"
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (locationLat != null)
+                                        Icons.Filled.Place
+                                    else Icons.Default.Add,
+                                    null,
+                                    modifier =
+                                        Modifier.size(
+                                            16.dp
+                                        ),
+                                    tint =
+                                        if (locationLat !=
+                                            null
+                                        )
+                                            animatedTypeColor
+                                        else
+                                            Color.Unspecified
+                                )
+                            },
+                            colors =
+                                AssistChipDefaults.assistChipColors(
+                                    containerColor =
+                                        if (locationLat !=
+                                            null
+                                        )
+                                            animatedTypeColor
+                                                .copy(
+                                                    alpha =
+                                                        0.1f
+                                                )
+                                        else
+                                            Color.Transparent,
+                                    labelColor =
+                                        if (locationLat !=
+                                            null
+                                        )
+                                            animatedTypeColor
+                                        else
+                                            Color.Unspecified
+                                )
+                        )
+
+                        if (showMapPicker) {
+                            Dialog(
+                                onDismissRequest = {
+                                    showMapPicker = false
+                                },
+                                properties =
+                                    DialogProperties(
+                                        usePlatformDefaultWidth =
+                                            false
+                                    ) // Full screen
+                            ) {
+                                Surface(
+                                    modifier =
+                                        Modifier.fillMaxSize()
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.fillMaxSize()
+                                    ) {
+                                        var tempLat by remember {
+                                            mutableStateOf(
+                                                locationLat
+                                            )
+                                        }
+                                        var tempLng by remember {
+                                            mutableStateOf(
+                                                locationLng
+                                            )
+                                        }
+
+                                        LocationPickerMap(
+                                            initialLat =
+                                                locationLat,
+                                            initialLng =
+                                                locationLng,
+                                            onLocationSelected = { lat,
+                                                                   lng
+                                                ->
+                                                tempLat =
+                                                    lat
+                                                tempLng =
+                                                    lng
+                                            },
+                                            modifier =
+                                                Modifier.fillMaxSize()
+                                        )
+
+                                        // Confirm Button
+                                        // Overlay
+                                        Box(
+                                            modifier =
+                                                Modifier.align(
+                                                    Alignment
+                                                        .BottomCenter
+                                                )
+                                                    .padding(
+                                                        16.dp
+                                                    )
+                                                    .fillMaxWidth()
+                                                    .background(
+                                                        MaterialTheme
+                                                            .colorScheme
+                                                            .surface
+                                                            .copy(
+                                                                alpha =
+                                                                    0.9f
+                                                            ),
+                                                        RoundedCornerShape(
+                                                            16.dp
+                                                        )
+                                                    )
+                                                    .padding(
+                                                        16.dp
+                                                    )
+                                        ) {
+                                            Column(
+                                                horizontalAlignment =
+                                                    Alignment
+                                                        .CenterHorizontally
+                                            ) {
+                                                Text(
+                                                    "Pinpoint Location",
+                                                    style =
+                                                        MaterialTheme
+                                                            .typography
+                                                            .titleMedium,
+                                                    fontWeight =
+                                                        FontWeight
+                                                            .Bold
+                                                )
+                                                Spacer(
+                                                    Modifier.height(
+                                                        8.dp
+                                                    )
+                                                )
+                                                TextButton(
+                                                    onClick = {
+                                                        if (tempLat !=
+                                                            null &&
+                                                            tempLng !=
+                                                            null
+                                                        ) {
+                                                            locationLat =
+                                                                tempLat
+                                                            locationLng =
+                                                                tempLng
+                                                            // Geocode
+                                                            coroutineScope
+                                                                .launch {
+                                                                    val address =
+                                                                        LocationHelper
+                                                                            .getAddressFromCoordinates(
+                                                                                context,
+                                                                                tempLat!!,
+                                                                                tempLng!!
+                                                                            )
+                                                                    locationName =
+                                                                        address
+                                                                }
+                                                            showMapPicker =
+                                                                false
+                                                        }
+                                                    },
+                                                    modifier =
+                                                        Modifier.fillMaxWidth()
+                                                            .background(
+                                                                primaryColor,
+                                                                RoundedCornerShape(
+                                                                    50
+                                                                )
+                                                            ),
+                                                ) {
+                                                    Text(
+                                                        "Confirm Location",
+                                                        color =
+                                                            Color.White
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Close Button
+                                        IconButton(
+                                            onClick = {
+                                                showMapPicker =
+                                                    false
+                                            },
+                                            modifier =
+                                                Modifier.align(
+                                                    Alignment
+                                                        .TopStart
+                                                )
+                                                    .padding(
+                                                        16.dp
+                                                    )
+                                                    .background(
+                                                        Color.Black
+                                                            .copy(
+                                                                alpha =
+                                                                    0.5f
+                                                            ),
+                                                        androidx.compose
+                                                            .foundation
+                                                            .shape
+                                                            .CircleShape
+                                                    )
+                                        ) {
+                                            Icon(
+                                                Icons.Default
+                                                    .Close,
+                                                "Close",
+                                                tint =
+                                                    Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        val currentLat = locationLat
+                        val currentLng = locationLng
+
+                        AnimatedVisibility(
+                            visible =
+                                currentLat != null &&
+                                    currentLng != null
+                        ) {
+                            if (currentLat != null && currentLng != null
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .height(
+                                                150.dp
+                                            )
+                                            .padding(
+                                                bottom =
+                                                    24.dp
+                                            )
+                                            .clip(
+                                                RoundedCornerShape(
+                                                    12.dp
+                                                )
+                                            )
+                                ) {
+                                    LocationMapPreview(
+                                        lat = currentLat,
+                                        lng = currentLng,
+                                        modifier =
+                                            Modifier.fillMaxSize()
+                                    )
+                                    // Add overlay gradient or
+                                    // marker icon if needed
+                                    // here,
+                                    // but osmdroid view handles
+                                    // the marker internally for
+                                    // now.
+                                }
+                            }
+                        }
+
+                        // Attachments
+                        Text(
+                            "Attachments",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onBackgroundColor.copy(alpha = 0.7f)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        // Placeholder
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                null,
+                                tint = animatedTypeColor
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Add attachment",
+                                color = animatedTypeColor
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Category picker bottom sheet
+    // Picker Sheets
     if (showCategoryPicker) {
-        ModalBottomSheet(
-            onDismissRequest = { showCategoryPicker = false },
-            containerColor = surfaceColor
-        ) {
+        ModalBottomSheet(onDismissRequest = { showCategoryPicker = false }) {
+            // Reusing existing content for category picker
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
                     "Select Category",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = onSurfaceColor
+                    fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 filteredCategories.forEach { category ->
@@ -452,31 +1177,30 @@ fun AddTransactionScreen(
                         },
                         color =
                             if (category == selectedCategory)
-                                primaryColor.copy(alpha = 0.1f)
+                                animatedTypeColor.copy(alpha = 0.1f)
                             else Color.Transparent,
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .padding(vertical = 12.dp, horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                    .padding(12.dp),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(12.dp),
+                            verticalAlignment =
+                                Alignment.CenterVertically
                         ) {
                             Text(category.icon, fontSize = 24.sp)
                             Text(
                                 category.name,
-                                color = onSurfaceColor,
                                 modifier = Modifier.weight(1f)
                             )
-                            if (category == selectedCategory) {
+                            if (category == selectedCategory)
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = primaryColor,
-                                    modifier = Modifier.size(20.dp)
+                                    null,
+                                    tint = animatedTypeColor
                                 )
-                            }
                         }
                     }
                 }
@@ -485,18 +1209,14 @@ fun AddTransactionScreen(
         }
     }
 
-    // Account picker bottom sheet
     if (showAccountPicker) {
-        ModalBottomSheet(
-            onDismissRequest = { showAccountPicker = false },
-            containerColor = surfaceColor
-        ) {
+        ModalBottomSheet(onDismissRequest = { showAccountPicker = false }) {
+            // Reusing existing content for account picker
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
                     "Select Account",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = onSurfaceColor
+                    fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 accounts.forEach { account ->
@@ -507,38 +1227,41 @@ fun AddTransactionScreen(
                         },
                         color =
                             if (account == selectedAccountLocal)
-                                primaryColor.copy(alpha = 0.1f)
+                                animatedTypeColor.copy(alpha = 0.1f)
                             else Color.Transparent,
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .padding(vertical = 12.dp, horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                    .padding(12.dp),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(12.dp),
+                            verticalAlignment =
+                                Alignment.CenterVertically
                         ) {
                             Text(account.icon, fontSize = 24.sp)
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     account.name,
-                                    color = onSurfaceColor,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight =
+                                        FontWeight.Medium
                                 )
                                 Text(
                                     "${account.currency} ${formatAmount(account.balance)}",
                                     fontSize = 12.sp,
-                                    color = onSurfaceVariantColor
+                                    color =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .onSurfaceVariant
                                 )
                             }
-                            if (account == selectedAccountLocal) {
+                            if (account == selectedAccountLocal)
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = primaryColor,
-                                    modifier = Modifier.size(20.dp)
+                                    null,
+                                    tint = animatedTypeColor
                                 )
-                            }
                         }
                     }
                 }
@@ -547,7 +1270,6 @@ fun AddTransactionScreen(
         }
     }
 
-    // Date picker
     if (showDatePicker) {
         val datePickerState =
             rememberDatePickerState(
@@ -561,7 +1283,9 @@ fun AddTransactionScreen(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
                             selectedDate =
-                                Instant.fromEpochMilliseconds(millis)
+                                Instant.fromEpochMilliseconds(
+                                    millis
+                                )
                                     .toLocalDateTime(
                                         TimeZone.currentSystemDefault()
                                     )
@@ -576,89 +1300,105 @@ fun AddTransactionScreen(
             }
         ) { DatePicker(state = datePickerState) }
     }
-}
 
-@Composable
-private fun TypeToggleButton(
-    text: String,
-    isSelected: Boolean,
-    color: Color,
-    unselectedColor: Color,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = if (isSelected) color else Color.Transparent
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
-            color = if (isSelected) Color.White else unselectedColor,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 14.sp
+    if (showTimePicker) {
+        val timePickerState =
+            rememberTimePickerState(
+                initialHour = selectedTime.hour,
+                initialMinute = selectedTime.minute
+            )
+        TimePickerDialog(
+            onDismiss = { showTimePicker = false },
+            onConfirm = {
+                selectedTime =
+                    LocalTime(timePickerState.hour, timePickerState.minute)
+                showTimePicker = false
+            }
+        ) { TimePicker(state = timePickerState) }
+    }
+
+    // Simple Note Dialog
+    if (showNoteDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showNoteDialog = false },
+            title = { Text("Add Note") },
+            text = {
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    placeholder = { Text("Enter note...") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showNoteDialog = false }) { Text("Done") }
+            }
         )
     }
 }
 
 @Composable
-private fun FieldRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    emoji: String? = null,
-    label: String,
-    value: String,
-    surfaceColor: Color,
-    labelColor: Color,
-    valueColor: Color,
-    onClick: () -> Unit
-) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(12.dp), color = surfaceColor) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (emoji != null) {
-                Text(emoji, fontSize = 24.sp)
-            } else if (icon != null) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = labelColor,
-                    modifier = Modifier.size(24.dp)
+private fun TypeTab(text: String, isSelected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier =
+            Modifier.clickable(onClick = onClick)
+                .background(
+                    if (isSelected) Color.White.copy(alpha = 0.2f)
+                    else Color.Transparent,
+                    RoundedCornerShape(50)
                 )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, fontSize = 11.sp, color = labelColor)
-                Text(
-                    value,
-                    fontSize = 15.sp,
-                    color = valueColor,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = labelColor,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text,
+            color = Color.White.copy(alpha = if (isSelected) 1f else 0.6f),
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp
+        )
     }
 }
 
+// Helpers
 private fun formatAmount(amount: Double): String {
     return String.format("%.2f", amount)
 }
 
-private fun formatDate(date: LocalDate): String {
+private fun formatDateShort(date: LocalDate): String {
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     return when {
         date == today -> "Today"
         date == today.minus(1, DateTimeUnit.DAY) -> "Yesterday"
-        else ->
-            "${date.dayOfMonth} ${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.year}"
+        else -> "${date.dayOfMonth} ${date.month.name.take(3)} ${date.year}"
     }
+}
+
+private fun formatTime(time: LocalTime): String {
+    // Store in 24-hour HH:mm format for consistent parsing
+    val hour = time.hour.toString().padStart(2, '0')
+    val minute = time.minute.toString().padStart(2, '0')
+    return "$hour:$minute"
+}
+
+private fun formatTimeDisplay(time: LocalTime): String {
+    // Display in 12-hour format with AM/PM
+    val hour = time.hour
+    val minute = time.minute
+    val amPm = if (hour < 12) "AM" else "PM"
+    val displayHour = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
+    return "${displayHour}:${minute.toString().padStart(2, '0')} $amPm"
+}
+
+@Composable
+fun TimePickerDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onConfirm) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        text = { content() }
+    )
 }

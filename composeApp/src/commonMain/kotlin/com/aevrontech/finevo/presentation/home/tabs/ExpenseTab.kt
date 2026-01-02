@@ -320,14 +320,27 @@ internal fun ExpenseTabContent() {
                 categories = expenseState.categories,
                 selectedAccount = expenseState.selectedAccount,
                 onDismiss = { showAddTransaction = false },
-                onConfirm = { type, amount, accountId, categoryId, note, date, _ ->
+                onConfirm = { type,
+                              amount,
+                              accountId,
+                              categoryId,
+                              note,
+                              date,
+                              time,
+                              locationName,
+                              locationLat,
+                              locationLng ->
                     expenseViewModel.addTransaction(
                         type,
                         amount,
                         accountId,
                         categoryId,
                         note,
-                        date
+                        date,
+                        time,
+                        locationName,
+                        locationLat,
+                        locationLng
                     )
                     showAddTransaction = false
                 }
@@ -352,7 +365,16 @@ internal fun ExpenseTabContent() {
                     selectedAccount = expenseState.accounts.find { it.id == tx.accountId },
                     editingTransaction = tx,
                     onDismiss = { transactionToEdit = null },
-                    onConfirm = { type, amount, accountId, categoryId, note, date, _ ->
+                    onConfirm = { type,
+                                  amount,
+                                  accountId,
+                                  categoryId,
+                                  note,
+                                  date,
+                                  time,
+                                  locationName,
+                                  locationLat,
+                                  locationLng ->
                         expenseViewModel.updateTransaction(
                             tx.id,
                             type,
@@ -360,7 +382,11 @@ internal fun ExpenseTabContent() {
                             accountId,
                             categoryId,
                             note,
-                            date
+                            date,
+                            time,
+                            locationName,
+                            locationLat,
+                            locationLng
                         )
                         transactionToEdit = null
                     }
