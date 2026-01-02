@@ -1,0 +1,379 @@
+-- FinEvo Database Schema v1
+-- SQLDelight initial migration for offline-first data storage
+
+-- ============================================
+-- USERS TABLE
+-- ============================================
+CREATE TABLE users (
+    id TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    country TEXT,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    tier TEXT NOT NULL DEFAULT 'FREE',
+    is_malaysian INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+-- ============================================
+-- USER PREFERENCES TABLE
+-- ============================================
+CREATE TABLE user_preferences (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    locale TEXT NOT NULL DEFAULT 'en',
+    use_decimals INTEGER NOT NULL DEFAULT 1,
+    dark_mode INTEGER NOT NULL DEFAULT 1,
+    biometric_enabled INTEGER NOT NULL DEFAULT 0,
+    pin_enabled INTEGER NOT NULL DEFAULT 0,
+    pin_hash TEXT,
+    notifications_enabled INTEGER NOT NULL DEFAULT 1,
+    budget_alerts INTEGER NOT NULL DEFAULT 1,
+    payment_reminders INTEGER NOT NULL DEFAULT 1,
+    habit_reminders INTEGER NOT NULL DEFAULT 1,
+    weekly_report INTEGER NOT NULL DEFAULT 1,
+    first_day_of_week INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- CATEGORIES TABLE
+-- ============================================
+CREATE TABLE categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    type TEXT NOT NULL,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_categories_user ON categories(user_id);
+CREATE INDEX idx_categories_type ON categories(type);
+
+-- ============================================
+-- ACCOUNTS TABLE
+-- ============================================
+CREATE TABLE accounts (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    balance REAL NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'MYR',
+    type TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#00D9FF',
+    icon TEXT NOT NULL DEFAULT '💰',
+    is_default INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    is_excluded_from_total INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_accounts_user ON accounts(user_id);
+CREATE INDEX idx_accounts_active ON accounts(is_active);
+
+-- ============================================
+-- LABELS TABLE
+-- ============================================
+CREATE TABLE labels (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#808080',
+    auto_assign INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_labels_user ON labels(user_id);
+CREATE INDEX idx_labels_auto_assign ON labels(auto_assign);
+
+-- ============================================
+-- TRANSACTIONS TABLE
+-- ============================================
+CREATE TABLE transactions (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    account_id TEXT,
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    description TEXT,
+    note TEXT,
+    date TEXT NOT NULL,
+    time TEXT,
+    location TEXT,
+    location_lat REAL,
+    location_lng REAL,
+    labels TEXT,
+    photo_path TEXT,
+    is_recurring INTEGER NOT NULL DEFAULT 0,
+    recurring_id TEXT,
+    receipt_url TEXT,
+    tags TEXT,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_transactions_user ON transactions(user_id);
+CREATE INDEX idx_transactions_account ON transactions(account_id);
+CREATE INDEX idx_transactions_date ON transactions(date);
+CREATE INDEX idx_transactions_category ON transactions(category_id);
+CREATE INDEX idx_transactions_synced ON transactions(is_synced);
+
+-- ============================================
+-- TRANSACTION_LABELS JUNCTION TABLE
+-- ============================================
+CREATE TABLE transaction_labels (
+    transaction_id TEXT NOT NULL,
+    label_id TEXT NOT NULL,
+    PRIMARY KEY (transaction_id, label_id),
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_transaction_labels_transaction ON transaction_labels(transaction_id);
+CREATE INDEX idx_transaction_labels_label ON transaction_labels(label_id);
+
+-- ============================================
+-- RECURRING TRANSACTIONS TABLE
+-- ============================================
+CREATE TABLE recurring_transactions (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    description TEXT,
+    frequency TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT,
+    last_generated_date TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_recurring_user ON recurring_transactions(user_id);
+
+-- ============================================
+-- BUDGETS TABLE
+-- ============================================
+CREATE TABLE budgets (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    spent REAL NOT NULL DEFAULT 0,
+    period TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    alert_threshold INTEGER NOT NULL DEFAULT 80,
+    rollover INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE INDEX idx_budgets_user ON budgets(user_id);
+CREATE INDEX idx_budgets_category ON budgets(category_id);
+
+-- ============================================
+-- DEBTS TABLE
+-- ============================================
+CREATE TABLE debts (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    original_amount REAL NOT NULL,
+    current_balance REAL NOT NULL,
+    interest_rate REAL NOT NULL,
+    minimum_payment REAL NOT NULL,
+    due_day INTEGER NOT NULL,
+    lender_name TEXT,
+    account_number TEXT,
+    notes TEXT,
+    start_date TEXT NOT NULL,
+    target_payoff_date TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    is_paid_off INTEGER NOT NULL DEFAULT 0,
+    paid_off_date TEXT,
+    color TEXT,
+    priority INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_debts_user ON debts(user_id);
+CREATE INDEX idx_debts_active ON debts(is_active);
+
+-- ============================================
+-- DEBT PAYMENTS TABLE
+-- ============================================
+CREATE TABLE debt_payments (
+    id TEXT NOT NULL PRIMARY KEY,
+    debt_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    principal_amount REAL NOT NULL,
+    interest_amount REAL NOT NULL,
+    date TEXT NOT NULL,
+    note TEXT,
+    is_extra_payment INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_debt_payments_debt ON debt_payments(debt_id);
+CREATE INDEX idx_debt_payments_date ON debt_payments(date);
+
+-- ============================================
+-- BILLS TABLE
+-- ============================================
+CREATE TABLE bills (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    due_day INTEGER NOT NULL,
+    frequency TEXT NOT NULL,
+    category_id TEXT,
+    is_auto_pay_enabled INTEGER NOT NULL DEFAULT 0,
+    reminder_days_before INTEGER NOT NULL DEFAULT 3,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    last_paid_date TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_bills_user ON bills(user_id);
+
+-- ============================================
+-- HABITS TABLE
+-- ============================================
+CREATE TABLE habits (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    category_id TEXT,
+    frequency TEXT NOT NULL,
+    target_days TEXT,
+    target_count INTEGER NOT NULL DEFAULT 1,
+    reminder_time TEXT,
+    reminder_enabled INTEGER NOT NULL DEFAULT 0,
+    current_streak INTEGER NOT NULL DEFAULT 0,
+    best_streak INTEGER NOT NULL DEFAULT 0,
+    total_completions INTEGER NOT NULL DEFAULT 0,
+    xp_reward INTEGER NOT NULL DEFAULT 10,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_synced INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_habits_user ON habits(user_id);
+CREATE INDEX idx_habits_active ON habits(is_active);
+
+-- ============================================
+-- HABIT LOGS TABLE
+-- ============================================
+CREATE TABLE habit_logs (
+    id TEXT NOT NULL PRIMARY KEY,
+    habit_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    completed_count INTEGER NOT NULL DEFAULT 1,
+    note TEXT,
+    skipped INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_habit_logs_habit ON habit_logs(habit_id);
+CREATE INDEX idx_habit_logs_date ON habit_logs(date);
+CREATE UNIQUE INDEX idx_habit_logs_unique ON habit_logs(habit_id, date);
+
+-- ============================================
+-- HABIT CATEGORIES TABLE
+-- ============================================
+CREATE TABLE habit_categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_habit_categories_user ON habit_categories(user_id);
+
+-- ============================================
+-- USER STATS TABLE (GAMIFICATION)
+-- ============================================
+CREATE TABLE user_stats (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    total_xp INTEGER NOT NULL DEFAULT 0,
+    level INTEGER NOT NULL DEFAULT 1,
+    current_streak_days INTEGER NOT NULL DEFAULT 0,
+    longest_streak_days INTEGER NOT NULL DEFAULT 0,
+    total_habits_completed INTEGER NOT NULL DEFAULT 0,
+    perfect_days INTEGER NOT NULL DEFAULT 0,
+    achievements TEXT,
+    last_active_date TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- SYNC QUEUE TABLE
+-- ============================================
+CREATE TABLE sync_queue (
+    id TEXT NOT NULL PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT
+);
+
+CREATE INDEX idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
+
+-- ============================================
+-- APP CONFIG TABLE
+-- ============================================
+CREATE TABLE app_config (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);

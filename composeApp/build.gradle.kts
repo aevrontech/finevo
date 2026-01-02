@@ -207,6 +207,7 @@ sqldelight {
             packageName.set("com.aevrontech.finevo.data.local")
             schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
             verifyMigrations.set(true)
+            deriveSchemaFromMigrations.set(true)
         }
     }
 }
