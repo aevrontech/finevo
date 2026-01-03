@@ -1,22 +1,19 @@
 package com.aevrontech.finevo.presentation.habit
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
@@ -32,12 +29,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.aevrontech.finevo.core.util.padZero
 import com.aevrontech.finevo.domain.model.*
+import com.aevrontech.finevo.presentation.label.LabelColors
 import com.aevrontech.finevo.ui.theme.*
 import kotlinx.datetime.*
 
 /** Second screen of Add Habit flow - Habit configuration */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddHabitScreen(
     selectedSubCategory: HabitSubCategory?,
@@ -56,7 +55,8 @@ fun AddHabitScreen(
         reminderEnabled: Boolean,
         reminderTime: LocalTime?,
         startDate: LocalDate?,
-        endDate: LocalDate?) -> Unit,
+        endDate: LocalDate?
+    ) -> Unit,
     habitToEdit: com.aevrontech.finevo.domain.model.Habit? = null
 ) {
     val isEditMode = habitToEdit != null
@@ -156,8 +156,7 @@ fun AddHabitScreen(
         }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top App Bar
+        Column(modifier = Modifier.fillMaxSize()) { // Top App Bar
             TopAppBar(
                 title = {
                     Text(
@@ -188,8 +187,7 @@ fun AddHabitScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Card 1: Habit Name, Icon & Color
+            ) { // Card 1: Habit Name, Icon & Color
                 SectionCard {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         SectionHeader("Habit Name")
@@ -307,34 +305,17 @@ fun AddHabitScreen(
                                 MaterialTheme.colorScheme
                                     .onSurfaceVariant
                         )
-                        val habitColors =
-                            listOf(
-                                "#5DADE2",
-                                "#48C9B0",
-                                "#52BE80",
-                                "#F4D03F",
-                                "#EB984E",
-                                "#EC7063",
-                                "#AF7AC5",
-                                "#5D6D7E"
-                            )
-                        LazyRow(
+                        val habitColors = LabelColors.colors
+                        FlowRow(
                             horizontalArrangement =
+                                Arrangement.spacedBy(8.dp),
+                            verticalArrangement =
                                 Arrangement.spacedBy(8.dp)
                         ) {
-                            items(habitColors) { colorHex ->
+                            habitColors.forEach { colorHex
+                                -> // Use forEach for FlowRow
                                 val color =
-                                    try {
-                                        Color(
-                                            android.graphics
-                                                .Color
-                                                .parseColor(
-                                                    colorHex
-                                                )
-                                        )
-                                    } catch (e: Exception) {
-                                        Color.Gray
-                                    }
+                                    LabelColors.parse(colorHex)
                                 Box(
                                     modifier =
                                         Modifier.size(36.dp)
@@ -365,8 +346,26 @@ fun AddHabitScreen(
                                             .clickable {
                                                 selectedColor =
                                                     colorHex
-                                            }
-                                )
+                                            },
+                                    contentAlignment =
+                                        Alignment.Center
+                                ) {
+                                    if (colorHex ==
+                                        selectedColor
+                                    ) {
+                                        Icon(
+                                            Icons.Default
+                                                .Check,
+                                            null,
+                                            tint =
+                                                Color.White,
+                                            modifier =
+                                                Modifier.size(
+                                                    18.dp
+                                                )
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -374,8 +373,9 @@ fun AddHabitScreen(
 
                 // Card 2: Repeat, Day Selection, Goal Value
                 SectionCard {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        // Repeat Section
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) { // Repeat Section
                         Column(
                             verticalArrangement =
                                 Arrangement.spacedBy(8.dp)
@@ -400,8 +400,8 @@ fun AddHabitScreen(
 
                         // Day Selection based on period
                         when (goalPeriod) {
-                            GoalPeriod.DAILY -> {
-                                // No additional selection needed
+                            GoalPeriod.DAILY -> { // No additional
+                                // selection needed
                                 // for daily
                                 Text(
                                     "Repeats every day",
@@ -653,12 +653,7 @@ fun AddHabitScreen(
                                                 "AM"
                                             else "PM"
                                         Text(
-                                            String.format(
-                                                "%d:%02d %s",
-                                                hour12,
-                                                reminderMinute,
-                                                amPm
-                                            ),
+                                            "${hour12}:${reminderMinute.padZero(2)} $amPm",
                                             color =
                                                 DashboardGradientMid
                                         )
@@ -898,13 +893,12 @@ fun AddHabitScreen(
     if (showEndDatePicker) {
         DatePickerDialog(
             selectedDate = endDate,
-            onDateSelected = { selectedEndDate ->
-                // Validate: end date cannot be before start date
+            onDateSelected = { selectedEndDate
+                -> // Validate: end date cannot be before start date
                 if (startDate != null &&
                     selectedEndDate != null &&
                     selectedEndDate < startDate!!
-                ) {
-                    // Invalid - end date is before start date, don't set it
+                ) { // Invalid - end date is before start date, don't set it
                     // You could show a toast/message here
                 } else {
                     endDate = selectedEndDate
@@ -938,8 +932,7 @@ private fun SectionHeader(title: String, tooltip: String? = null) {
                     },
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (showTooltip) {
-                // Simple tooltip display
+            if (showTooltip) { // Simple tooltip display
                 Text(
                     text = it,
                     fontSize = 11.sp,
@@ -1470,14 +1463,13 @@ private fun TimePickerDialog(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Hour
+                ) { // Hour
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(
                             onClick = { tempHour = (tempHour + 1) % 24 }
                         ) { Text("▲", fontSize = 18.sp) }
                         Text(
-                            String.format("%02d", tempHour),
+                            tempHour.padZero(2),
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1500,7 +1492,7 @@ private fun TimePickerDialog(
                             }
                         ) { Text("▲", fontSize = 18.sp) }
                         Text(
-                            String.format("%02d", tempMinute),
+                            tempMinute.padZero(2),
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
                         )

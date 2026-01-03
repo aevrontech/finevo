@@ -1,5 +1,6 @@
 package com.aevrontech.finevo.domain.model
 
+import com.aevrontech.finevo.core.util.formatDecimal
 import kotlinx.datetime.Instant
 
 /** Account types available in the app. Each type has an associated icon and display name. */
@@ -42,7 +43,7 @@ data class Account(
     /** Get formatted balance with currency symbol. */
     fun formattedBalance(): String {
         val symbol = CurrencyProvider.getCurrency(currency)?.symbol ?: currency
-        return "$symbol ${String.format("%.2f", balance)}"
+        return "$symbol ${balance.formatDecimal(2)}"
     }
 
     /** Check if this is a liability account (negative contribution to net worth). */

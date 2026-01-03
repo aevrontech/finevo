@@ -5,11 +5,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,8 +25,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -46,6 +51,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -65,18 +72,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.aevrontech.finevo.core.util.formatDecimal
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.Category
+import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.presentation.common.LocationHelper
 import com.aevrontech.finevo.presentation.common.LocationMapPreview
 import com.aevrontech.finevo.presentation.common.LocationPickerMap
+import com.aevrontech.finevo.presentation.label.LabelColors
+import com.aevrontech.finevo.presentation.label.LabelPickerBottomSheet
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -96,6 +108,7 @@ fun AddTransactionScreen(
     accounts: List<Account>,
     categories: List<Category>,
     selectedAccount: Account?,
+    availableLabels: List<Label> = emptyList(),
     editingTransaction: Transaction? = null,
     onDismiss: () -> Unit,
     onConfirm:
@@ -109,14 +122,16 @@ fun AddTransactionScreen(
         time: String,
         location: String?, // Location Name
         locationLat: Double?,
-        locationLng: Double?) -> Unit
+        locationLng: Double?,
+        labels: List<String>
+    ) -> Unit,
+    onAddLabel: (String, String, Boolean) -> Unit = { _, _, _ -> }
 ) {
     val isEditing = editingTransaction != null
 
     var expression by remember {
         mutableStateOf(
-            if (isEditing) String.format("%.2f", editingTransaction?.amount ?: 0.0)
-            else ""
+            if (isEditing) (editingTransaction?.amount ?: 0.0).formatDecimal(2) else ""
         )
     }
     var computedAmount by remember { mutableStateOf(editingTransaction?.amount ?: 0.0) }
@@ -165,6 +180,11 @@ fun AddTransactionScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showMapPicker by remember { mutableStateOf(false) }
+    var showLabelPicker by remember { mutableStateOf(false) }
+    var showAddLabelDialog by remember { mutableStateOf(false) }
+    var selectedLabelIds by remember {
+        mutableStateOf(editingTransaction?.labels ?: emptyList())
+    }
 
     // Location State
     var locationLat by remember { mutableStateOf(editingTransaction?.locationLat) }
@@ -296,7 +316,8 @@ fun AddTransactionScreen(
                             formatTime(selectedTime),
                             locationName,
                             locationLat,
-                            locationLng
+                            locationLng,
+                            selectedLabelIds
                         )
                     }
                 },
@@ -628,6 +649,12 @@ fun AddTransactionScreen(
                                             onBackgroundColor
                                     ),
                             cursorBrush = SolidColor(primaryColor),
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    capitalization =
+                                        KeyboardCapitalization
+                                            .Sentences
+                                ),
                             modifier =
                                 Modifier.fillMaxWidth()
                                     .padding(vertical = 12.dp),
@@ -670,22 +697,28 @@ fun AddTransactionScreen(
                             color = onBackgroundColor.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(8.dp))
-                        Row(
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
                             horizontalArrangement =
+                                Arrangement.spacedBy(8.dp),
+                            verticalArrangement =
                                 Arrangement.spacedBy(8.dp)
                         ) {
-                            // Placeholder Labels
+                            // Add Label Button
                             AssistChip(
-                                onClick = {},
-                                label = { Text("Label2") },
-                                trailingIcon = {
+                                onClick = {
+                                    showLabelPicker = true
+                                },
+                                label = { Text("Add Label") },
+                                leadingIcon = {
                                     Icon(
-                                        Icons.Default.Close,
+                                        Icons.Default.Add,
                                         null,
                                         modifier =
                                             Modifier.size(
                                                 16.dp
-                                            )
+                                            ),
+                                        tint = primaryColor
                                     )
                                 },
                                 colors =
@@ -696,24 +729,69 @@ fun AddTransactionScreen(
                                                     .copy(
                                                         alpha =
                                                             0.1f
-                                                    )
+                                                    ),
+                                            labelColor =
+                                                primaryColor
                                         )
                             )
-                            AssistChip(
-                                onClick = {},
-                                label = { Text("Add label") },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Add,
-                                        null,
-                                        modifier =
-                                            Modifier.size(
-                                                16.dp
-                                            )
-                                    )
-                                }
-                            )
+
+                            // Selected Labels
+                            selectedLabelIds.forEach { labelId ->
+                                val label =
+                                    availableLabels.find {
+                                        it.id == labelId
+                                    }
+                                val labelColor =
+                                    if (label != null)
+                                        LabelColors.parse(
+                                            label.color
+                                        )
+                                    else primaryColor
+
+                                AssistChip(
+                                    onClick = {
+                                        showLabelPicker =
+                                            true
+                                    },
+                                    label = {
+                                        Text(
+                                            label?.name
+                                                ?: ""
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Default
+                                                .Close,
+                                            "Remove",
+                                            modifier =
+                                                Modifier.size(
+                                                    16.dp
+                                                )
+                                                    .clickable {
+                                                        selectedLabelIds =
+                                                            selectedLabelIds -
+                                                                labelId
+                                                    }
+                                        )
+                                    },
+                                    colors =
+                                        AssistChipDefaults
+                                            .assistChipColors(
+                                                containerColor =
+                                                    labelColor
+                                                        .copy(
+                                                            alpha =
+                                                                0.2f
+                                                        ),
+                                                labelColor =
+                                                    onBackgroundColor
+                                            ),
+                                    border = null
+                                )
+                            }
                         }
+
                         HorizontalDivider(
                             modifier = Modifier.padding(top = 16.dp),
                             color = onBackgroundColor.copy(alpha = 0.1f)
@@ -833,9 +911,6 @@ fun AddTransactionScreen(
                             color = onBackgroundColor.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(8.dp))
-                        var showMapPicker by remember {
-                            mutableStateOf(false)
-                        }
 
                         AssistChip(
                             onClick = {
@@ -1317,7 +1392,6 @@ fun AddTransactionScreen(
         ) { TimePicker(state = timePickerState) }
     }
 
-    // Simple Note Dialog
     if (showNoteDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showNoteDialog = false },
@@ -1332,6 +1406,33 @@ fun AddTransactionScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showNoteDialog = false }) { Text("Done") }
+            }
+        )
+    }
+
+    if (showLabelPicker) {
+        LabelPickerBottomSheet(
+            labels = availableLabels,
+            selectedLabelIds = selectedLabelIds,
+            onLabelSelected = { labelId ->
+                selectedLabelIds =
+                    if (selectedLabelIds.contains(labelId)) {
+                        selectedLabelIds - labelId
+                    } else {
+                        selectedLabelIds + labelId
+                    }
+            },
+            onAddLabelClick = { showAddLabelDialog = true },
+            onDismissRequest = { showLabelPicker = false }
+        )
+    }
+
+    if (showAddLabelDialog) {
+        AddLabelDialog(
+            onDismiss = { showAddLabelDialog = false },
+            onConfirm = { name, color, autoAssign ->
+                onAddLabel(name, color, autoAssign)
+                showAddLabelDialog = false
             }
         )
     }
@@ -1361,7 +1462,7 @@ private fun TypeTab(text: String, isSelected: Boolean, onClick: () -> Unit) {
 
 // Helpers
 private fun formatAmount(amount: Double): String {
-    return String.format("%.2f", amount)
+    return amount.formatDecimal(2)
 }
 
 private fun formatDateShort(date: LocalDate): String {
@@ -1401,4 +1502,123 @@ fun TimePickerDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
         text = { content() }
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AddLabelDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, color: String, autoAssign: Boolean) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var selectedColor by remember { mutableStateOf(LabelColors.colors.first()) }
+    var autoAssign by remember { mutableStateOf(false) }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New Label") },
+        text = {
+            Column {
+                // Name input
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Label Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Color picker
+                Text(
+                    "Color",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LabelColors.colors.forEach { color ->
+                        ColorOption(
+                            color = color,
+                            isSelected = color == selectedColor,
+                            onSelect = { selectedColor = color }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Auto-assign toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Auto-assign",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Apply to new transactions",
+                            style = MaterialTheme.typography.bodySmall,
+                            color =
+                                MaterialTheme.colorScheme.onSurface
+                                    .copy(alpha = 0.6f)
+                        )
+                    }
+                    Switch(
+                        checked = autoAssign,
+                        onCheckedChange = { autoAssign = it },
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = primaryColor
+                            )
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), selectedColor, autoAssign) },
+                enabled = name.isNotBlank()
+            ) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun ColorOption(color: String, isSelected: Boolean, onSelect: () -> Unit) {
+    Box(
+        modifier =
+            Modifier.size(36.dp)
+                .clip(CircleShape)
+                .background(LabelColors.parse(color))
+                .then(
+                    if (isSelected) {
+                        Modifier.border(2.dp, Color.White, CircleShape)
+                    } else {
+                        Modifier
+                    }
+                )
+                .clickable(onClick = onSelect),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isSelected) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = "Selected",
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
 }

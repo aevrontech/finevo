@@ -5,10 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,6 +43,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.util.formatDecimal
+import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.ui.theme.Error
@@ -53,7 +58,6 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
 
@@ -119,6 +123,7 @@ private fun formatDateLabel(date: LocalDate): String {
 /** Grouped transaction list content for LazyColumn. */
 fun LazyListScope.groupedTransactionItems(
     groups: List<TransactionGroup>,
+    availableLabels: List<Label>,
     onTransactionClick: (Transaction) -> Unit,
     onTransactionDelete: (Transaction) -> Unit
 ) {
@@ -143,6 +148,7 @@ fun LazyListScope.groupedTransactionItems(
                     group.transactions.forEachIndexed { index, transaction ->
                         SwipeableTransactionItem(
                             transaction = transaction,
+                            availableLabels = availableLabels,
                             onClick = { onTransactionClick(transaction) },
                             onDelete = { onTransactionDelete(transaction) }
                         )
@@ -178,7 +184,7 @@ private fun TransactionDateHeader(dateLabel: String, totalExpense: Double, total
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (totalExpense > 0) {
                 Text(
-                    text = "-${String.format("%.0f", totalExpense)}",
+                    text = "-${totalExpense.formatDecimal(0)}",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = Expense
@@ -186,7 +192,7 @@ private fun TransactionDateHeader(dateLabel: String, totalExpense: Double, total
             }
             if (totalIncome > 0) {
                 Text(
-                    text = "+${String.format("%.0f", totalIncome)}",
+                    text = "+${totalIncome.formatDecimal(0)}",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = Income
@@ -200,6 +206,7 @@ private fun TransactionDateHeader(dateLabel: String, totalExpense: Double, total
 @Composable
 private fun SwipeableTransactionItem(
     transaction: Transaction,
+    availableLabels: List<Label>,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -239,7 +246,13 @@ private fun SwipeableTransactionItem(
                 }
             }
         },
-        content = { TransactionItemContent(transaction = transaction, onClick = onClick) },
+        content = {
+            TransactionItemContent(
+                transaction = transaction,
+                availableLabels = availableLabels,
+                onClick = onClick
+            )
+        },
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true
     )
@@ -252,10 +265,7 @@ private fun SwipeableTransactionItem(
             text = {
                 Text(
                     "Are you sure you want to delete this transaction of RM ${
-                        String.format(
-                            "%.2f",
-                            transaction.amount
-                        )
+                        transaction.amount.formatDecimal(2)
                     }?"
                 )
             },
@@ -274,9 +284,13 @@ private fun SwipeableTransactionItem(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-private fun TransactionItemContent(transaction: Transaction, onClick: () -> Unit) {
+private fun TransactionItemContent(
+    transaction: Transaction,
+    availableLabels: List<Label>,
+    onClick: () -> Unit
+) {
     Surface(onClick = onClick, color = SurfaceContainer) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -322,16 +336,47 @@ private fun TransactionItemContent(transaction: Transaction, onClick: () -> Unit
                             maxLines = 1
                         )
                     }
+
+                    // Labels
+                    if (transaction.labels.isNotEmpty() && availableLabels.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            transaction.labels.forEach { labelId ->
+                                val label = availableLabels.find { it.id == labelId }
+                                if (label != null) {
+                                    val labelColor = parseColorSafe(label.color)
+                                    Box(
+                                        modifier =
+                                            Modifier.clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    labelColor.copy(alpha = 0.2f)
+                                                )
+                                                .padding(
+                                                    horizontal = 6.dp,
+                                                    vertical = 2.dp
+                                                )
+                                    ) {
+                                        Text(
+                                            text = label.name,
+                                            color = labelColor,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             Text(
                 text =
                     "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"} RM ${
-                        String.format(
-                            "%.2f",
-                            transaction.amount
-                        )
+                        transaction.amount.formatDecimal(2)
                     }",
                 color = if (transaction.type == TransactionType.EXPENSE) Expense else Income,
                 fontWeight = FontWeight.SemiBold,

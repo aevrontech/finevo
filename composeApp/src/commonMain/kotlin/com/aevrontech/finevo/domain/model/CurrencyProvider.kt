@@ -1,5 +1,7 @@
 package com.aevrontech.finevo.domain.model
 
+import com.aevrontech.finevo.core.util.formatDecimal
+
 /**
  * Currency data class representing a currency with code, name, symbol, and decimal digits. Data
  * sourced from currencies.json with symbol_native, decimal_digits, and name fields.
@@ -24,7 +26,7 @@ data class CurrencyInfo(
 
     /** Format an amount for this currency. */
     fun formatAmount(amount: Double): String {
-        return "$symbol ${String.format("%.${decimalDigits}f", kotlin.math.abs(amount))}"
+        return "$symbol ${kotlin.math.abs(amount).formatDecimal(decimalDigits)}"
     }
 }
 

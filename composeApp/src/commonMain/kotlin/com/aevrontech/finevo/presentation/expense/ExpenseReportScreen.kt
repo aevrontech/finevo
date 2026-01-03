@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aevrontech.finevo.domain.model.TransactionType
+import com.aevrontech.finevo.presentation.label.LabelViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Month
@@ -43,7 +44,9 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun ExpenseReportScreen(onDismiss: () -> Unit) {
     val expenseViewModel: ExpenseViewModel = koinViewModel()
+    val labelViewModel: LabelViewModel = koinViewModel()
     val expenseState by expenseViewModel.uiState.collectAsState()
+    val labelState by labelViewModel.uiState.collectAsState()
     val filterPeriod by expenseViewModel.filterPeriod.collectAsState()
     val periodOffset by expenseViewModel.periodOffset.collectAsState()
 
@@ -85,7 +88,20 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                 FilterPeriod.YEAR -> {
                     // Group by Month
                     val monthNames =
-                        listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                        listOf(
+                            "Jan",
+                            "Feb",
+                            "Mar",
+                            "Apr",
+                            "May",
+                            "Jun",
+                            "Jul",
+                            "Aug",
+                            "Sep",
+                            "Oct",
+                            "Nov",
+                            "Dec"
+                        )
                     val grouped = expenseTransactions.groupBy { it.date.monthNumber }
                     monthNames.mapIndexed { index, name ->
                         val total = grouped[index + 1]?.sumOf { it.amount } ?: 0.0
@@ -184,7 +200,6 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                     selectedPeriod = filterPeriod,
                     periodOffset = periodOffset,
                     barChartData = barChartData,
-                    onPeriodChange = { expenseViewModel.setFilterPeriod(it) },
                     monthName = periodLabel.split(" ").firstOrNull() ?: "",
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
@@ -199,6 +214,7 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                     limit = 100, // Show more in full report
                     onSeeAllClick = { /* Navigate to full history if needed */ },
                     onTransactionClick = { /* Open details */ },
+                    availableLabels = labelState.labels,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }

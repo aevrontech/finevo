@@ -58,6 +58,7 @@ import com.aevrontech.finevo.presentation.auth.AuthViewModel
 import com.aevrontech.finevo.presentation.category.CategoryManagementScreen
 import com.aevrontech.finevo.presentation.home.LocalParentNavigator
 import com.aevrontech.finevo.presentation.home.LocalSignOutHandler
+import com.aevrontech.finevo.presentation.label.LabelManagementScreen
 import com.aevrontech.finevo.presentation.settings.SettingsViewModel
 import com.aevrontech.finevo.presentation.settings.UserProfileScreen
 import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
@@ -92,6 +93,7 @@ private fun SettingsTabContent() {
     val authViewModel: AuthViewModel = koinViewModel()
     val parentNavigator = LocalParentNavigator.current
     var showCategoryManagement by remember { mutableStateOf(false) }
+    var showLabelManagement by remember { mutableStateOf(false) }
     var showCurrencyPicker by remember { mutableStateOf(false) }
 
     val authState by authViewModel.uiState.collectAsState()
@@ -108,8 +110,14 @@ private fun SettingsTabContent() {
             } else {
                 allCurrencies.filter {
                     it.code.contains(currencySearchQuery, ignoreCase = true) ||
-                        it.displayName.contains(currencySearchQuery, ignoreCase = true) ||
-                        it.symbol.contains(currencySearchQuery, ignoreCase = true)
+                        it.displayName.contains(
+                            currencySearchQuery,
+                            ignoreCase = true
+                        ) ||
+                        it.symbol.contains(
+                            currencySearchQuery,
+                            ignoreCase = true
+                        )
                 }
             }
         }
@@ -120,6 +128,12 @@ private fun SettingsTabContent() {
     // Show Category Management Screen
     if (showCategoryManagement) {
         CategoryManagementScreen(onBack = { showCategoryManagement = false })
+        return
+    }
+
+    // Show Label Management Screen
+    if (showLabelManagement) {
+        LabelManagementScreen(onNavigateBack = { showLabelManagement = false })
         return
     }
 
@@ -144,11 +158,23 @@ private fun SettingsTabContent() {
                     value = currencySearchQuery,
                     onValueChange = { currencySearchQuery = it },
                     placeholder = { Text("Search currencies...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null
+                        )
+                    },
                     trailingIcon = {
                         if (currencySearchQuery.isNotEmpty()) {
-                            IconButton(onClick = { currencySearchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                            IconButton(
+                                onClick = {
+                                    currencySearchQuery = ""
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear"
+                                )
                             }
                         }
                     },
@@ -166,38 +192,64 @@ private fun SettingsTabContent() {
                             modifier =
                                 Modifier.fillMaxWidth()
                                     .clickable {
-                                        selectedCurrency = currency
-                                        showCurrencyPicker = false
-                                        currencySearchQuery = ""
+                                        selectedCurrency =
+                                            currency
+                                        showCurrencyPicker =
+                                            false
+                                        currencySearchQuery =
+                                            ""
                                     }
-                                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                    .padding(
+                                        vertical = 12.dp,
+                                        horizontal = 8.dp
+                                    ),
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween,
+                            verticalAlignment =
+                                Alignment.CenterVertically
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
                                     currency.symbol,
                                     fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.width(40.dp)
+                                    fontWeight =
+                                        FontWeight.Bold,
+                                    modifier =
+                                        Modifier.width(
+                                            40.dp
+                                        )
                                 )
                                 Column {
-                                    Text(currency.displayName, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        currency.displayName,
+                                        fontWeight =
+                                            FontWeight
+                                                .Medium
+                                    )
                                     Text(
                                         currency.code,
                                         fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSurfaceVariant
                                     )
                                 }
                             }
-                            if (currency.code == selectedCurrency.code) {
+                            if (currency.code == selectedCurrency.code
+                            ) {
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primary
                                 )
                             }
                         }
@@ -231,7 +283,8 @@ private fun SettingsTabContent() {
                     },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
                     )
             ) {
                 Row(
@@ -259,9 +312,14 @@ private fun SettingsTabContent() {
                                     ),
                             contentAlignment = Alignment.Center
                         ) {
-                            val userEmail = authState.user?.email ?: "User"
+                            val userEmail =
+                                authState.user?.email ?: "User"
                             Text(
-                                text = userEmail.firstOrNull()?.uppercase() ?: "U",
+                                text =
+                                    userEmail
+                                        .firstOrNull()
+                                        ?.uppercase()
+                                        ?: "U",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -269,15 +327,25 @@ private fun SettingsTabContent() {
                         }
                         Column {
                             Text(
-                                text = authState.user?.email?.substringBefore("@") ?: "User",
+                                text =
+                                    authState.user?.email
+                                        ?.substringBefore(
+                                            "@"
+                                        )
+                                        ?: "User",
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurface
                             )
                             Text(
-                                text = authState.user?.email ?: "Not signed in",
+                                text = authState.user?.email
+                                    ?: "Not signed in",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant
                             )
                         }
                     }
@@ -296,7 +364,8 @@ private fun SettingsTabContent() {
                 modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
                     )
             ) {
                 Row(
@@ -308,28 +377,41 @@ private fun SettingsTabContent() {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(if (isDarkMode) "🌙" else "☀️", fontSize = 24.sp)
+                        Text(
+                            if (isDarkMode) "🌙" else "☀️",
+                            fontSize = 24.sp
+                        )
                         Column {
                             Text(
                                 "Dark Mode",
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurface
                             )
                             Text(
-                                if (isDarkMode) "Dark theme enabled" else "Light theme enabled",
+                                if (isDarkMode) "Dark theme enabled"
+                                else "Light theme enabled",
                                 fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant
                             )
                         }
                     }
                     Switch(
                         checked = isDarkMode,
-                        onCheckedChange = { enabled -> ThemeManager.setDarkMode(enabled) },
+                        onCheckedChange = { enabled ->
+                            ThemeManager.setDarkMode(enabled)
+                        },
                         colors =
                             SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedThumbColor =
+                                    MaterialTheme.colorScheme
+                                        .primary,
                                 checkedTrackColor =
-                                    MaterialTheme.colorScheme.primaryContainer
+                                    MaterialTheme.colorScheme
+                                        .primaryContainer
                             )
                     )
                 }
@@ -339,10 +421,14 @@ private fun SettingsTabContent() {
         // Currency Selection
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { showCurrencyPicker = true },
+                modifier =
+                    Modifier.fillMaxWidth().clickable {
+                        showCurrencyPicker = true
+                    },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
                     )
             ) {
                 Row(
@@ -359,12 +445,16 @@ private fun SettingsTabContent() {
                             Text(
                                 "Currency",
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurface
                             )
                             Text(
                                 "${selectedCurrency.symbol} ${selectedCurrency.displayName}",
                                 fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant
                             )
                         }
                     }
@@ -378,9 +468,12 @@ private fun SettingsTabContent() {
                             color = MaterialTheme.colorScheme.primary
                         )
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            Icons.AutoMirrored.Filled
+                                .KeyboardArrowRight,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint =
+                                MaterialTheme.colorScheme
+                                    .onSurfaceVariant
                         )
                     }
                 }
@@ -390,10 +483,14 @@ private fun SettingsTabContent() {
         // Categories Section
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { showCategoryManagement = true },
+                modifier =
+                    Modifier.fillMaxWidth().clickable {
+                        showCategoryManagement = true
+                    },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
                     )
             ) {
                 Row(
@@ -410,12 +507,65 @@ private fun SettingsTabContent() {
                             Text(
                                 "Manage Categories",
                                 fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurface
                             )
                             Text(
                                 "Add, edit, or delete categories",
                                 fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Labels Section
+        item {
+            Card(
+                modifier =
+                    Modifier.fillMaxWidth().clickable {
+                        showLabelManagement = true
+                    },
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
+                    )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("🏷️", fontSize = 24.sp)
+                        Column {
+                            Text(
+                                "Manage Labels",
+                                fontWeight = FontWeight.Medium,
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurface
+                            )
+                            Text(
+                                "Create and customize labels",
+                                fontSize = 12.sp,
+                                color =
+                                    MaterialTheme.colorScheme
+                                        .onSurfaceVariant
                             )
                         }
                     }
@@ -434,7 +584,8 @@ private fun SettingsTabContent() {
                 modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
                     )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -446,7 +597,10 @@ private fun SettingsTabContent() {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = { signOutHandler?.invoke() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Expense),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = Expense
+                            ),
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Sign Out") }
                 }
@@ -459,7 +613,8 @@ private fun SettingsTabContent() {
                 modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor =
+                            MaterialTheme.colorScheme.surfaceContainer
                     )
             ) {
                 Column(

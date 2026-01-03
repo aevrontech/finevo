@@ -6,6 +6,7 @@ import com.aevrontech.finevo.core.util.Result
 import com.aevrontech.finevo.domain.model.*
 import com.aevrontech.finevo.domain.repository.AccountRepository
 import com.aevrontech.finevo.domain.repository.ExpenseRepository
+import com.aevrontech.finevo.domain.repository.LabelRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.*
@@ -13,7 +14,8 @@ import kotlinx.datetime.*
 /** ViewModel for Expense Tracker feature. */
 class ExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
-    private val accountRepository: AccountRepository
+    private val accountRepository: AccountRepository,
+    private val labelRepository: LabelRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
@@ -160,7 +162,8 @@ class ExpenseViewModel(
         time: String? = null,
         location: String? = null,
         locationLat: Double? = null,
-        locationLng: Double? = null
+        locationLng: Double? = null,
+        labels: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
@@ -187,12 +190,13 @@ class ExpenseViewModel(
                     location = location,
                     locationLat = locationLat,
                     locationLng = locationLng,
+                    labels = labels,
                     createdAt = now,
                     updatedAt = now
                 )
 
             when (val result = expenseRepository.addTransaction(transaction)) {
-                is Result.Success -> {
+                is Result.Success<*> -> {
                     // Update account balance if account selected
                     if (accountId != null && selectedAccount != null) {
                         val balanceChange = if (type == TransactionType.EXPENSE) -amount else amount
@@ -221,6 +225,11 @@ class ExpenseViewModel(
                                 else it.selectedAccount
                         )
                     }
+                    // Set labels for transaction
+                    if (labels.isNotEmpty()) {
+                        labelRepository.setLabelsForTransaction(transaction.id, labels)
+                    }
+
                     // Reload transactions
                     loadTransactions()
                 }
@@ -238,7 +247,7 @@ class ExpenseViewModel(
             val transaction = _uiState.value.transactions.find { it.id == id }
 
             when (val result = expenseRepository.deleteTransaction(id)) {
-                is Result.Success -> {
+                is Result.Success<*> -> {
                     // Reverse the balance effect
                     if (transaction != null && transaction.accountId != null) {
                         val account =
@@ -278,7 +287,8 @@ class ExpenseViewModel(
         time: String? = null,
         location: String? = null,
         locationLat: Double? = null,
-        locationLng: Double? = null
+        locationLng: Double? = null,
+        labels: List<String> = emptyList()
     ) {
         viewModelScope.launch {
             // Find the old transaction to calculate balance delta
@@ -308,12 +318,13 @@ class ExpenseViewModel(
                     location = location,
                     locationLat = locationLat,
                     locationLng = locationLng,
+                    labels = labels,
                     createdAt = oldTransaction?.createdAt ?: now,
                     updatedAt = now
                 )
 
             when (val result = expenseRepository.updateTransaction(transaction)) {
-                is Result.Success -> {
+                is Result.Success<*> -> {
                     // Update account balance: reverse old effect, apply new effect
                     if (oldTransaction != null && accountId != null && selectedAccount != null) {
                         // Calculate old balance effect (what we need to reverse)
@@ -349,6 +360,8 @@ class ExpenseViewModel(
                     }
 
                     _uiState.update { it.copy(successMessage = "Transaction updated!") }
+                    // Set labels for transaction
+                    labelRepository.setLabelsForTransaction(transaction.id, labels)
                     loadTransactions()
                 }
                 is Result.Error -> {

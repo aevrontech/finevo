@@ -6,11 +6,23 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,7 +35,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aevrontech.finevo.ui.theme.*
+import com.aevrontech.finevo.core.util.formatDecimal
+import com.aevrontech.finevo.ui.theme.Expense
+import com.aevrontech.finevo.ui.theme.Income
+import com.aevrontech.finevo.ui.theme.OnSurface
+import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
+import com.aevrontech.finevo.ui.theme.SurfaceContainer
 
 /** Circular progress indicator with animated fill */
 @Composable
@@ -100,12 +117,7 @@ fun CircularProgressCard(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = amount,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = OnSurface
-        )
+        Text(text = amount, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnSurface)
     }
 }
 
@@ -147,7 +159,7 @@ fun IncomeExpenseCircleCard(
             Text(text = "Net", fontSize = 12.sp, color = OnSurfaceVariant)
             Text(
                 text =
-                    "${if (net >= 0) "+" else ""}$currencySymbol ${formatAmount(kotlin.math.abs(net))}",
+                    "${if (net >= 0) "+" else ""}$currencySymbol ${kotlin.math.abs(net).formatDecimal(2)}",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (net >= 0) Income else Expense
@@ -179,10 +191,7 @@ fun BarChart(
     val animatedProgress = remember { Animatable(0f) }
     LaunchedEffect(data) {
         animatedProgress.snapTo(0f)
-        animatedProgress.animateTo(
-            1f,
-            animationSpec = tween(600, easing = FastOutSlowInEasing)
-        )
+        animatedProgress.animateTo(1f, animationSpec = tween(600, easing = FastOutSlowInEasing))
     }
 
     Row(
@@ -203,18 +212,11 @@ fun BarChart(
                 ) {
                     // Income bar
                     val incomeHeight =
-                        ((item.income / maxValue) *
-                            maxHeight.value *
-                            animatedProgress.value)
-                            .dp
+                        ((item.income / maxValue) * maxHeight.value * animatedProgress.value).dp
                     Box(
                         modifier =
                             Modifier.width(barWidth / 2)
-                                .height(
-                                    incomeHeight.coerceAtLeast(
-                                        4.dp
-                                    )
-                                )
+                                .height(incomeHeight.coerceAtLeast(4.dp))
                                 .clip(
                                     RoundedCornerShape(
                                         topStart = 4.dp,
@@ -226,18 +228,12 @@ fun BarChart(
 
                     // Expense bar
                     val expenseHeight =
-                        ((item.expense / maxValue) *
-                            maxHeight.value *
-                            animatedProgress.value)
+                        ((item.expense / maxValue) * maxHeight.value * animatedProgress.value)
                             .dp
                     Box(
                         modifier =
                             Modifier.width(barWidth / 2)
-                                .height(
-                                    expenseHeight.coerceAtLeast(
-                                        4.dp
-                                    )
-                                )
+                                .height(expenseHeight.coerceAtLeast(4.dp))
                                 .clip(
                                     RoundedCornerShape(
                                         topStart = 4.dp,
@@ -271,10 +267,7 @@ fun PieChart(data: List<PieChartData>, modifier: Modifier = Modifier, size: Dp =
 
     LaunchedEffect(data) {
         animatedProgress.snapTo(0f)
-        animatedProgress.animateTo(
-            1f,
-            animationSpec = tween(800, easing = FastOutSlowInEasing)
-        )
+        animatedProgress.animateTo(1f, animationSpec = tween(800, easing = FastOutSlowInEasing))
     }
 
     Box(contentAlignment = Alignment.Center, modifier = modifier.size(size)) {
@@ -284,10 +277,7 @@ fun PieChart(data: List<PieChartData>, modifier: Modifier = Modifier, size: Dp =
             data.forEach { item ->
                 val sweepAngle =
                     if (total > 0) {
-                        ((item.value / total) *
-                            360 *
-                            animatedProgress.value)
-                            .toFloat()
+                        ((item.value / total) * 360 * animatedProgress.value).toFloat()
                     } else 0f
 
                 drawArc(
@@ -369,8 +359,8 @@ fun PieChartLegend(data: List<PieChartData>, modifier: Modifier = Modifier) {
 // Helper function to format amounts
 private fun formatAmount(amount: Double): String {
     return when {
-        amount >= 1_000_000 -> String.format("%.1fM", amount / 1_000_000)
-        amount >= 1_000 -> String.format("%.1fK", amount / 1_000)
-        else -> String.format("%.2f", amount)
+        amount >= 1_000_000 -> "${(amount / 1_000_000).formatDecimal(1)}M"
+        amount >= 1_000 -> "${(amount / 1_000).formatDecimal(1)}K"
+        else -> amount.formatDecimal(2)
     }
 }

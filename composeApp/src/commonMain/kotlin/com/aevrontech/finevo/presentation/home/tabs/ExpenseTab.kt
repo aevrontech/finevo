@@ -62,6 +62,7 @@ import com.aevrontech.finevo.presentation.expense.FilterPeriod
 import com.aevrontech.finevo.presentation.expense.IncomeExpenseCards
 import com.aevrontech.finevo.presentation.expense.TransactionHistorySection
 import com.aevrontech.finevo.presentation.home.LocalSetNavBarVisible
+import com.aevrontech.finevo.presentation.label.LabelViewModel
 import com.aevrontech.finevo.ui.theme.Error
 import com.aevrontech.finevo.ui.theme.HabitGradientEnd
 import com.aevrontech.finevo.ui.theme.HabitGradientStart
@@ -98,6 +99,8 @@ object ExpenseTab : Tab {
 @Composable
 internal fun ExpenseTabContent() {
     val expenseViewModel: ExpenseViewModel = koinViewModel()
+    val labelViewModel: LabelViewModel = koinViewModel()
+    val labelUiState by labelViewModel.uiState.collectAsState()
     val accountViewModel: AccountViewModel = koinViewModel()
     val expenseState by expenseViewModel.uiState.collectAsState()
 
@@ -283,6 +286,7 @@ internal fun ExpenseTabContent() {
             item {
                 TransactionHistorySection(
                     transactions = filteredTransactions,
+                    availableLabels = labelUiState.labels,
                     limit = 5,
                     onSeeAllClick = { showReportScreen = true },
                     onTransactionClick = { tx -> transactionToEdit = tx },
@@ -319,6 +323,7 @@ internal fun ExpenseTabContent() {
                 accounts = expenseState.accounts,
                 categories = expenseState.categories,
                 selectedAccount = expenseState.selectedAccount,
+                availableLabels = labelUiState.labels,
                 onDismiss = { showAddTransaction = false },
                 onConfirm = { type,
                               amount,
@@ -329,7 +334,8 @@ internal fun ExpenseTabContent() {
                               time,
                               locationName,
                               locationLat,
-                              locationLng ->
+                              locationLng,
+                              labels ->
                     expenseViewModel.addTransaction(
                         type,
                         amount,
@@ -340,10 +346,12 @@ internal fun ExpenseTabContent() {
                         time,
                         locationName,
                         locationLat,
-                        locationLng
+                        locationLng,
+                        labels
                     )
                     showAddTransaction = false
-                }
+                },
+                onAddLabel = { name, color, auto -> labelViewModel.addLabel(name, color, auto) }
             )
         }
 
@@ -363,6 +371,7 @@ internal fun ExpenseTabContent() {
                     accounts = expenseState.accounts,
                     categories = expenseState.categories,
                     selectedAccount = expenseState.accounts.find { it.id == tx.accountId },
+                    availableLabels = labelUiState.labels,
                     editingTransaction = tx,
                     onDismiss = { transactionToEdit = null },
                     onConfirm = { type,
@@ -374,7 +383,8 @@ internal fun ExpenseTabContent() {
                                   time,
                                   locationName,
                                   locationLat,
-                                  locationLng ->
+                                  locationLng,
+                                  labels ->
                         expenseViewModel.updateTransaction(
                             tx.id,
                             type,
@@ -386,9 +396,13 @@ internal fun ExpenseTabContent() {
                             time,
                             locationName,
                             locationLat,
-                            locationLng
+                            locationLng,
+                            labels
                         )
                         transactionToEdit = null
+                    },
+                    onAddLabel = { name, color, auto ->
+                        labelViewModel.addLabel(name, color, auto)
                     }
                 )
             }
@@ -500,7 +514,7 @@ private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
                 today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
                     .plus(offset * 7, DateTimeUnit.DAY)
             val weekEnd = weekStart.plus(6, DateTimeUnit.DAY)
-            "${weekStart.dayOfMonth} - ${weekEnd.dayOfMonth} ${weekEnd.month.name.take(3)} ${weekEnd.year}"
+            "${weekStart.dayOfMonth} ${weekStart.month.name.take(3)} - ${weekEnd.dayOfMonth} ${weekEnd.month.name.take(3)}"
         }
         FilterPeriod.MONTH -> {
             var targetYear = today.year

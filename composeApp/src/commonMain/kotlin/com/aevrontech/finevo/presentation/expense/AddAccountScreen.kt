@@ -1,16 +1,51 @@
 package com.aevrontech.finevo.presentation.expense
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,13 +55,19 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.util.formatDecimal
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.AccountType
 import com.aevrontech.finevo.domain.model.CurrencyProvider
-import com.aevrontech.finevo.ui.theme.*
+import com.aevrontech.finevo.presentation.label.LabelColors
+import com.aevrontech.finevo.ui.theme.OnSurface
+import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
+import com.aevrontech.finevo.ui.theme.Primary
+import com.aevrontech.finevo.ui.theme.Surface
+import com.aevrontech.finevo.ui.theme.SurfaceContainer
 
 /** Elegant, minimalist screen for creating/editing an account. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddAccountScreen(
     onDismiss: () -> Unit,
@@ -36,7 +77,8 @@ fun AddAccountScreen(
         balance: Double,
         currency: String,
         type: AccountType,
-        color: String) -> Unit,
+        color: String
+    ) -> Unit,
     defaultCurrency: String = "MYR",
     editingAccount: Account? = null
 ) {
@@ -44,9 +86,13 @@ fun AddAccountScreen(
 
     var name by remember { mutableStateOf(editingAccount?.name ?: "") }
     var balanceText by remember {
-        mutableStateOf(if (isEditing) String.format("%.2f", editingAccount?.balance ?: 0.0) else "")
+        mutableStateOf(
+            if (isEditing) (editingAccount?.balance ?: 0.0).formatDecimal(2) else ""
+        )
     }
-    var selectedCurrency by remember { mutableStateOf(editingAccount?.currency ?: defaultCurrency) }
+    var selectedCurrency by remember {
+        mutableStateOf(editingAccount?.currency ?: defaultCurrency)
+    }
     var selectedType by remember { mutableStateOf(editingAccount?.type ?: AccountType.CASH) }
     var selectedColor by remember { mutableStateOf(editingAccount?.color ?: "#00D9FF") }
     var showCurrencyPicker by remember { mutableStateOf(false) }
@@ -55,17 +101,8 @@ fun AddAccountScreen(
         name.isNotBlank() && (balanceText.isEmpty() || balanceText.toDoubleOrNull() != null)
 
     // Use centralized Currency enum
-    val colors =
-        listOf(
-            "#00D9FF",
-            "#7C4DFF",
-            "#00E5A0",
-            "#FF6B6B",
-            "#FFD93D",
-            "#FF8C00",
-            "#4ECDC4",
-            "#A855F7"
-        )
+    // Use centralized Currency enum
+    val colors = LabelColors.colors
 
     Scaffold(
         topBar = {
@@ -78,13 +115,17 @@ fun AddAccountScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
                     }
                 },
                 actions = {
                     TextButton(
                         onClick = {
-                            val balance = balanceText.toDoubleOrNull() ?: 0.0
+                            val balance =
+                                balanceText.toDoubleOrNull() ?: 0.0
                             onConfirm(
                                 name,
                                 balance,
@@ -97,7 +138,9 @@ fun AddAccountScreen(
                     ) {
                         Text(
                             "Save",
-                            color = if (isValid) Primary else OnSurfaceVariant,
+                            color =
+                                if (isValid) Primary
+                                else OnSurfaceVariant,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -153,8 +196,7 @@ fun AddAccountScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Currency selector
+                ) { // Currency selector
                     Surface(
                         onClick = { showCurrencyPicker = true },
                         shape = RoundedCornerShape(12.dp),
@@ -162,9 +204,15 @@ fun AddAccountScreen(
                         modifier = Modifier.width(80.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = 12.dp,
+                                    vertical = 16.dp
+                                ),
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween,
+                            verticalAlignment =
+                                Alignment.CenterVertically
                         ) {
                             Text(
                                 selectedCurrency,
@@ -184,7 +232,13 @@ fun AddAccountScreen(
                     OutlinedTextField(
                         value = balanceText,
                         onValueChange = {
-                            if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
+                            if (it.isEmpty() ||
+                                it.matches(
+                                    Regex(
+                                        "^\\d*\\.?\\d*$"
+                                    )
+                                )
+                            ) {
                                 balanceText = it
                             }
                         },
@@ -194,11 +248,17 @@ fun AddAccountScreen(
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Primary,
-                                unfocusedBorderColor = SurfaceContainer,
-                                focusedContainerColor = SurfaceContainer,
-                                unfocusedContainerColor = SurfaceContainer
+                                unfocusedBorderColor =
+                                    SurfaceContainer,
+                                focusedContainerColor =
+                                    SurfaceContainer,
+                                unfocusedContainerColor =
+                                    SurfaceContainer
                             ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal
+                            ),
                         singleLine = true
                     )
                 }
@@ -236,9 +296,10 @@ fun AddAccountScreen(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     colors.forEach { color ->
                         ColorCircle(
@@ -283,17 +344,29 @@ fun AddAccountScreen(
                         Row(
                             modifier =
                                 Modifier.fillMaxWidth()
-                                    .padding(vertical = 14.dp, horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                    .padding(
+                                        vertical = 14.dp,
+                                        horizontal = 12.dp
+                                    ),
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween,
+                            verticalAlignment =
+                                Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
                                 Text(
                                     currency.symbol,
                                     fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight =
+                                        FontWeight.Bold,
                                     color = OnSurface,
-                                    modifier = Modifier.width(40.dp)
+                                    modifier =
+                                        Modifier.width(
+                                            40.dp
+                                        )
                                 )
                                 Text(
                                     "${currency.code} - ${currency.displayName}",
@@ -305,7 +378,8 @@ fun AddAccountScreen(
                                     Icons.Default.Check,
                                     contentDescription = null,
                                     tint = Primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier =
+                                        Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -337,7 +411,8 @@ private fun AccountTypeCard(type: AccountType, isSelected: Boolean, onClick: () 
             Text(
                 type.displayName,
                 fontSize = 11.sp,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight =
+                    if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (isSelected) Primary else OnSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 2
@@ -348,7 +423,7 @@ private fun AccountTypeCard(type: AccountType, isSelected: Boolean, onClick: () 
 
 @Composable
 private fun ColorCircle(color: String, isSelected: Boolean, onClick: () -> Unit) {
-    val parsedColor = parseHexColor(color)
+    val parsedColor = LabelColors.parse(color)
 
     Box(
         modifier =
@@ -371,22 +446,5 @@ private fun ColorCircle(color: String, isSelected: Boolean, onClick: () -> Unit)
                 modifier = Modifier.size(20.dp)
             )
         }
-    }
-}
-
-private fun parseHexColor(hex: String): Color {
-    return try {
-        val colorString = hex.removePrefix("#")
-        when (colorString.length) {
-            6 -> {
-                val r = colorString.substring(0, 2).toInt(16)
-                val g = colorString.substring(2, 4).toInt(16)
-                val b = colorString.substring(4, 6).toInt(16)
-                Color(red = r, green = g, blue = b, alpha = 255)
-            }
-            else -> Primary
-        }
-    } catch (e: Exception) {
-        Primary
     }
 }

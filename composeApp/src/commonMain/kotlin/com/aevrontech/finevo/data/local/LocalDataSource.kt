@@ -12,6 +12,7 @@ import com.aevrontech.finevo.domain.model.DebtType
 import com.aevrontech.finevo.domain.model.Habit
 import com.aevrontech.finevo.domain.model.HabitFrequency
 import com.aevrontech.finevo.domain.model.HabitLog
+import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.domain.model.User
@@ -519,6 +520,81 @@ class LocalDataSource(private val database: FinEvoDatabase) {
         withContext(Dispatchers.IO) {
             queries.insertAppConfig(key, value, Clock.System.now().toEpochMilliseconds())
         }
+
+    // ============================================
+    // LABELS
+    // ============================================
+
+    fun getLabels(userId: String): Flow<List<Label>> {
+        return queries.selectAllLabels(userId).asFlow().mapToList(Dispatchers.IO).map { list ->
+            list.map { it.toDomainLabel() }
+        }
+    }
+
+    suspend fun getLabelById(id: String): Label? =
+        withContext(Dispatchers.IO) {
+            queries.selectLabelById(id).executeAsOneOrNull()?.toDomainLabel()
+        }
+
+    fun getAutoAssignLabels(userId: String): Flow<List<Label>> {
+        return queries.selectAutoAssignLabels(userId).asFlow().mapToList(Dispatchers.IO).map { list
+            ->
+            list.map { it.toDomainLabel() }
+        }
+    }
+
+    suspend fun insertLabel(label: Label) =
+        withContext(Dispatchers.IO) {
+            queries.insertLabel(
+                id = label.id,
+                user_id = label.userId,
+                name = label.name,
+                color = label.color,
+                auto_assign = if (label.autoAssign) 1L else 0L,
+                sort_order = label.sortOrder.toLong(),
+                created_at = label.createdAt.toEpochMilliseconds(),
+                updated_at = label.updatedAt.toEpochMilliseconds()
+            )
+        }
+
+    suspend fun updateLabel(label: Label) =
+        withContext(Dispatchers.IO) {
+            queries.updateLabel(
+                name = label.name,
+                color = label.color,
+                auto_assign = if (label.autoAssign) 1L else 0L,
+                sort_order = label.sortOrder.toLong(),
+                updated_at = Clock.System.now().toEpochMilliseconds(),
+                id = label.id
+            )
+        }
+
+    suspend fun deleteLabel(id: String) = withContext(Dispatchers.IO) { queries.deleteLabel(id) }
+
+    suspend fun getLabelUsageCount(labelId: String): Long =
+        withContext(Dispatchers.IO) {
+            queries.countTransactionsForLabel(labelId).executeAsOne()
+        }
+
+    // ============================================
+    // TRANSACTION-LABEL RELATIONSHIPS
+    // ============================================
+
+    suspend fun getLabelsForTransaction(transactionId: String): List<Label> =
+        withContext(Dispatchers.IO) {
+            queries.selectLabelsByTransactionId(transactionId).executeAsList().map {
+                it.toDomainLabel()
+            }
+        }
+
+    suspend fun addLabelToTransaction(transactionId: String, labelId: String) =
+        withContext(Dispatchers.IO) { queries.insertTransactionLabel(transactionId, labelId) }
+
+    suspend fun removeLabelFromTransaction(transactionId: String, labelId: String) =
+        withContext(Dispatchers.IO) { queries.deleteTransactionLabel(transactionId, labelId) }
+
+    suspend fun removeAllLabelsFromTransaction(transactionId: String) =
+        withContext(Dispatchers.IO) { queries.deleteAllLabelsForTransaction(transactionId) }
 }
 
 // ============================================
@@ -666,4 +742,16 @@ private fun Debt_payments.toDomainDebtPayment(): DebtPayment =
         note = note,
         isExtraPayment = is_extra_payment == 1L,
         createdAt = Instant.fromEpochMilliseconds(created_at)
+    )
+
+private fun Labels.toDomainLabel(): Label =
+    Label(
+        id = id,
+        userId = user_id,
+        name = name,
+        color = color,
+        autoAssign = auto_assign == 1L,
+        sortOrder = sort_order.toInt(),
+        createdAt = Instant.fromEpochMilliseconds(created_at),
+        updatedAt = Instant.fromEpochMilliseconds(updated_at)
     )

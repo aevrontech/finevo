@@ -54,7 +54,7 @@ DELETE FROM accounts WHERE id = ?;
 -- ============================================
 
 selectAllLabels:
-SELECT * FROM labels WHERE user_id = ? ORDER BY name;
+SELECT * FROM labels WHERE user_id = ? ORDER BY sort_order ASC, name ASC;
 
 selectLabelById:
 SELECT * FROM labels WHERE id = ?;
@@ -63,14 +63,17 @@ selectAutoAssignLabels:
 SELECT * FROM labels WHERE user_id = ? AND auto_assign = 1;
 
 insertLabel:
-INSERT OR REPLACE INTO labels(id, user_id, name, color, auto_assign, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO labels(id, user_id, name, color, auto_assign, sort_order, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 updateLabel:
-UPDATE labels SET name = ?, color = ?, auto_assign = ?, updated_at = ? WHERE id = ?;
+UPDATE labels SET name = ?, color = ?, auto_assign = ?, sort_order = ?, updated_at = ? WHERE id = ?;
 
 deleteLabel:
 DELETE FROM labels WHERE id = ?;
+
+countTransactionsForLabel:
+SELECT COUNT(*) FROM transaction_labels WHERE label_id = ?;
 
 -- ============================================
 -- TRANSACTION_LABELS QUERIES

@@ -1,12 +1,26 @@
 package com.aevrontech.finevo.presentation.home.tabs
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,10 +29,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.aevrontech.finevo.core.util.formatDecimal
 import com.aevrontech.finevo.domain.model.Debt
 import com.aevrontech.finevo.presentation.components.AddDebtDialog
 import com.aevrontech.finevo.presentation.debt.DebtViewModel
-import com.aevrontech.finevo.ui.theme.*
+import com.aevrontech.finevo.ui.theme.Income
+import com.aevrontech.finevo.ui.theme.OnSurface
+import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
+import com.aevrontech.finevo.ui.theme.SurfaceContainer
+import com.aevrontech.finevo.ui.theme.SurfaceContainerHighest
+import com.aevrontech.finevo.ui.theme.Warning
 import org.koin.compose.viewmodel.koinViewModel
 
 object DebtTab : Tab {
@@ -91,7 +111,7 @@ private fun DebtTabContent() {
                     Text("Total Debt", color = OnSurfaceVariant, fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "RM ${String.format("%.2f", uiState.totalDebt)}",
+                        text = "RM ${uiState.totalDebt.formatDecimal(2)}",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (uiState.totalDebt > 0) Warning else Income
@@ -104,7 +124,7 @@ private fun DebtTabContent() {
                             fontSize = 12.sp
                         )
                         Text(
-                            "Min. payment: RM ${String.format("%.0f", uiState.totalMinimumPayment)}/mo",
+                            "Min. payment: RM ${uiState.totalMinimumPayment.formatDecimal(0)}/mo",
                             color = OnSurfaceVariant,
                             fontSize = 12.sp
                         )
@@ -162,12 +182,12 @@ private fun DebtItem(debt: Debt) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "RM ${String.format("%.2f", debt.currentBalance)}",
+                        text = "RM ${debt.currentBalance.formatDecimal(2)}",
                         color = Warning,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${String.format("%.1f", debt.interestRate)}% APR",
+                        text = "${debt.interestRate.formatDecimal(1)}% APR",
                         color = OnSurfaceVariant,
                         fontSize = 12.sp
                     )
@@ -182,7 +202,7 @@ private fun DebtItem(debt: Debt) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${String.format("%.1f", debt.percentPaid)}% paid off",
+                text = "${debt.percentPaid.formatDecimal(1)}% paid off",
                 color = OnSurfaceVariant,
                 fontSize = 12.sp
             )
