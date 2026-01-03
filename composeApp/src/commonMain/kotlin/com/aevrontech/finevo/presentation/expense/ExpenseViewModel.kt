@@ -163,7 +163,8 @@ class ExpenseViewModel(
         location: String? = null,
         locationLat: Double? = null,
         locationLng: Double? = null,
-        labels: List<String> = emptyList()
+        labels: List<String> = emptyList(),
+        photoPath: String? = null
     ) {
         viewModelScope.launch {
             val now = Clock.System.now()
@@ -191,6 +192,7 @@ class ExpenseViewModel(
                     locationLat = locationLat,
                     locationLng = locationLng,
                     labels = labels,
+                    photoPath = photoPath,
                     createdAt = now,
                     updatedAt = now
                 )
@@ -260,7 +262,7 @@ class ExpenseViewModel(
                                     -transaction.amount // Subtract what was added
                                 }
                             accountRepository.updateAccountBalance(
-                                transaction.accountId!!,
+                                transaction.accountId,
                                 account.balance + balanceChange
                             )
                         }
@@ -288,7 +290,8 @@ class ExpenseViewModel(
         location: String? = null,
         locationLat: Double? = null,
         locationLng: Double? = null,
-        labels: List<String> = emptyList()
+        labels: List<String> = emptyList(),
+        photoPath: String? = null
     ) {
         viewModelScope.launch {
             // Find the old transaction to calculate balance delta
@@ -319,6 +322,7 @@ class ExpenseViewModel(
                     locationLat = locationLat,
                     locationLng = locationLng,
                     labels = labels,
+                    photoPath = photoPath,
                     createdAt = oldTransaction?.createdAt ?: now,
                     updatedAt = now
                 )

@@ -37,10 +37,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -78,12 +83,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import com.aevrontech.finevo.core.util.formatDecimal
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.Category
 import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
+import com.aevrontech.finevo.presentation.common.FileStorage
+import com.aevrontech.finevo.presentation.common.ImagePicker
 import com.aevrontech.finevo.presentation.common.LocationHelper
 import com.aevrontech.finevo.presentation.common.LocationMapPreview
 import com.aevrontech.finevo.presentation.common.LocationPickerMap
@@ -123,16 +131,15 @@ fun AddTransactionScreen(
         location: String?, // Location Name
         locationLat: Double?,
         locationLng: Double?,
-        labels: List<String>
+        labels: List<String>,
+        photoPath: String?
     ) -> Unit,
     onAddLabel: (String, String, Boolean) -> Unit = { _, _, _ -> }
 ) {
     val isEditing = editingTransaction != null
 
     var expression by remember {
-        mutableStateOf(
-            if (isEditing) (editingTransaction?.amount ?: 0.0).formatDecimal(2) else ""
-        )
+        mutableStateOf(if (isEditing) (editingTransaction?.amount ?: 0.0).formatDecimal(2) else "")
     }
     var computedAmount by remember { mutableStateOf(editingTransaction?.amount ?: 0.0) }
     var selectedAccountLocal by remember { mutableStateOf(selectedAccount) }
@@ -145,34 +152,24 @@ fun AddTransactionScreen(
                     if (parts.size >= 2) {
                         LocalTime(parts[0].toInt(), parts[1].toInt())
                     } else {
-                        Clock.System.now()
-                            .toLocalDateTime(
-                                TimeZone.currentSystemDefault()
-                            )
-                            .time
+                        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
                     }
                 } catch (e: Exception) {
-                    Clock.System.now()
-                        .toLocalDateTime(TimeZone.currentSystemDefault())
-                        .time
+                    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
                 }
             }
-                ?: Clock.System.now()
-                    .toLocalDateTime(TimeZone.currentSystemDefault())
-                    .time
+                ?: Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
         )
     }
     var selectedCategory by remember {
         mutableStateOf<Category?>(
-            if (isEditing) categories.find { it.id == editingTransaction?.categoryId }
-            else null
+            if (isEditing) categories.find { it.id == editingTransaction?.categoryId } else null
         )
     }
     var note by remember { mutableStateOf(editingTransaction?.note ?: "") }
     var selectedDate by remember {
         mutableStateOf(
-            editingTransaction?.date
-                ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+            editingTransaction?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
         )
     }
     var showCategoryPicker by remember { mutableStateOf(false) }
@@ -182,9 +179,14 @@ fun AddTransactionScreen(
     var showMapPicker by remember { mutableStateOf(false) }
     var showLabelPicker by remember { mutableStateOf(false) }
     var showAddLabelDialog by remember { mutableStateOf(false) }
-    var selectedLabelIds by remember {
-        mutableStateOf(editingTransaction?.labels ?: emptyList())
-    }
+    var selectedLabelIds by remember { mutableStateOf(editingTransaction?.labels ?: emptyList()) }
+
+    // Photo Binding
+    var showImagePickerSheet by remember { mutableStateOf(false) }
+    var showFullScreenPhoto by remember { mutableStateOf(false) }
+    var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var photoPath by remember { mutableStateOf<String?>(editingTransaction?.photoPath) }
+    val imagePicker = remember { ImagePicker() }
 
     // Location State
     var locationLat by remember { mutableStateOf(editingTransaction?.locationLat) }
@@ -260,8 +262,7 @@ fun AddTransactionScreen(
     ) {
         // 1. Top Bar (Fixed)
         Row(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -275,8 +276,7 @@ fun AddTransactionScreen(
                 }
             ) {
                 Icon(
-                    if (pagerState.currentPage == 1)
-                        Icons.AutoMirrored.Filled.ArrowBack
+                    if (pagerState.currentPage == 1) Icons.AutoMirrored.Filled.ArrowBack
                     else Icons.Default.Close,
                     "Back or Close",
                     tint = Color.White
@@ -317,7 +317,8 @@ fun AddTransactionScreen(
                             locationName,
                             locationLat,
                             locationLng,
-                            selectedLabelIds
+                            selectedLabelIds,
+                            photoPath
                         )
                     }
                 },
@@ -326,18 +327,13 @@ fun AddTransactionScreen(
                 Icon(
                     Icons.Default.Check,
                     "Save",
-                    tint =
-                        if (isValid) Color.White
-                        else Color.White.copy(alpha = 0.3f)
+                    tint = if (isValid) Color.White else Color.White.copy(alpha = 0.3f)
                 )
             }
         }
 
         // 2. Pager Content
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth().weight(1f)
-        ) { page ->
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().weight(1f)) { page ->
             when (page) {
                 0 -> {
                     // MAIN PAGE: Amount, Selectors, Calculator
@@ -349,44 +345,24 @@ fun AddTransactionScreen(
                         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                             Column(
                                 modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment =
-                                    Alignment
-                                        .CenterHorizontally,
-                                verticalArrangement =
-                                    Arrangement.Bottom
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Bottom
                             ) {
                                 // Amount Display
                                 Text(
-                                    text =
-                                        if (expression
-                                                .isEmpty()
-                                        )
-                                            "0"
-                                        else expression,
+                                    text = if (expression.isEmpty()) "0" else expression,
                                     fontSize = 70.sp,
-                                    fontWeight =
-                                        FontWeight.Light,
+                                    fontWeight = FontWeight.Light,
                                     color = Color.White,
                                     maxLines = 1,
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal =
-                                                16.dp
-                                        ),
+                                    modifier = Modifier.padding(horizontal = 16.dp),
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
-                                    text =
-                                        selectedAccountLocal
-                                            ?.currency
-                                            ?: "MYR",
+                                    text = selectedAccountLocal?.currency ?: "MYR",
                                     fontSize = 18.sp,
-                                    fontWeight =
-                                        FontWeight.Medium,
-                                    color =
-                                        Color.White.copy(
-                                            alpha = 0.7f
-                                        )
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White.copy(alpha = 0.7f)
                                 )
 
                                 Spacer(Modifier.height(32.dp))
@@ -394,133 +370,63 @@ fun AddTransactionScreen(
                                 // Selectors
                                 Row(
                                     modifier =
-                                        Modifier.fillMaxWidth()
-                                            .padding(
-                                                horizontal =
-                                                    24.dp
-                                            ),
-                                    horizontalArrangement =
-                                        Arrangement
-                                            .SpaceBetween
+                                        Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     // Account
                                     Column(
-                                        horizontalAlignment =
-                                            Alignment
-                                                .Start,
+                                        horizontalAlignment = Alignment.Start,
                                         modifier =
-                                            Modifier.clip(
-                                                RoundedCornerShape(
-                                                    8.dp
-                                                )
-                                            )
-                                                .clickable {
-                                                    showAccountPicker =
-                                                        true
-                                                }
-                                                .padding(
-                                                    8.dp
-                                                )
+                                            Modifier.clip(RoundedCornerShape(8.dp))
+                                                .clickable { showAccountPicker = true }
+                                                .padding(8.dp)
                                     ) {
                                         Text(
                                             "Account",
-                                            fontSize =
-                                                12.sp,
-                                            color =
-                                                Color.White
-                                                    .copy(
-                                                        alpha =
-                                                            0.5f
-                                                    )
+                                            fontSize = 12.sp,
+                                            color = Color.White.copy(alpha = 0.5f)
                                         )
-                                        Row(
-                                            verticalAlignment =
-                                                Alignment
-                                                    .CenterVertically
-                                        ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                selectedAccountLocal
-                                                    ?.name
-                                                    ?: "Select",
-                                                fontSize =
-                                                    16.sp,
-                                                fontWeight =
-                                                    FontWeight
-                                                        .Bold,
-                                                color =
-                                                    Color.White
+                                                selectedAccountLocal?.name ?: "Select",
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
                                             )
                                             Icon(
-                                                Icons.Default
-                                                    .KeyboardArrowDown,
+                                                Icons.Default.KeyboardArrowDown,
                                                 null,
-                                                tint =
-                                                    Color.White,
-                                                modifier =
-                                                    Modifier.size(
-                                                        16.dp
-                                                    )
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
                                             )
                                         }
                                     }
 
                                     // Category
                                     Column(
-                                        horizontalAlignment =
-                                            Alignment
-                                                .End,
+                                        horizontalAlignment = Alignment.End,
                                         modifier =
-                                            Modifier.clip(
-                                                RoundedCornerShape(
-                                                    8.dp
-                                                )
-                                            )
-                                                .clickable {
-                                                    showCategoryPicker =
-                                                        true
-                                                }
-                                                .padding(
-                                                    8.dp
-                                                )
+                                            Modifier.clip(RoundedCornerShape(8.dp))
+                                                .clickable { showCategoryPicker = true }
+                                                .padding(8.dp)
                                     ) {
                                         Text(
                                             "Category",
-                                            fontSize =
-                                                12.sp,
-                                            color =
-                                                Color.White
-                                                    .copy(
-                                                        alpha =
-                                                            0.5f
-                                                    )
+                                            fontSize = 12.sp,
+                                            color = Color.White.copy(alpha = 0.5f)
                                         )
-                                        Row(
-                                            verticalAlignment =
-                                                Alignment
-                                                    .CenterVertically
-                                        ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                selectedCategory
-                                                    ?.name
-                                                    ?: "Select",
-                                                fontSize =
-                                                    16.sp,
-                                                fontWeight =
-                                                    FontWeight
-                                                        .Bold,
-                                                color =
-                                                    Color.White
+                                                selectedCategory?.name ?: "Select",
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
                                             )
                                             Icon(
-                                                Icons.Default
-                                                    .KeyboardArrowDown,
+                                                Icons.Default.KeyboardArrowDown,
                                                 null,
-                                                tint =
-                                                    Color.White,
-                                                modifier =
-                                                    Modifier.size(
-                                                        16.dp
-                                                    )
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
                                             )
                                         }
                                     }
@@ -531,47 +437,25 @@ fun AddTransactionScreen(
                             // Arrow Tab Overlay
                             Box(
                                 modifier =
-                                    Modifier.align(
-                                        Alignment
-                                            .CenterEnd
-                                    )
+                                    Modifier.align(Alignment.CenterEnd)
                                         .background(
-                                            Color.White
-                                                .copy(
-                                                    alpha =
-                                                        0.1f
-                                                ),
+                                            Color.White.copy(alpha = 0.1f),
                                             RoundedCornerShape(
-                                                topStart =
-                                                    50.dp,
-                                                bottomStart =
-                                                    50.dp
+                                                topStart = 50.dp,
+                                                bottomStart = 50.dp
                                             )
                                         )
                                         .clickable {
-                                            scope
-                                                .launch {
-                                                    pagerState
-                                                        .animateScrollToPage(
-                                                            1
-                                                        )
-                                                }
+                                            scope.launch {
+                                                pagerState.animateScrollToPage(1)
+                                            }
                                         }
-                                        .padding(
-                                            vertical =
-                                                24.dp,
-                                            horizontal =
-                                                4.dp
-                                        )
+                                        .padding(vertical = 24.dp, horizontal = 4.dp)
                             ) {
                                 Icon(
-                                    Icons.AutoMirrored.Filled
-                                        .KeyboardArrowLeft,
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                     "Details",
-                                    tint =
-                                        Color.White.copy(
-                                            alpha = 0.7f
-                                        )
+                                    tint = Color.White.copy(alpha = 0.7f)
                                 )
                             }
                         }
@@ -579,32 +463,19 @@ fun AddTransactionScreen(
                         // Calculator
                         Surface(
                             color = MaterialTheme.colorScheme.surface,
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .navigationBarsPadding()
+                            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
                         ) {
                             CalculatorKeypad(
                                 expression = expression,
                                 onExpressionChange = { newExpr ->
                                     expression = newExpr
-                                    computedAmount =
-                                        evaluateExpression(
-                                            newExpr
-                                        )
+                                    computedAmount = evaluateExpression(newExpr)
                                 },
                                 onEquals = {
-                                    if (expression.isNotEmpty()
-                                    ) {
-                                        val result =
-                                            evaluateExpression(
-                                                expression
-                                            )
-                                        expression =
-                                            formatAmount(
-                                                result
-                                            )
-                                        computedAmount =
-                                            result
+                                    if (expression.isNotEmpty()) {
+                                        val result = evaluateExpression(expression)
+                                        expression = formatAmount(result)
+                                        computedAmount = result
                                     }
                                 },
                                 modifier =
@@ -624,14 +495,9 @@ fun AddTransactionScreen(
                     Column(
                         modifier =
                             Modifier.fillMaxSize()
-                                .background(
-                                    MaterialTheme.colorScheme
-                                        .background
-                                )
+                                .background(MaterialTheme.colorScheme.background)
                                 .padding(24.dp)
-                                .verticalScroll(
-                                    rememberScrollState()
-                                )
+                                .verticalScroll(rememberScrollState())
                     ) {
                         // Note
                         Text(
@@ -643,36 +509,22 @@ fun AddTransactionScreen(
                             value = note,
                             onValueChange = { note = it },
                             textStyle =
-                                MaterialTheme.typography.bodyLarge
-                                    .copy(
-                                        color =
-                                            onBackgroundColor
-                                    ),
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    color = onBackgroundColor
+                                ),
                             cursorBrush = SolidColor(primaryColor),
                             keyboardOptions =
                                 KeyboardOptions(
-                                    capitalization =
-                                        KeyboardCapitalization
-                                            .Sentences
+                                    capitalization = KeyboardCapitalization.Sentences
                                 ),
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(vertical = 12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                             decorationBox = { innerTextField ->
                                 Box {
                                     if (note.isEmpty()) {
                                         Text(
                                             "Description",
-                                            color =
-                                                onBackgroundColor
-                                                    .copy(
-                                                        alpha =
-                                                            0.5f
-                                                    ),
-                                            style =
-                                                MaterialTheme
-                                                    .typography
-                                                    .bodyLarge
+                                            color = onBackgroundColor.copy(alpha = 0.5f),
+                                            style = MaterialTheme.typography.bodyLarge
                                         )
                                     }
                                     innerTextField()
@@ -682,10 +534,7 @@ fun AddTransactionScreen(
                         HorizontalDivider(
                             color =
                                 if (note.isNotEmpty()) primaryColor
-                                else
-                                    onBackgroundColor.copy(
-                                        alpha = 0.3f
-                                    )
+                                else onBackgroundColor.copy(alpha = 0.3f)
                         )
 
                         Spacer(Modifier.height(24.dp))
@@ -699,94 +548,56 @@ fun AddTransactionScreen(
                         Spacer(Modifier.height(8.dp))
                         @OptIn(ExperimentalLayoutApi::class)
                         FlowRow(
-                            horizontalArrangement =
-                                Arrangement.spacedBy(8.dp),
-                            verticalArrangement =
-                                Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             // Add Label Button
                             AssistChip(
-                                onClick = {
-                                    showLabelPicker = true
-                                },
+                                onClick = { showLabelPicker = true },
                                 label = { Text("Add Label") },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Add,
                                         null,
-                                        modifier =
-                                            Modifier.size(
-                                                16.dp
-                                            ),
+                                        modifier = Modifier.size(16.dp),
                                         tint = primaryColor
                                     )
                                 },
                                 colors =
-                                    AssistChipDefaults
-                                        .assistChipColors(
-                                            containerColor =
-                                                primaryColor
-                                                    .copy(
-                                                        alpha =
-                                                            0.1f
-                                                    ),
-                                            labelColor =
-                                                primaryColor
-                                        )
+                                    AssistChipDefaults.assistChipColors(
+                                        containerColor =
+                                            primaryColor.copy(alpha = 0.1f),
+                                        labelColor = primaryColor
+                                    )
                             )
 
                             // Selected Labels
                             selectedLabelIds.forEach { labelId ->
-                                val label =
-                                    availableLabels.find {
-                                        it.id == labelId
-                                    }
+                                val label = availableLabels.find { it.id == labelId }
                                 val labelColor =
-                                    if (label != null)
-                                        LabelColors.parse(
-                                            label.color
-                                        )
+                                    if (label != null) LabelColors.parse(label.color)
                                     else primaryColor
 
                                 AssistChip(
-                                    onClick = {
-                                        showLabelPicker =
-                                            true
-                                    },
-                                    label = {
-                                        Text(
-                                            label?.name
-                                                ?: ""
-                                        )
-                                    },
+                                    onClick = { showLabelPicker = true },
+                                    label = { Text(label?.name ?: "") },
                                     trailingIcon = {
                                         Icon(
-                                            Icons.Default
-                                                .Close,
+                                            Icons.Default.Close,
                                             "Remove",
                                             modifier =
-                                                Modifier.size(
-                                                    16.dp
-                                                )
-                                                    .clickable {
-                                                        selectedLabelIds =
-                                                            selectedLabelIds -
-                                                                labelId
-                                                    }
+                                                Modifier.size(16.dp).clickable {
+                                                    selectedLabelIds =
+                                                        selectedLabelIds - labelId
+                                                }
                                         )
                                     },
                                     colors =
-                                        AssistChipDefaults
-                                            .assistChipColors(
-                                                containerColor =
-                                                    labelColor
-                                                        .copy(
-                                                            alpha =
-                                                                0.2f
-                                                        ),
-                                                labelColor =
-                                                    onBackgroundColor
-                                            ),
+                                        AssistChipDefaults.assistChipColors(
+                                            containerColor =
+                                                labelColor.copy(alpha = 0.2f),
+                                            labelColor = onBackgroundColor
+                                        ),
                                     border = null
                                 )
                             }
@@ -804,49 +615,24 @@ fun AddTransactionScreen(
                             // Date
                             Column(
                                 modifier =
-                                    Modifier.weight(1f)
-                                        .clickable {
-                                            showDatePicker =
-                                                true
-                                        }
+                                    Modifier.weight(1f).clickable { showDatePicker = true }
                             ) {
                                 Text(
                                     "Date",
-                                    style =
-                                        MaterialTheme
-                                            .typography
-                                            .labelSmall,
-                                    color =
-                                        onBackgroundColor
-                                            .copy(
-                                                alpha =
-                                                    0.7f
-                                            )
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = onBackgroundColor.copy(alpha = 0.7f)
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 // Need formatted date
                                 Text(
-                                    formatDateShort(
-                                        selectedDate
-                                    ),
-                                    style =
-                                        MaterialTheme
-                                            .typography
-                                            .bodyLarge,
+                                    formatDateShort(selectedDate),
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = onBackgroundColor,
                                     fontWeight = FontWeight.Bold
                                 )
                                 HorizontalDivider(
-                                    modifier =
-                                        Modifier.padding(
-                                            top = 8.dp
-                                        ),
-                                    color =
-                                        onBackgroundColor
-                                            .copy(
-                                                alpha =
-                                                    0.3f
-                                            )
+                                    modifier = Modifier.padding(top = 8.dp),
+                                    color = onBackgroundColor.copy(alpha = 0.3f)
                                 )
                             }
 
@@ -855,49 +641,24 @@ fun AddTransactionScreen(
                             // Time
                             Column(
                                 modifier =
-                                    Modifier.weight(1f)
-                                        .clickable {
-                                            showTimePicker =
-                                                true
-                                        }
+                                    Modifier.weight(1f).clickable { showTimePicker = true }
                             ) {
                                 Text(
                                     "Time",
-                                    style =
-                                        MaterialTheme
-                                            .typography
-                                            .labelSmall,
-                                    color =
-                                        onBackgroundColor
-                                            .copy(
-                                                alpha =
-                                                    0.7f
-                                            )
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = onBackgroundColor.copy(alpha = 0.7f)
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 // Need formatted time
                                 Text(
-                                    formatTimeDisplay(
-                                        selectedTime
-                                    ),
-                                    style =
-                                        MaterialTheme
-                                            .typography
-                                            .bodyLarge,
+                                    formatTimeDisplay(selectedTime),
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = onBackgroundColor,
                                     fontWeight = FontWeight.Bold
                                 )
                                 HorizontalDivider(
-                                    modifier =
-                                        Modifier.padding(
-                                            top = 8.dp
-                                        ),
-                                    color =
-                                        onBackgroundColor
-                                            .copy(
-                                                alpha =
-                                                    0.3f
-                                            )
+                                    modifier = Modifier.padding(top = 8.dp),
+                                    color = onBackgroundColor.copy(alpha = 0.3f)
                                 )
                             }
                         }
@@ -917,13 +678,12 @@ fun AddTransactionScreen(
                                 if (locationLat == null) {
                                     // Request permission first
                                     // to center map on user
-                                    locationPermissionLauncher
-                                        .launch(
-                                            arrayOf(
-                                                "android.permission.ACCESS_COARSE_LOCATION",
-                                                "android.permission.ACCESS_FINE_LOCATION"
-                                            )
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            "android.permission.ACCESS_COARSE_LOCATION",
+                                            "android.permission.ACCESS_FINE_LOCATION"
                                         )
+                                    )
                                 } else {
                                     showMapPicker = true
                                 }
@@ -931,176 +691,102 @@ fun AddTransactionScreen(
                             label = {
                                 Text(
                                     locationName
-                                        ?: if (locationLat !=
-                                            null
-                                        )
-                                            "Edit Location"
+                                        ?: if (locationLat != null) "Edit Location"
                                         else "Add Place"
                                 )
                             },
                             leadingIcon = {
                                 Icon(
-                                    if (locationLat != null)
-                                        Icons.Filled.Place
+                                    if (locationLat != null) Icons.Filled.Place
                                     else Icons.Default.Add,
                                     null,
-                                    modifier =
-                                        Modifier.size(
-                                            16.dp
-                                        ),
+                                    modifier = Modifier.size(16.dp),
                                     tint =
-                                        if (locationLat !=
-                                            null
-                                        )
-                                            animatedTypeColor
-                                        else
-                                            Color.Unspecified
+                                        if (locationLat != null) animatedTypeColor
+                                        else Color.Unspecified
                                 )
                             },
                             colors =
                                 AssistChipDefaults.assistChipColors(
                                     containerColor =
-                                        if (locationLat !=
-                                            null
-                                        )
-                                            animatedTypeColor
-                                                .copy(
-                                                    alpha =
-                                                        0.1f
-                                                )
-                                        else
-                                            Color.Transparent,
+                                        if (locationLat != null)
+                                            animatedTypeColor.copy(alpha = 0.1f)
+                                        else Color.Transparent,
                                     labelColor =
-                                        if (locationLat !=
-                                            null
-                                        )
-                                            animatedTypeColor
-                                        else
-                                            Color.Unspecified
+                                        if (locationLat != null) animatedTypeColor
+                                        else Color.Unspecified
                                 )
                         )
 
                         if (showMapPicker) {
                             Dialog(
-                                onDismissRequest = {
-                                    showMapPicker = false
-                                },
+                                onDismissRequest = { showMapPicker = false },
                                 properties =
                                     DialogProperties(
-                                        usePlatformDefaultWidth =
-                                            false
+                                        usePlatformDefaultWidth = false
                                     ) // Full screen
                             ) {
-                                Surface(
-                                    modifier =
-                                        Modifier.fillMaxSize()
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier.fillMaxSize()
-                                    ) {
-                                        var tempLat by remember {
-                                            mutableStateOf(
-                                                locationLat
-                                            )
-                                        }
-                                        var tempLng by remember {
-                                            mutableStateOf(
-                                                locationLng
-                                            )
-                                        }
+                                Surface(modifier = Modifier.fillMaxSize()) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        var tempLat by remember { mutableStateOf(locationLat) }
+                                        var tempLng by remember { mutableStateOf(locationLng) }
 
                                         LocationPickerMap(
-                                            initialLat =
-                                                locationLat,
-                                            initialLng =
-                                                locationLng,
-                                            onLocationSelected = { lat,
-                                                                   lng
-                                                ->
-                                                tempLat =
-                                                    lat
-                                                tempLng =
-                                                    lng
+                                            initialLat = locationLat,
+                                            initialLng = locationLng,
+                                            onLocationSelected = { lat, lng ->
+                                                tempLat = lat
+                                                tempLng = lng
                                             },
-                                            modifier =
-                                                Modifier.fillMaxSize()
+                                            modifier = Modifier.fillMaxSize()
                                         )
 
                                         // Confirm Button
                                         // Overlay
                                         Box(
                                             modifier =
-                                                Modifier.align(
-                                                    Alignment
-                                                        .BottomCenter
-                                                )
-                                                    .padding(
-                                                        16.dp
-                                                    )
+                                                Modifier.align(Alignment.BottomCenter)
+                                                    .padding(16.dp)
                                                     .fillMaxWidth()
                                                     .background(
-                                                        MaterialTheme
-                                                            .colorScheme
-                                                            .surface
-                                                            .copy(
-                                                                alpha =
-                                                                    0.9f
+                                                        MaterialTheme.colorScheme
+                                                            .surface.copy(
+                                                                alpha = 0.9f
                                                             ),
-                                                        RoundedCornerShape(
-                                                            16.dp
-                                                        )
+                                                        RoundedCornerShape(16.dp)
                                                     )
-                                                    .padding(
-                                                        16.dp
-                                                    )
+                                                    .padding(16.dp)
                                         ) {
                                             Column(
                                                 horizontalAlignment =
-                                                    Alignment
-                                                        .CenterHorizontally
+                                                    Alignment.CenterHorizontally
                                             ) {
                                                 Text(
                                                     "Pinpoint Location",
                                                     style =
-                                                        MaterialTheme
-                                                            .typography
+                                                        MaterialTheme.typography
                                                             .titleMedium,
-                                                    fontWeight =
-                                                        FontWeight
-                                                            .Bold
+                                                    fontWeight = FontWeight.Bold
                                                 )
-                                                Spacer(
-                                                    Modifier.height(
-                                                        8.dp
-                                                    )
-                                                )
+                                                Spacer(Modifier.height(8.dp))
                                                 TextButton(
                                                     onClick = {
-                                                        if (tempLat !=
-                                                            null &&
-                                                            tempLng !=
-                                                            null
+                                                        if (tempLat != null && tempLng != null
                                                         ) {
-                                                            locationLat =
-                                                                tempLat
-                                                            locationLng =
-                                                                tempLng
+                                                            locationLat = tempLat
+                                                            locationLng = tempLng
                                                             // Geocode
-                                                            coroutineScope
-                                                                .launch {
-                                                                    val address =
-                                                                        LocationHelper
-                                                                            .getAddressFromCoordinates(
-                                                                                context,
-                                                                                tempLat!!,
-                                                                                tempLng!!
-                                                                            )
-                                                                    locationName =
-                                                                        address
-                                                                }
-                                                            showMapPicker =
-                                                                false
+                                                            coroutineScope.launch {
+                                                                val address =
+                                                                    LocationHelper
+                                                                        .getAddressFromCoordinates(
+                                                                            context,
+                                                                            tempLat!!,
+                                                                            tempLng!!
+                                                                        )
+                                                                locationName = address
+                                                            }
+                                                            showMapPicker = false
                                                         }
                                                     },
                                                     modifier =
@@ -1111,50 +797,24 @@ fun AddTransactionScreen(
                                                                     50
                                                                 )
                                                             ),
-                                                ) {
-                                                    Text(
-                                                        "Confirm Location",
-                                                        color =
-                                                            Color.White
-                                                    )
-                                                }
+                                                ) { Text("Confirm Location", color = Color.White) }
                                             }
                                         }
 
                                         // Close Button
                                         IconButton(
-                                            onClick = {
-                                                showMapPicker =
-                                                    false
-                                            },
+                                            onClick = { showMapPicker = false },
                                             modifier =
-                                                Modifier.align(
-                                                    Alignment
-                                                        .TopStart
-                                                )
-                                                    .padding(
-                                                        16.dp
-                                                    )
+                                                Modifier.align(Alignment.TopStart)
+                                                    .padding(16.dp)
                                                     .background(
-                                                        Color.Black
-                                                            .copy(
-                                                                alpha =
-                                                                    0.5f
-                                                            ),
-                                                        androidx.compose
-                                                            .foundation
-                                                            .shape
-                                                            .CircleShape
+                                                        Color.Black.copy(
+                                                            alpha = 0.5f
+                                                        ),
+                                                        androidx.compose.foundation
+                                                            .shape.CircleShape
                                                     )
-                                        ) {
-                                            Icon(
-                                                Icons.Default
-                                                    .Close,
-                                                "Close",
-                                                tint =
-                                                    Color.White
-                                            )
-                                        }
+                                        ) { Icon(Icons.Default.Close, "Close", tint = Color.White) }
                                     }
                                 }
                             }
@@ -1165,34 +825,19 @@ fun AddTransactionScreen(
                         val currentLat = locationLat
                         val currentLng = locationLng
 
-                        AnimatedVisibility(
-                            visible =
-                                currentLat != null &&
-                                    currentLng != null
-                        ) {
-                            if (currentLat != null && currentLng != null
-                            ) {
+                        AnimatedVisibility(visible = currentLat != null && currentLng != null) {
+                            if (currentLat != null && currentLng != null) {
                                 Box(
                                     modifier =
                                         Modifier.fillMaxWidth()
-                                            .height(
-                                                150.dp
-                                            )
-                                            .padding(
-                                                bottom =
-                                                    24.dp
-                                            )
-                                            .clip(
-                                                RoundedCornerShape(
-                                                    12.dp
-                                                )
-                                            )
+                                            .height(150.dp)
+                                            .padding(bottom = 24.dp)
+                                            .clip(RoundedCornerShape(12.dp))
                                 ) {
                                     LocationMapPreview(
                                         lat = currentLat,
                                         lng = currentLng,
-                                        modifier =
-                                            Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize()
                                     )
                                     // Add overlay gradient or
                                     // marker icon if needed
@@ -1204,28 +849,80 @@ fun AddTransactionScreen(
                             }
                         }
 
-                        // Attachments
+                        // Photo
                         Text(
-                            "Attachments",
+                            "Photo",
                             style = MaterialTheme.typography.labelSmall,
                             color = onBackgroundColor.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(8.dp))
-                        // Placeholder
-                        Row(
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                null,
-                                tint = animatedTypeColor
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "Add attachment",
-                                color = animatedTypeColor
-                            )
+
+                        // Photo Preview or Add Button
+                        if (photoBytes != null || photoPath != null) {
+                            Box(
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .height(200.dp) // Large preview
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f))
+                                        .clickable { showFullScreenPhoto = true }
+                            ) {
+                                AsyncImage(
+                                    model = photoBytes ?: photoPath,
+                                    contentDescription = "Transaction Photo",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+
+                                // Close/Delete Button
+                                Box(
+                                    modifier =
+                                        Modifier.align(Alignment.TopEnd)
+                                            .padding(8.dp)
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.5f))
+                                            .clickable {
+                                                photoBytes = null
+                                                photoPath = null
+                                            },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove photo",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AssistChip(
+                                    onClick = { showImagePickerSheet = true },
+                                    label = { Text("Add Photo") },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = "Add Photo",
+                                            modifier =
+                                                Modifier.size(
+                                                    AssistChipDefaults.IconSize
+                                                )
+                                        )
+                                    },
+                                    colors =
+                                        AssistChipDefaults.assistChipColors(
+                                            containerColor =
+                                                animatedTypeColor.copy(
+                                                    alpha = 0.1f
+                                                ),
+                                            labelColor = animatedTypeColor,
+                                            leadingIconContentColor = animatedTypeColor
+                                        ),
+                                    border = null
+                                )
+                            }
                         }
                     }
                 }
@@ -1238,11 +935,7 @@ fun AddTransactionScreen(
         ModalBottomSheet(onDismissRequest = { showCategoryPicker = false }) {
             // Reusing existing content for category picker
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Text(
-                    "Select Category",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("Select Category", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(16.dp))
                 filteredCategories.forEach { category ->
                     Surface(
@@ -1257,25 +950,14 @@ fun AddTransactionScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(12.dp),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(12.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(category.icon, fontSize = 24.sp)
-                            Text(
-                                category.name,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Text(category.name, modifier = Modifier.weight(1f))
                             if (category == selectedCategory)
-                                Icon(
-                                    Icons.Default.Check,
-                                    null,
-                                    tint = animatedTypeColor
-                                )
+                                Icon(Icons.Default.Check, null, tint = animatedTypeColor)
                         }
                     }
                 }
@@ -1288,11 +970,7 @@ fun AddTransactionScreen(
         ModalBottomSheet(onDismissRequest = { showAccountPicker = false }) {
             // Reusing existing content for account picker
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Text(
-                    "Select Account",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("Select Account", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(16.dp))
                 accounts.forEach { account ->
                     Surface(
@@ -1307,36 +985,21 @@ fun AddTransactionScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(12.dp),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(12.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(account.icon, fontSize = 24.sp)
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    account.name,
-                                    fontWeight =
-                                        FontWeight.Medium
-                                )
+                                Text(account.name, fontWeight = FontWeight.Medium)
                                 Text(
                                     "${account.currency} ${formatAmount(account.balance)}",
                                     fontSize = 12.sp,
-                                    color =
-                                        MaterialTheme
-                                            .colorScheme
-                                            .onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             if (account == selectedAccountLocal)
-                                Icon(
-                                    Icons.Default.Check,
-                                    null,
-                                    tint = animatedTypeColor
-                                )
+                                Icon(Icons.Default.Check, null, tint = animatedTypeColor)
                         }
                     }
                 }
@@ -1358,9 +1021,7 @@ fun AddTransactionScreen(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
                             selectedDate =
-                                Instant.fromEpochMilliseconds(
-                                    millis
-                                )
+                                Instant.fromEpochMilliseconds(millis)
                                     .toLocalDateTime(
                                         TimeZone.currentSystemDefault()
                                     )
@@ -1385,11 +1046,65 @@ fun AddTransactionScreen(
         TimePickerDialog(
             onDismiss = { showTimePicker = false },
             onConfirm = {
-                selectedTime =
-                    LocalTime(timePickerState.hour, timePickerState.minute)
+                selectedTime = LocalTime(timePickerState.hour, timePickerState.minute)
                 showTimePicker = false
             }
         ) { TimePicker(state = timePickerState) }
+    }
+
+    // Photo Picker Sheet
+    if (showImagePickerSheet) {
+        ImagePickerBottomSheet(
+            onDismiss = { showImagePickerSheet = false },
+            onPickFromGallery = { context ->
+                imagePicker.pickFromGallery(context) { result ->
+                    if (result.isSuccess && result.bytes != null) {
+                        // Save to local file
+                        val fileName = "trans_${Clock.System.now().toEpochMilliseconds()}.jpg"
+                        val filePath = FileStorage.saveAvatar(context, result.bytes, fileName)
+                        photoBytes = result.bytes
+                        photoPath = filePath
+                        showImagePickerSheet = false
+                    }
+                }
+            },
+            onCaptureFromCamera = { context ->
+                imagePicker.captureFromCamera(context) { result ->
+                    if (result.isSuccess && result.bytes != null) {
+                        val fileName = "trans_${Clock.System.now().toEpochMilliseconds()}.jpg"
+                        val filePath = FileStorage.saveAvatar(context, result.bytes, fileName)
+                        photoBytes = result.bytes
+                        photoPath = filePath
+                        showImagePickerSheet = false
+                    }
+                }
+            }
+        )
+    }
+
+    // Full Screen Photo Viewer
+    if (showFullScreenPhoto && (photoBytes != null || photoPath != null)) {
+        Dialog(
+            onDismissRequest = { showFullScreenPhoto = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = photoBytes ?: photoPath, // prioritize bytes if
+                    // available in memory
+                    contentDescription = "Full screen photo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+                IconButton(
+                    onClick = { showFullScreenPhoto = false },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                ) { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White) }
+            }
+        }
     }
 
     if (showNoteDialog) {
@@ -1504,6 +1219,93 @@ fun TimePickerDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImagePickerBottomSheet(
+    onDismiss: () -> Unit,
+    onPickFromGallery: (context: Any) -> Unit,
+    onCaptureFromCamera: (context: Any) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Add Photo",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Photo Library Button
+            androidx.compose.material3.Button(
+                onClick = { onPickFromGallery(context) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person, // Or Image icon
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Choose from Gallery",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Camera Button
+            androidx.compose.material3.Button(
+                onClick = { onCaptureFromCamera(context) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh, // Or Camera icon
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Take Photo",
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = onDismiss) {
+                Text(text = "Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddLabelDialog(
@@ -1568,9 +1370,7 @@ private fun AddLabelDialog(
                         Text(
                             "Apply to new transactions",
                             style = MaterialTheme.typography.bodySmall,
-                            color =
-                                MaterialTheme.colorScheme.onSurface
-                                    .copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
                     Switch(

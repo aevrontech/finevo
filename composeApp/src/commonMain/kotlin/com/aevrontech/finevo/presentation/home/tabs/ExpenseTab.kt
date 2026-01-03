@@ -335,7 +335,8 @@ internal fun ExpenseTabContent() {
                               locationName,
                               locationLat,
                               locationLng,
-                              labels ->
+                              labels,
+                              photoPath ->
                     expenseViewModel.addTransaction(
                         type,
                         amount,
@@ -347,7 +348,8 @@ internal fun ExpenseTabContent() {
                         locationName,
                         locationLat,
                         locationLng,
-                        labels
+                        labels,
+                        photoPath
                     )
                     showAddTransaction = false
                 },
@@ -384,7 +386,8 @@ internal fun ExpenseTabContent() {
                                   locationName,
                                   locationLat,
                                   locationLng,
-                                  labels ->
+                                  labels,
+                                  photoPath ->
                         expenseViewModel.updateTransaction(
                             tx.id,
                             type,
@@ -397,7 +400,8 @@ internal fun ExpenseTabContent() {
                             locationName,
                             locationLat,
                             locationLng,
-                            labels
+                            labels,
+                            photoPath
                         )
                         transactionToEdit = null
                     },
