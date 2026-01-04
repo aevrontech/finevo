@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,32 +48,30 @@ import com.aevrontech.finevo.ui.theme.DashboardGradientMid
 import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
 import com.aevrontech.finevo.ui.theme.Primary
-import com.aevrontech.finevo.ui.theme.SurfaceContainer
-import com.aevrontech.finevo.ui.theme.SurfaceContainerHighest
 
 /** Horizontal scrollable row of account cards. */
 @Composable
 fun AccountCardsRow(
-    accounts: List<Account>,
-    selectedAccount: Account?,
-    onAccountClick: (Account) -> Unit,
-    onAccountLongClick: ((Account) -> Unit)? = null,
-    onAddAccountClick: () -> Unit,
-    modifier: Modifier = Modifier
+        accounts: List<Account>,
+        selectedAccounts: Set<Account>,
+        onAccountClick: (Account) -> Unit,
+        onAccountLongClick: ((Account) -> Unit)? = null,
+        onAddAccountClick: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
     LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        verticalAlignment =
-            Alignment.CenterVertically // Center align so size changes grow from center
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            verticalAlignment =
+                    Alignment.CenterVertically // Center align so size changes grow from center
     ) {
         items(accounts) { account ->
             AccountCard(
-                account = account,
-                isSelected = account == selectedAccount,
-                onClick = { onAccountClick(account) },
-                onLongClick = onAccountLongClick?.let { { it(account) } }
+                    account = account,
+                    isSelected = account in selectedAccounts,
+                    onClick = { onAccountClick(account) },
+                    onLongClick = onAccountLongClick?.let { { it(account) } }
             )
         }
 
@@ -85,11 +84,11 @@ fun AccountCardsRow(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AccountCard(
-    account: Account,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+        account: Account,
+        isSelected: Boolean,
+        onClick: () -> Unit,
+        onLongClick: (() -> Unit)? = null,
+        modifier: Modifier = Modifier
 ) {
     val cardColor = LabelColors.parse(account.color)
     val borderColor = if (isSelected) Primary else Color.Transparent
@@ -99,64 +98,57 @@ fun AccountCard(
     val alpha by animateFloatAsState(if (isSelected) 1f else 0.3f, label = "cardAlpha")
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = cardColor, // Always use the account's color
-        // border removed as requested
-        modifier =
-            modifier.width(width)
-                .height(height) // Height animation
-                .alpha(alpha)
-                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            shape = RoundedCornerShape(12.dp),
+            color = cardColor, // Always use the account's color
+            // border removed as requested
+            modifier =
+                    modifier.width(width)
+                            .height(height) // Height animation
+                            .alpha(alpha)
+                            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Icon with white transparency background
             Box(
-                modifier =
-                    Modifier.size(28.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+                    modifier =
+                            Modifier.size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
             ) { Text(account.icon, fontSize = 14.sp) }
 
             // Account name
             Text(
-                account.name,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White, // Assume colored bg needs white text
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                    account.name,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White, // Assume colored bg needs white text
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
             )
 
             // Balance
             Text(
-                formatAccountBalance(account),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                    formatAccountBalance(account),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
             )
 
             // Account type badge
-            Surface(
-                shape = RoundedCornerShape(3.dp),
-                color = Color.White.copy(alpha = 0.2f)
-            ) {
+            Surface(shape = RoundedCornerShape(3.dp), color = Color.White.copy(alpha = 0.2f)) {
                 Text(
-                    account.type.displayName,
-                    fontSize = 8.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Medium,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = 4.dp,
-                            vertical = 1.dp
-                        ),
-                    maxLines = 1
+                        account.type.displayName,
+                        fontSize = 8.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                        maxLines = 1
                 )
             }
         }
@@ -167,29 +159,33 @@ fun AccountCard(
 @Composable
 fun AddAccountCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = SurfaceContainer,
-        border = BorderStroke(1.5.dp, SurfaceContainerHighest.copy(alpha = 0.5f)),
-        modifier = modifier.width(70.dp)
+            onClick = onClick,
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border =
+                    BorderStroke(
+                            1.5.dp,
+                            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                    ),
+            modifier = modifier.width(110.dp).height(140.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                Icons.Default.Add,
-                contentDescription = "Add Account",
-                tint = Primary,
-                modifier = Modifier.size(24.dp)
+                    Icons.Default.Add,
+                    contentDescription = "Add Account",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Add",
-                fontSize = 10.sp,
-                color = Primary,
-                fontWeight = FontWeight.Medium
+                    "Add",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
             )
         }
     }
@@ -198,103 +194,95 @@ fun AddAccountCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
 /** Account summary card showing income, expense, and remaining. */
 @Composable
 fun AccountSummaryCard(
-    account: Account?,
-    income: Double,
-    expense: Double,
-    modifier: Modifier = Modifier
+        account: Account?,
+        income: Double,
+        expense: Double,
+        modifier: Modifier = Modifier
 ) {
     val remaining = income - expense
     val percentageUsed =
-        if (account != null && account.balance > 0) {
-            (expense / account.balance * 100).coerceIn(0.0, 100.0)
-        } else 0.0
+            if (account != null && account.balance > 0) {
+                (expense / account.balance * 100).coerceIn(0.0, 100.0)
+            } else 0.0
 
     Box(
-        modifier =
-            modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    brush =
-                        androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    DashboardGradientStart,
-                                    DashboardGradientMid,
-                                    DashboardGradientEnd
-                                )
-                        )
-                )
+            modifier =
+                    modifier.fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                    brush =
+                                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                                    colors =
+                                                            listOf(
+                                                                    DashboardGradientStart,
+                                                                    DashboardGradientMid,
+                                                                    DashboardGradientEnd
+                                                            )
+                                            )
+                            )
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    account?.name ?: "All Accounts",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                        account?.name ?: "All Accounts",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
                 )
-                Text(
-                    "This Month",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
+                Text("This Month", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
             }
 
             // Progress bar (optional)
             if (account != null && account.balance > 0) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     LinearProgressIndicator(
-                        progress = {
-                            (percentageUsed / 100)
-                                .toFloat()
-                                .coerceIn(0f, 1f)
-                        },
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                        color = Color.White,
-                        trackColor = Color.White.copy(alpha = 0.3f)
+                            progress = { (percentageUsed / 100).toFloat().coerceIn(0f, 1f) },
+                            modifier =
+                                    Modifier.fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp)),
+                            color = Color.White,
+                            trackColor = Color.White.copy(alpha = 0.3f)
                     )
                     Text(
-                        "${percentageUsed.toInt()}% of balance spent",
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.8f)
+                            "${percentageUsed.toInt()}% of balance spent",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }
 
             // Income, Expense, Remaining
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 SummaryItemWhite(
-                    label = "Income",
-                    amount = income,
-                    isPositive = true,
-                    currency = account?.currency ?: "MYR"
+                        label = "Income",
+                        amount = income,
+                        isPositive = true,
+                        currency = account?.currency ?: "MYR"
                 )
                 SummaryItemWhite(
-                    label = "Expense",
-                    amount = expense,
-                    isPositive = false,
-                    currency = account?.currency ?: "MYR"
+                        label = "Expense",
+                        amount = expense,
+                        isPositive = false,
+                        currency = account?.currency ?: "MYR"
                 )
                 SummaryItemWhite(
-                    label = "Net",
-                    amount = remaining,
-                    isPositive = remaining >= 0,
-                    currency = account?.currency ?: "MYR"
+                        label = "Net",
+                        amount = remaining,
+                        isPositive = remaining >= 0,
+                        currency = account?.currency ?: "MYR"
                 )
             }
         }
@@ -307,10 +295,10 @@ private fun SummaryItem(label: String, amount: Double, color: Color, currency: S
         Text(label, fontSize = 12.sp, color = OnSurfaceVariant)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "${CurrencyProvider.getCurrency(currency)?.symbol ?: currency} ${formatAmount(kotlin.math.abs(amount))}",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = color
+                "${CurrencyProvider.getCurrency(currency)?.symbol ?: currency} ${formatAmount(kotlin.math.abs(amount))}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = color
         )
     }
 }
@@ -321,10 +309,10 @@ private fun SummaryItemWhite(label: String, amount: Double, isPositive: Boolean,
         Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "${CurrencyProvider.getCurrency(currency)?.symbol ?: currency} ${formatAmount(kotlin.math.abs(amount))}",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
+                "${CurrencyProvider.getCurrency(currency)?.symbol ?: currency} ${formatAmount(kotlin.math.abs(amount))}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
         )
     }
 }

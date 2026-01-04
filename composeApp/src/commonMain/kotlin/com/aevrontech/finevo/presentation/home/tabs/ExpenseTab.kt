@@ -78,11 +78,16 @@ import org.koin.compose.viewmodel.koinViewModel
 
 object ExpenseTab : Tab {
     override val options: TabOptions
-        @Composable get() = TabOptions(
-            index = 1u,
-            title = "Wallet",
-            icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Star)
-        )
+        @Composable
+        get() =
+                TabOptions(
+                        index = 1u,
+                        title = "Wallet",
+                        icon =
+                                androidx.compose.ui.graphics.vector.rememberVectorPainter(
+                                        Icons.Filled.Star
+                                )
+                )
 
     @Composable
     override fun Content() {
@@ -123,121 +128,167 @@ internal fun ExpenseTabContent() {
     // because 'getFilteredTransactions' depends on the filterPeriod/offset which might be
     // changed in the Report Screen (e.g. looking at last month), causing this list to be empty
     // if we return to this screen while the filter is set to the past.
-    val filteredTransactions = remember(expenseState.transactions) {
-        expenseState.transactions.sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending {
-            it.createdAt
-        })
-    }
+    val filteredTransactions =
+            remember(expenseState.transactions) {
+                expenseState.transactions.sortedWith(
+                        compareByDescending<Transaction> { it.date }.thenByDescending {
+                            it.createdAt
+                        }
+                )
+            }
 
     // Bar Chart Data computation
-    val barChartData = remember(filteredTransactions, filterPeriod) {
-        val expenseTransactions = filteredTransactions.filter { it.type == TransactionType.EXPENSE }
+    val barChartData =
+            remember(filteredTransactions, filterPeriod) {
+                val expenseTransactions =
+                        filteredTransactions.filter { it.type == TransactionType.EXPENSE }
 
-        when (filterPeriod) {
-            FilterPeriod.WEEK -> { // Group by Day of Week (Mon-Sun)
-                val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                val grouped = expenseTransactions.groupBy {
-                    it.date.dayOfWeek.ordinal
-                }
-                dayNames.mapIndexed { index, name ->
-                    val total = grouped[index]?.sumOf { it.amount } ?: 0.0
-                    BarChartItem(label = name, value = total)
+                when (filterPeriod) {
+                    FilterPeriod.WEEK -> { // Group by Day of Week (Mon-Sun)
+                        val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                        val grouped = expenseTransactions.groupBy { it.date.dayOfWeek.ordinal }
+                        dayNames.mapIndexed { index, name ->
+                            val total = grouped[index]?.sumOf { it.amount } ?: 0.0
+                            BarChartItem(label = name, value = total)
+                        }
+                    }
+                    FilterPeriod.MONTH -> { // Group by Day of Month (1-31)
+                        val grouped = expenseTransactions.groupBy { it.date.dayOfMonth }
+                        (1..31).map { day ->
+                            val total = grouped[day]?.sumOf { it.amount } ?: 0.0
+                            BarChartItem(label = day.toString(), value = total)
+                        }
+                    }
+                    FilterPeriod.YEAR -> { // Group by Month (J, F, M...)
+                        val monthNames =
+                                listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
+                        val grouped = expenseTransactions.groupBy { it.date.monthNumber }
+                        monthNames.mapIndexed { index, name ->
+                            val total = grouped[index + 1]?.sumOf { it.amount } ?: 0.0
+                            BarChartItem(label = name, value = total)
+                        }
+                    }
                 }
             }
-            FilterPeriod.MONTH -> { // Group by Day of Month (1-31)
-                val grouped = expenseTransactions.groupBy { it.date.dayOfMonth }
-                (1..31).map { day ->
-                    val total = grouped[day]?.sumOf { it.amount } ?: 0.0
-                    BarChartItem(label = day.toString(), value = total)
-                }
-            }
-            FilterPeriod.YEAR -> { // Group by Month (J, F, M...)
-                val monthNames = listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
-                val grouped = expenseTransactions.groupBy { it.date.monthNumber }
-                monthNames.mapIndexed { index, name ->
-                    val total = grouped[index + 1]?.sumOf { it.amount } ?: 0.0
-                    BarChartItem(label = name, value = total)
-                }
-            }
-        }
-    }
 
     // Update nav bar visibility when any overlay is shown
     val isOverlayVisible =
-        showAddTransaction || transactionToEdit != null || showAddAccount || accountToEdit != null || showReportScreen
+            showAddTransaction ||
+                    transactionToEdit != null ||
+                    showAddAccount ||
+                    accountToEdit != null ||
+                    showReportScreen
     LaunchedEffect(isOverlayVisible) { setNavBarVisible?.invoke(!isOverlayVisible) }
+
+    // Delete confirmation state
+    var accountToDelete by remember { mutableStateOf<Account?>(null) }
 
     // Account options dialog
     if (accountToManage != null) {
-        AlertDialog(onDismissRequest = { accountToManage = null }, title = { Text("Account Options") }, text = {
-            Text("What would you like to do with \"${accountToManage!!.name}\"?")
-        }, confirmButton = {
-            TextButton(onClick = {
-                accountToManage?.let { accountToEdit = it }
-                accountToManage = null
-            }) { Text("Edit", color = Primary) }
-        }, dismissButton = {
-            Row {
-                TextButton(onClick = { accountToManage = null }) {
-                    Text("Cancel")
-                }
-                TextButton(onClick = {
-                    accountToManage?.let {
-                        accountViewModel.deleteAccount(it.id)
+        AlertDialog(
+                onDismissRequest = { accountToManage = null },
+                title = { Text("Account Options") },
+                text = { Text("What would you like to do with \"${accountToManage!!.name}\"?") },
+                confirmButton = {
+                    TextButton(
+                            onClick = {
+                                accountToManage?.let { accountToEdit = it }
+                                accountToManage = null
+                            }
+                    ) { Text("Edit", color = Primary) }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = { accountToManage = null }) { Text("Cancel") }
+                        TextButton(
+                                onClick = {
+                                    accountToDelete = accountToManage
+                                    accountToManage = null
+                                }
+                        ) { Text("Delete", color = Error) }
                     }
-                    accountToManage = null
-                }) { Text("Delete", color = Error) }
-            }
-        })
+                }
+        )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { // Main content
+    // Delete Confirmation Dialog
+    if (accountToDelete != null) {
+        AlertDialog(
+                onDismissRequest = { accountToDelete = null },
+                title = { Text("Delete Account") },
+                text = {
+                    Text(
+                            "Are you sure you want to delete \"${accountToDelete!!.name}\"? This action cannot be undone."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                            onClick = {
+                                accountToDelete?.let { accountViewModel.deleteAccount(it.id) }
+                                accountToDelete = null
+                            }
+                    ) { Text("Delete", color = Error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { accountToDelete = null }) { Text("Cancel") }
+                }
+        )
+    }
+
+    Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+    ) { // Main content
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 160.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 160.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
         ) { // Header
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Accounts",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                            text = "Accounts",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
                     )
+
+                    if (expenseState.selectedAccounts.size < expenseState.accounts.size) {
+                        TextButton(onClick = { expenseViewModel.selectAllAccounts() }) {
+                            Text("Select All")
+                        }
+                    }
                 }
             }
 
             // Account Cards - Horizontal Scroll
             item {
                 AccountCardsRow(
-                    accounts = expenseState.accounts,
-                    selectedAccount = expenseState.selectedAccount,
-                    onAccountClick = { account ->
-                        expenseViewModel.selectAccount(account)
-                    },
-                    onAccountLongClick = { account ->
-                        accountToManage = account
-                    },
-                    onAddAccountClick = {
-                        defaultCurrency = "MYR"
-                        showAddAccount = true
-                    })
+                        accounts = expenseState.accounts,
+                        selectedAccounts = expenseState.selectedAccounts,
+                        onAccountClick = { account ->
+                            expenseViewModel.toggleAccountSelection(account)
+                        },
+                        onAccountLongClick = { account -> accountToManage = account },
+                        onAddAccountClick = {
+                            defaultCurrency = "MYR"
+                            showAddAccount = true
+                        }
+                )
             }
 
             // Account Summary Card
             // Income and Expense Summary Cards (Percentage Round)
             item {
                 IncomeExpenseCards(
-                    income = expenseState.accountIncome,
-                    expense = expenseState.accountExpense,
-                    currencySymbol = "RM", // Should ideally come from UserProfile or
-                    // Account
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                        income = expenseState.accountIncome,
+                        expense = expenseState.accountExpense,
+                        currencySymbol = "RM", // Should ideally come from UserProfile or
+                        // Account
+                        modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
 
@@ -271,12 +322,12 @@ internal fun ExpenseTabContent() {
             // Transaction History Section with See all
             item {
                 TransactionHistorySection(
-                    transactions = filteredTransactions,
-                    availableLabels = labelUiState.labels,
-                    limit = 5,
-                    onSeeAllClick = { showReportScreen = true },
-                    onTransactionClick = { tx -> transactionToEdit = tx },
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                        transactions = filteredTransactions,
+                        availableLabels = labelUiState.labels,
+                        limit = 5,
+                        onSeeAllClick = { showReportScreen = true },
+                        onTransactionClick = { tx -> transactionToEdit = tx },
+                        modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
 
@@ -285,82 +336,34 @@ internal fun ExpenseTabContent() {
 
         // FAB
         GradientFab(
-            onClick = {
-                transactionType = TransactionType.EXPENSE
-                showAddTransaction = true
-            },
-            icon = Icons.Default.Add,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 130.dp, end = 20.dp)
+                onClick = {
+                    transactionType = TransactionType.EXPENSE
+                    showAddTransaction = true
+                },
+                icon = Icons.Default.Add,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 130.dp, end = 20.dp)
         )
 
         // ========== OVERLAYS ==========
         // Add Transaction Overlay
         AnimatedVisibility(
-            visible = showAddTransaction,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeIn(tween(200)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeOut(tween(200))
+                visible = showAddTransaction,
+                enter =
+                        slideInVertically(initialOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeIn(tween(200)),
+                exit =
+                        slideOutVertically(targetOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeOut(tween(200))
         ) {
             AddTransactionScreen(
-                transactionType = transactionType,
-                accounts = expenseState.accounts,
-                categories = expenseState.categories,
-                selectedAccount = expenseState.selectedAccount,
-                availableLabels = labelUiState.labels,
-                onDismiss = { showAddTransaction = false },
-                onConfirm = { type, amount, accountId, categoryId, note, date, time, locationName, locationLat, locationLng, labels, photoPath ->
-                    expenseViewModel.addTransaction(
-                        type,
-                        amount,
-                        accountId,
-                        categoryId,
-                        note,
-                        date,
-                        time,
-                        locationName,
-                        locationLat,
-                        locationLng,
-                        labels,
-                        photoPath
-                    )
-                    showAddTransaction = false
-                },
-                onAddLabel = { name, color, auto ->
-                    labelViewModel.addLabel(name, color, auto)
-                })
-        }
-
-        // Edit Transaction Overlay
-        AnimatedVisibility(
-            visible = transactionToEdit != null,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeIn(tween(200)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeOut(tween(200))
-        ) {
-            transactionToEdit?.let { tx ->
-                AddTransactionScreen(
-                    transactionType = tx.type,
+                    transactionType = transactionType,
                     accounts = expenseState.accounts,
                     categories = expenseState.categories,
-                    selectedAccount = expenseState.accounts.find {
-                        it.id == tx.accountId
-                    },
+                    selectedAccount = expenseState.selectedAccounts.firstOrNull()
+                                    ?: expenseState.accounts.firstOrNull(),
                     availableLabels = labelUiState.labels,
-                    editingTransaction = tx,
-                    onDismiss = { transactionToEdit = null },
-                    onConfirm = { type, amount, accountId, categoryId, note, date, time, locationName, locationLat, locationLng, labels, photoPath ->
-                        expenseViewModel.updateTransaction(
-                            tx.id,
+                    onDismiss = { showAddTransaction = false },
+                    onConfirm = {
                             type,
                             amount,
                             accountId,
@@ -372,95 +375,177 @@ internal fun ExpenseTabContent() {
                             locationLat,
                             locationLng,
                             labels,
-                            photoPath
+                            photoPath ->
+                        expenseViewModel.addTransaction(
+                                type,
+                                amount,
+                                accountId,
+                                categoryId,
+                                note,
+                                date,
+                                time,
+                                locationName,
+                                locationLat,
+                                locationLng,
+                                labels,
+                                photoPath
                         )
-                        transactionToEdit = null
+                        showAddTransaction = false
                     },
-                    onAddLabel = { name, color, auto ->
-                        labelViewModel.addLabel(name, color, auto)
-                    })
+                    onAddLabel = { name, color, auto -> labelViewModel.addLabel(name, color, auto) }
+            )
+        }
+
+        // Edit Transaction Overlay
+        AnimatedVisibility(
+                visible = transactionToEdit != null,
+                enter =
+                        slideInVertically(initialOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeIn(tween(200)),
+                exit =
+                        slideOutVertically(targetOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeOut(tween(200))
+        ) {
+            transactionToEdit?.let { tx ->
+                AddTransactionScreen(
+                        transactionType = tx.type,
+                        accounts = expenseState.accounts,
+                        categories = expenseState.categories,
+                        selectedAccount = expenseState.accounts.find { it.id == tx.accountId },
+                        availableLabels = labelUiState.labels,
+                        editingTransaction = tx,
+                        onDismiss = { transactionToEdit = null },
+                        onConfirm = {
+                                type,
+                                amount,
+                                accountId,
+                                categoryId,
+                                note,
+                                date,
+                                time,
+                                locationName,
+                                locationLat,
+                                locationLng,
+                                labels,
+                                photoPath ->
+                            expenseViewModel.updateTransaction(
+                                    tx.id,
+                                    type,
+                                    amount,
+                                    accountId,
+                                    categoryId,
+                                    note,
+                                    date,
+                                    time,
+                                    locationName,
+                                    locationLat,
+                                    locationLng,
+                                    labels,
+                                    photoPath
+                            )
+                            transactionToEdit = null
+                        },
+                        onAddLabel = { name, color, auto ->
+                            labelViewModel.addLabel(name, color, auto)
+                        }
+                )
             }
         }
 
         // Add Account Overlay
         AnimatedVisibility(
-            visible = showAddAccount,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeIn(tween(200)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeOut(tween(200))
+                visible = showAddAccount,
+                enter =
+                        slideInVertically(initialOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeIn(tween(200)),
+                exit =
+                        slideOutVertically(targetOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeOut(tween(200))
         ) {
             AddAccountScreen(
-                onDismiss = { showAddAccount = false },
-                onConfirm = { name, balance, currency, type, color ->
-                    accountViewModel.createAccount(name, balance, currency, type, color)
-                    showAddAccount = false
-                },
-                defaultCurrency = defaultCurrency
+                    onDismiss = { showAddAccount = false },
+                    onConfirm = { name, balance, currency, type, color ->
+                        accountViewModel.createAccount(name, balance, currency, type, color)
+                        showAddAccount = false
+                    },
+                    defaultCurrency = defaultCurrency
             )
         }
 
         // Edit Account Overlay
         AnimatedVisibility(
-            visible = accountToEdit != null,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeIn(tween(200)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeOut(tween(200))
+                visible = accountToEdit != null,
+                enter =
+                        slideInVertically(initialOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeIn(tween(200)),
+                exit =
+                        slideOutVertically(targetOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeOut(tween(200))
         ) {
             accountToEdit?.let { acc ->
                 AddAccountScreen(
-                    onDismiss = { accountToEdit = null },
-                    onConfirm = { name, balance, currency, type, color ->
-                        accountViewModel.updateAccount(acc.id, name, balance, currency, type, color)
-                        accountToEdit = null
-                    },
-                    defaultCurrency = acc.currency,
-                    editingAccount = acc
+                        onDismiss = { accountToEdit = null },
+                        onConfirm = { name, balance, currency, type, color ->
+                            accountViewModel.updateAccount(
+                                    acc.id,
+                                    name,
+                                    balance,
+                                    currency,
+                                    type,
+                                    color
+                            )
+                            accountToEdit = null
+                        },
+                        defaultCurrency = acc.currency,
+                        editingAccount = acc
                 )
             }
         }
 
         // Report Screen Overlay
         AnimatedVisibility(
-            visible = showReportScreen,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeIn(tween(200)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(200)
-            ) + fadeOut(tween(200))
-        ) {
-            ExpenseReportScreen(onDismiss = {
-                showReportScreen = false
-            })
-        }
+                visible = showReportScreen,
+                enter =
+                        slideInVertically(initialOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeIn(tween(200)),
+                exit =
+                        slideOutVertically(targetOffsetY = { it }, animationSpec = tween(200)) +
+                                fadeOut(tween(200))
+        ) { ExpenseReportScreen(onDismiss = { showReportScreen = false }) }
     }
 }
 
 @Composable
 internal fun GradientFab(onClick: () -> Unit, icon: ImageVector, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.size(56.dp).shadow(
-            elevation = 8.dp,
-            shape = RoundedCornerShape(16.dp),
-            ambientColor = HabitGradientStart.copy(alpha = 0.5f),
-            spotColor = HabitGradientStart.copy(alpha = 0.3f)
-        ).clip(RoundedCornerShape(16.dp))
-            .background(brush = Brush.verticalGradient(colors = listOf(HabitGradientStart, HabitGradientEnd)))
-            .clickable(onClick = onClick), contentAlignment = Alignment.Center
+            modifier =
+                    modifier.size(56.dp)
+                            .shadow(
+                                    elevation = 8.dp,
+                                    shape = RoundedCornerShape(16.dp),
+                                    ambientColor = HabitGradientStart.copy(alpha = 0.5f),
+                                    spotColor = HabitGradientStart.copy(alpha = 0.3f)
+                            )
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                    brush =
+                                            Brush.verticalGradient(
+                                                    colors =
+                                                            listOf(
+                                                                    HabitGradientStart,
+                                                                    HabitGradientEnd
+                                                            )
+                                            )
+                            )
+                            .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
     ) {
-        Icon(imageVector = icon, contentDescription = "Add", tint = Color.White, modifier = Modifier.size(24.dp))
+        Icon(
+                imageVector = icon,
+                contentDescription = "Add",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+        )
     }
 }
 
@@ -469,7 +554,9 @@ private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
 
     return when (period) {
         FilterPeriod.WEEK -> {
-            val weekStart = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY).plus(offset * 7, DateTimeUnit.DAY)
+            val weekStart =
+                    today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
+                            .plus(offset * 7, DateTimeUnit.DAY)
             val weekEnd = weekStart.plus(6, DateTimeUnit.DAY)
             "${weekStart.dayOfMonth} ${weekStart.month.name.take(3)} - ${weekEnd.dayOfMonth} ${weekEnd.month.name.take(3)}"
         }

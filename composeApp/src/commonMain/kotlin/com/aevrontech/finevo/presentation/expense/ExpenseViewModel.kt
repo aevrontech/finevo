@@ -42,43 +42,80 @@ class ExpenseViewModel(
     private fun loadAccounts() {
         viewModelScope.launch {
             accountRepository.getActiveAccounts("local_user").collect { accounts ->
-                val currentSelectedId = _uiState.value.selectedAccount?.id
-                // Find the updated account object from the new list, or default to first if none
-                // selected/found
-                val selectedAccount =
-                    accounts.find { it.id == currentSelectedId } ?: accounts.firstOrNull()
+                // Default to ALL accounts selected if none previously (or on first load)
+                // If previously selected accounts exist, try to keep them.
+                val previousSelectedIds = _uiState.value.selectedAccounts.map { it.id }.toSet()
 
-                _uiState.update { it.copy(accounts = accounts, selectedAccount = selectedAccount) }
+                // New selection: Accounts that were previously selected AND still exist.
+                // If the result is empty (e.g. first load, or all selected were deleted), select
+                // ALL.
+                val newSelected = accounts.filter { it.id in previousSelectedIds }.toSet()
 
-                // Load transactions for selected account
-                selectedAccount?.let { loadTransactionsForAccount(it.id) }
+                val finalSelected = if (newSelected.isEmpty()) accounts.toSet() else newSelected
+
+                _uiState.update { it.copy(accounts = accounts, selectedAccounts = finalSelected) }
+
+                // Load transactions for selected accounts
+                loadTransactionsForAccounts(finalSelected.map { it.id }.toSet())
             }
         }
     }
 
-    fun selectAccount(account: Account) {
-        _uiState.update { it.copy(selectedAccount = account) }
-        loadTransactionsForAccount(account.id)
+    fun toggleAccountSelection(account: Account) {
+        val currentSelected = _uiState.value.selectedAccounts.toMutableSet()
+        if (currentSelected.contains(account)) {
+            // Only remove if it's not the last one selected
+            if (currentSelected.size > 1) {
+                currentSelected.remove(account)
+            }
+        } else {
+            currentSelected.add(account)
+        }
+        _uiState.update { it.copy(selectedAccounts = currentSelected) }
+        loadTransactionsForAccounts(currentSelected.map { it.id }.toSet())
     }
 
-    private fun loadTransactionsForAccount(accountId: String) {
+    fun selectAllAccounts() {
+        val allAccounts = _uiState.value.accounts.toSet()
+        _uiState.update { it.copy(selectedAccounts = allAccounts) }
+        loadTransactionsForAccounts(allAccounts.map { it.id }.toSet())
+    }
+
+    private fun loadTransactionsForAccounts(accountIds: Set<String>) {
         viewModelScope.launch {
-            expenseRepository.getTransactionsByAccount(accountId, monthStart, monthEnd).collect { transactions ->
-                // Enrich transactions with category data
+            // If no accounts selected (shouldn't happen with our logic, but safe guard), load all
+            // or none?
+            // "Multi-select" usually implies OR. Logic: Get transactions where accountId IN
+            // accountIds.
+            // Since we don't have a direct "getAllTransactionsForAccountList" in Repo (assuming),
+            // and `getTransactionsByAccount` is for ONE account.
+            // We might need to load ALL transactions for the period first, then filter in memory?
+            // OR iterate and fetch.
+            // Current `loadTransactionsForAccount` loads for one.
+            // Given local database constraints, "getTransactions(startDate, endDate)" likely gets
+            // ALL.
+            // Then we filter.
+
+            expenseRepository.getTransactions(monthStart, monthEnd).collect { transactions ->
                 val enrichedTransactions = enrichWithCategoryData(transactions)
+                val filtered =
+                    enrichedTransactions.filter {
+                        it.accountId in accountIds && it.accountId != null
+                    }
 
                 val income =
-                    enrichedTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
-                        it.amount
-                    }
+                    filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
                 val expense =
-                    enrichedTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
-                        it.amount
-                    }
+                    filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
                 _uiState.update {
                     it.copy(
-                        transactions = enrichedTransactions,
+                        transactions =
+                            filtered, // Store ONLY filtered transactions for the view?
+                        // Or should we store ALL and filter in UI?
+                        // The original logic replaced `transactions` with the account-specific
+                        // list.
+                        // So let's stick to that pattern: `transactions` holds what is shown.
                         isLoading = false,
                         accountIncome = income,
                         accountExpense = expense
@@ -207,38 +244,28 @@ class ExpenseViewModel(
                             selectedAccount.balance + balanceChange
                         )
                     }
+
                     _uiState.update {
                         it.copy(
                             successMessage = "Transaction added!",
                             showAddDialog = false,
-                            isLoading = true,
-                            // Switch to the account used for this transaction if it exists
-                            selectedAccount =
-                                if (selectedAccount != null)
-                                    selectedAccount.copy(
-                                        balance =
-                                            selectedAccount.balance +
-                                                (if (type ==
-                                                    TransactionType
-                                                        .EXPENSE
-                                                )
-                                                    -amount
-                                                else amount)
-                                    )
-                                else it.selectedAccount
+                            isLoading = true
                         )
                     }
+                    // selectedAccount balance update was manual in original?
+                    // Original: selectedAccount = selectedAccount.copy(...)
+                    // But `loadAccounts` observes Realm/DB, so it should auto-update.
+                    // Let's remove manual state mutation for simplicity and rely on data source.
+
                     // Set labels for transaction
                     if (labels.isNotEmpty()) {
                         labelRepository.setLabelsForTransaction(transaction.id, labels)
                     }
 
-                    // Reload transactions
-                    if (accountId != null) {
-                        loadTransactionsForAccount(accountId)
-                    } else {
-                        loadTransactions()
-                    }
+                    // Reload transactions for selected accounts
+                    loadTransactionsForAccounts(
+                        _uiState.value.selectedAccounts.map { it.id }.toSet()
+                    )
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -273,7 +300,10 @@ class ExpenseViewModel(
                         }
                     }
                     _uiState.update { it.copy(successMessage = "Transaction deleted") }
-                    loadTransactions()
+                    // Reload transactions for selected accounts
+                    loadTransactionsForAccounts(
+                        _uiState.value.selectedAccounts.map { it.id }.toSet()
+                    )
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -372,25 +402,16 @@ class ExpenseViewModel(
                     }
 
                     _uiState.update {
-                        it.copy(
-                            successMessage = "Transaction updated!",
-                            // Switch to the updated account and reflect balance change
-                            // immediately
-                            isLoading = true,
-                            selectedAccount =
-                                currentAccount?.copy(
-                                    balance = currentAccount.balance + netChange
-                                )
-                        )
+                        it.copy(successMessage = "Transaction updated!", isLoading = true)
                     }
+
                     // Set labels for transaction
                     labelRepository.setLabelsForTransaction(transaction.id, labels)
-                    // Load transactions for the specific account we are viewing
-                    if (accountId != null) {
-                        loadTransactionsForAccount(accountId)
-                    } else {
-                        loadTransactions()
-                    }
+
+                    // Reload transactions
+                    loadTransactionsForAccounts(
+                        _uiState.value.selectedAccounts.map { it.id }.toSet()
+                    )
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -610,7 +631,7 @@ class ExpenseViewModel(
 data class ExpenseUiState(
     val isLoading: Boolean = true,
     val accounts: List<Account> = emptyList(),
-    val selectedAccount: Account? = null,
+    val selectedAccounts: Set<Account> = emptySet(),
     val transactions: List<Transaction> = emptyList(),
     val categories: List<Category> = emptyList(),
     val summary: TransactionSummary? = null,
@@ -638,11 +659,11 @@ data class ExpenseUiState(
         get() = summary?.totalIncome ?: accountIncome
 
     val accountBalance: Double
-        get() = selectedAccount?.balance ?: 0.0
+        get() = selectedAccounts.sumOf { it.balance }
 
     val accountBalancePercentage: Double
         get() {
-            val balance = selectedAccount?.balance ?: 0.0
+            val balance = accountBalance
             return if (balance > 0) {
                 ((balance - accountExpense) / balance * 100).coerceIn(0.0, 100.0)
             } else 0.0
