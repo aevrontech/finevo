@@ -1367,14 +1367,11 @@ private fun TransactionHistoryItem(
             ) {
                 // Category Name
                 Text(
-                    text = transaction.categoryName
-                        ?: "Transaction", // Default to category
-                    // name
-                    fontSize = 14.sp,
+                    text = transaction.categoryName ?: "Transaction",
+                    fontSize = 15.sp,
+                    lineHeight = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color =
-                        MaterialTheme.colorScheme
-                            .onSurface, // Black in Light Mode
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier =
                         Modifier.weight(1f, fill = false)
                             .padding(end = 8.dp)
@@ -1391,16 +1388,17 @@ private fun TransactionHistoryItem(
                 Text(
                     text =
                         "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}${transaction.currency}${
-                            transaction.amount.formatDecimal(2)
+                            transaction.amount.formatDecimal(
+                                2
+                            )
                         }",
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = amountColor
                 )
             }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
+            Spacer(modifier = Modifier.height(1.dp))
             // Row 2: Account Name & Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1410,8 +1408,9 @@ private fun TransactionHistoryItem(
                 // Account Name
                 Text(
                     text = transaction.accountName ?: "Unknown",
-                    fontSize = 12.sp,
-                    color = OnSurfaceVariant, // Gray
+                    fontSize = 13.sp,
+                    lineHeight = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier =
                         Modifier.weight(1f, fill = false)
                             .padding(end = 8.dp)
@@ -1423,18 +1422,21 @@ private fun TransactionHistoryItem(
                         ?: formatTimeFromInstant(transaction.createdAt)
                 Text(
                     text = timeString,
-                    fontSize = 11.sp,
-                    color = OnSurfaceVariant.copy(alpha = 0.7f)
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             // Row 3: Note (if present)
             if (!transaction.note.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = transaction.note,
-                    fontSize = 11.sp,
-                    color = OnSurfaceVariant.copy(alpha = 0.8f),
+                    text = "\"${transaction.note}\"",
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow =
                         androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -1491,7 +1493,7 @@ private fun TransactionHistoryItem(
                                 Text(
                                     text = label.name,
                                     color = labelColor,
-                                    fontSize = 10.sp,
+                                    fontSize = 11.sp,
                                     fontWeight =
                                         FontWeight.Medium
                                 )
