@@ -244,7 +244,11 @@ private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
                 targetMonth -= 12
                 targetYear += 1
             }
-            "${Month(targetMonth).name.take(3)} $targetYear"
+            val monthName =
+                Month(targetMonth).name.take(3).lowercase().replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase() else it.toString()
+                }
+            "$monthName $targetYear"
         }
         FilterPeriod.YEAR -> {
             (today.year + offset).toString()
