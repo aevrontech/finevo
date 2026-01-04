@@ -467,6 +467,26 @@ class ExpenseViewModel(
             .sortedByDescending { it.total }
     }
 
+    /** Get income category breakdown for pie chart */
+    fun getIncomeCategoryBreakdown(): List<CategoryBreakdown> {
+        val filtered = getFilteredTransactions().filter { it.type == TransactionType.INCOME }
+        val grouped = filtered.groupBy { it.categoryId }
+
+        return grouped
+            .map { (categoryId, transactions) ->
+                val category = _uiState.value.categories.find { it.id == categoryId }
+                CategoryBreakdown(
+                    categoryId = categoryId,
+                    categoryName = category?.name ?: "Other",
+                    categoryIcon = category?.icon ?: "💰",
+                    categoryColor = category?.color ?: "#4CAF50",
+                    total = transactions.sumOf { it.amount },
+                    count = transactions.size
+                )
+            }
+            .sortedByDescending { it.total }
+    }
+
     /** Get bar chart data (income vs expense by time periods) */
     fun getBarChartData(): List<BarChartDataItem> {
         val period = _filterPeriod.value
