@@ -211,6 +211,7 @@ class ExpenseViewModel(
                         it.copy(
                             successMessage = "Transaction added!",
                             showAddDialog = false,
+                            isLoading = true,
                             // Switch to the account used for this transaction if it exists
                             selectedAccount =
                                 if (selectedAccount != null)
@@ -233,7 +234,11 @@ class ExpenseViewModel(
                     }
 
                     // Reload transactions
-                    loadTransactions()
+                    if (accountId != null) {
+                        loadTransactionsForAccount(accountId)
+                    } else {
+                        loadTransactions()
+                    }
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -330,6 +335,9 @@ class ExpenseViewModel(
             when (val result = expenseRepository.updateTransaction(transaction)) {
                 is Result.Success<*> -> {
                     // Update account balance: reverse old effect, apply new effect
+                    var netChange = 0.0
+                    val currentAccount = _uiState.value.accounts.find { it.id == accountId }
+
                     if (oldTransaction != null && accountId != null && selectedAccount != null) {
                         // Calculate old balance effect (what we need to reverse)
                         // Expense was subtracted from balance, so ADD it back (positive)
@@ -352,7 +360,7 @@ class ExpenseViewModel(
                             }
 
                         // Net change = reverse old + apply new
-                        val netChange = oldEffect + newEffect
+                        netChange = oldEffect + newEffect
 
                         // Only update if there's actually a change
                         if (netChange != 0.0) {
@@ -363,10 +371,26 @@ class ExpenseViewModel(
                         }
                     }
 
-                    _uiState.update { it.copy(successMessage = "Transaction updated!") }
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Transaction updated!",
+                            // Switch to the updated account and reflect balance change
+                            // immediately
+                            isLoading = true,
+                            selectedAccount =
+                                currentAccount?.copy(
+                                    balance = currentAccount.balance + netChange
+                                )
+                        )
+                    }
                     // Set labels for transaction
                     labelRepository.setLabelsForTransaction(transaction.id, labels)
-                    loadTransactions()
+                    // Load transactions for the specific account we are viewing
+                    if (accountId != null) {
+                        loadTransactionsForAccount(accountId)
+                    } else {
+                        loadTransactions()
+                    }
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
