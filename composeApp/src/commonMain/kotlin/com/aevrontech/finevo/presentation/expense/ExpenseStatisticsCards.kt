@@ -1216,6 +1216,7 @@ fun StatisticsCard(
 fun TransactionHistorySection(
     transactions: List<Transaction>,
     availableLabels: List<Label>,
+    currencySymbol: String = "RM",
     limit: Int = 100, // Increased limit for scrolling
     onSeeAllClick: () -> Unit,
     onTransactionClick: (Transaction) -> Unit,
@@ -1301,6 +1302,7 @@ fun TransactionHistorySection(
                             TransactionHistoryItem(
                                 transaction = transaction,
                                 availableLabels = availableLabels,
+                                currencySymbol = currencySymbol,
                                 onClick = {
                                     onTransactionClick(
                                         transaction
@@ -1340,6 +1342,7 @@ fun TransactionHistorySection(
 private fun TransactionHistoryItem(
     transaction: Transaction,
     availableLabels: List<Label>,
+    currencySymbol: String,
     onClick: () -> Unit
 ) {
     Row(
@@ -1403,7 +1406,7 @@ private fun TransactionHistoryItem(
 
                 Text(
                     text =
-                        "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}${transaction.currency}${
+                        "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"}$currencySymbol${
                             transaction.amount.formatDecimal(
                                 2
                             )

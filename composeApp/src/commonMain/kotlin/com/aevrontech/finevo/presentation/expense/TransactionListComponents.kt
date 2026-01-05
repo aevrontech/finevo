@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,10 +52,8 @@ import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.ui.theme.Error
 import com.aevrontech.finevo.ui.theme.Expense
 import com.aevrontech.finevo.ui.theme.Income
-import com.aevrontech.finevo.ui.theme.OnSurface
 import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
 import com.aevrontech.finevo.ui.theme.Primary
-import com.aevrontech.finevo.ui.theme.SurfaceContainer
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -104,51 +104,61 @@ fun groupTransactionsByDate(transactions: List<Transaction>): List<TransactionGr
 private fun formatDateLabel(date: LocalDate): String {
     val months =
         listOf(
-            "JANUARY",
-            "FEBRUARY",
-            "MARCH",
-            "APRIL",
-            "MAY",
-            "JUNE",
-            "JULY",
-            "AUGUST",
-            "SEPTEMBER",
-            "OCTOBER",
-            "NOVEMBER",
-            "DECEMBER"
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December"
         )
-    return "${date.dayOfMonth} ${months[date.monthNumber - 1]} ${date.year}"
+    return "${date.dayOfMonth.toString().padStart(2, '0')} ${months[date.monthNumber - 1]} ${date.year}"
 }
 
 /** Grouped transaction list content for LazyColumn. */
 fun LazyListScope.groupedTransactionItems(
     groups: List<TransactionGroup>,
     availableLabels: List<Label>,
+    currencySymbol: String,
     onTransactionClick: (Transaction) -> Unit,
     onTransactionDelete: (Transaction) -> Unit
 ) {
     groups.forEach { group ->
-        // Date header
-        item(key = "header_${group.date}") {
-            TransactionDateHeader(
-                dateLabel = group.dateLabel,
-                totalExpense = group.totalExpense,
-                totalIncome = group.totalIncome
-            )
-        }
-
-        // Transactions for this date
-        item(key = "transactions_${group.date}") {
+        item(key = "group_${group.date}") {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainer),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column {
+                    // Date header inside card
+                    TransactionDateHeader(
+                        date = group.date,
+                        totalExpense = group.totalExpense,
+                        totalIncome = group.totalIncome,
+                        currencySymbol = currencySymbol
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = OnSurfaceVariant.copy(alpha = 0.1f)
+                    )
+
+                    // Transactions
                     group.transactions.forEachIndexed { index, transaction ->
                         SwipeableTransactionItem(
                             transaction = transaction,
                             availableLabels = availableLabels,
+                            currencySymbol = currencySymbol,
                             onClick = { onTransactionClick(transaction) },
                             onDelete = { onTransactionDelete(transaction) }
                         )
@@ -162,39 +172,53 @@ fun LazyListScope.groupedTransactionItems(
                 }
             }
         }
-
-        // No spacer between groups - compact layout
     }
 }
 
 @Composable
-private fun TransactionDateHeader(dateLabel: String, totalExpense: Double, totalIncome: Double) {
+private fun TransactionDateHeader(
+    date: LocalDate,
+    totalExpense: Double,
+    totalIncome: Double,
+    currencySymbol: String
+) {
+    val dayOfWeek = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+    val dateString = formatDateLabel(date)
+
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = dateLabel,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = OnSurfaceVariant,
-            letterSpacing = 0.5.sp
-        )
+        Column(verticalArrangement = Arrangement.spacedBy((-2).dp)) {
+            Text(
+                text = dayOfWeek,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = dateString,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = OnSurfaceVariant
+            )
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (totalExpense > 0) {
                 Text(
-                    text = "-${totalExpense.formatDecimal(0)}",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
+                    text = "-$currencySymbol${totalExpense.formatDecimal(0)}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Expense
                 )
             }
             if (totalIncome > 0) {
                 Text(
-                    text = "+${totalIncome.formatDecimal(0)}",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
+                    text = "+$currencySymbol${totalIncome.formatDecimal(0)}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Income
                 )
             }
@@ -204,9 +228,10 @@ private fun TransactionDateHeader(dateLabel: String, totalExpense: Double, total
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun SwipeableTransactionItem(
+fun SwipeableTransactionItem(
     transaction: Transaction,
     availableLabels: List<Label>,
+    currencySymbol: String,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -250,6 +275,7 @@ private fun SwipeableTransactionItem(
             TransactionItemContent(
                 transaction = transaction,
                 availableLabels = availableLabels,
+                currencySymbol = currencySymbol,
                 onClick = onClick
             )
         },
@@ -264,7 +290,7 @@ private fun SwipeableTransactionItem(
             title = { Text("Delete Transaction") },
             text = {
                 Text(
-                    "Are you sure you want to delete this transaction of RM ${
+                    "Are you sure you want to delete this transaction of $currencySymbol ${
                         transaction.amount.formatDecimal(2)
                     }?"
                 )
@@ -289,99 +315,140 @@ private fun SwipeableTransactionItem(
 private fun TransactionItemContent(
     transaction: Transaction,
     availableLabels: List<Label>,
+    currencySymbol: String,
     onClick: () -> Unit
 ) {
-    Surface(onClick = onClick, color = SurfaceContainer) {
+    Surface(onClick = onClick, color = MaterialTheme.colorScheme.surface) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                // Category icon - compact size
-                Box(
-                    modifier =
-                        Modifier.size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                parseColorSafe(
-                                    transaction.categoryColor
-                                        ?: "#607D8B"
-                                )
-                                    .copy(alpha = 0.15f)
-                            ),
-                    contentAlignment = Alignment.Center
-                ) { Text(text = transaction.categoryIcon ?: "💵", fontSize = 16.sp) }
+            // Category Icon
+            Box(
+                modifier =
+                    Modifier.size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            parseColorSafe(transaction.categoryColor ?: "#607D8B")
+                                .copy(alpha = 0.15f)
+                        ),
+                contentAlignment = Alignment.Center
+            ) { Text(text = transaction.categoryIcon ?: "💵", fontSize = 20.sp) }
 
-                Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-                Column {
-                    // Primary: Category name (e.g., "Food and Dining")
-                    // Fallback: Description or generic "Transaction"
+            // Main Content
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy((-2).dp) // Reduced spacing
+            ) {
+                // Row 1: Category - Amount
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = transaction.categoryName
                             ?: transaction.description ?: "Transaction",
-                        color = OnSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp, // Reduced to 15sp
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text =
+                            "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"} $currencySymbol ${
+                                transaction.amount.formatDecimal(2)
+                            }",
+                        color =
+                            if (transaction.type == TransactionType.EXPENSE) Expense
+                            else Income,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp // Reduced to 15sp
+                    )
+                }
+
+                // Row 2: Account - Time
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = transaction.accountName ?: "Cash",
+                        color = OnSurfaceVariant,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Time formatting
+                    val timeString =
+                        transaction.time?.let {
+                            val parts = it.split(":")
+                            if (parts.size >= 2) {
+                                val hour = parts[0].toInt()
+                                val minute = parts[1].toInt()
+                                val amPm = if (hour < 12) "AM" else "PM"
+                                val hour12 = if (hour % 12 == 0) 12 else hour % 12
+                                "${hour12}:${minute.toString().padStart(2, '0')} $amPm"
+                            } else it
+                        }
+                            ?: ""
+
+                    Text(text = timeString, color = OnSurfaceVariant, fontSize = 13.sp)
+                }
+
+                // Note (if present and distinct)
+                val noteText = transaction.note ?: transaction.description
+                if (!noteText.isNullOrBlank() && noteText != transaction.categoryName) {
+                    // Removed Spacer to tighten spacing
+                    Text(
+                        text = "\"$noteText\"",
+                        color = OnSurfaceVariant.copy(alpha = 0.8f),
+                        fontSize = 13.sp,
+                        fontStyle = FontStyle.Italic,
                         maxLines = 1
                     )
-                    // Secondary: Note (if different from category name)
-                    val noteText = transaction.note ?: transaction.description
-                    if (noteText != null && noteText != transaction.categoryName) {
-                        Text(
-                            text = noteText,
-                            color = OnSurfaceVariant,
-                            fontSize = 11.sp,
-                            maxLines = 1
-                        )
-                    }
+                }
 
-                    // Labels
-                    if (transaction.labels.isNotEmpty() && availableLabels.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            transaction.labels.forEach { labelId ->
-                                val label = availableLabels.find { it.id == labelId }
-                                if (label != null) {
-                                    val labelColor = parseColorSafe(label.color)
-                                    Box(
-                                        modifier =
-                                            Modifier.clip(RoundedCornerShape(4.dp))
-                                                .background(
-                                                    labelColor.copy(alpha = 0.2f)
-                                                )
-                                                .padding(
-                                                    horizontal = 6.dp,
-                                                    vertical = 2.dp
-                                                )
-                                    ) {
-                                        Text(
-                                            text = label.name,
-                                            color = labelColor,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
+                // Labels
+                if (transaction.labels.isNotEmpty() && availableLabels.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp)) // Reduced from 4.dp
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        transaction.labels.forEach { labelId ->
+                            val label = availableLabels.find { it.id == labelId }
+                            if (label != null) {
+                                val labelColor = parseColorSafe(label.color)
+                                Box(
+                                    modifier =
+                                        Modifier.clip(RoundedCornerShape(4.dp))
+                                            .background(labelColor.copy(alpha = 0.2f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = label.name,
+                                        color = labelColor,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
                     }
                 }
             }
-
-            Text(
-                text =
-                    "${if (transaction.type == TransactionType.EXPENSE) "-" else "+"} RM ${
-                        transaction.amount.formatDecimal(2)
-                    }",
-                color = if (transaction.type == TransactionType.EXPENSE) Expense else Income,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp
-            )
         }
     }
 }

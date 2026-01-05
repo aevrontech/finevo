@@ -57,7 +57,9 @@ val appModule = module {
     viewModel { OnboardingViewModel(get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { HomeViewModel() }
-    viewModel { ExpenseViewModel(get(), get(), get()) } // ExpenseRepo + AccountRepo + LabelRepo
+    viewModel {
+        ExpenseViewModel(get(), get(), get(), get())
+    } // ExpenseRepo + AccountRepo + LabelRepo + SettingsRepo
     viewModel { DebtViewModel(get()) }
     viewModel { HabitViewModel(get()) }
     viewModel { SettingsViewModel(get()) }

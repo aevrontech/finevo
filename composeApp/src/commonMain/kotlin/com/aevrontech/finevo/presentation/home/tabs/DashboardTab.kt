@@ -13,34 +13,33 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.aevrontech.finevo.domain.model.TransactionType
@@ -56,9 +55,6 @@ import com.aevrontech.finevo.ui.theme.ActionTopUp
 import com.aevrontech.finevo.ui.theme.ActionTopUpBg
 import com.aevrontech.finevo.ui.theme.ActionTransfer
 import com.aevrontech.finevo.ui.theme.ActionTransferBg
-import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
-import com.aevrontech.finevo.ui.theme.DashboardGradientMid
-import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 import com.aevrontech.finevo.ui.theme.OnSurface
 import com.aevrontech.finevo.ui.theme.ThemeColors
 import org.koin.compose.viewmodel.koinViewModel
@@ -82,6 +78,7 @@ object DashboardTab : Tab {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DashboardContent() {
     val viewModel: HomeViewModel = koinViewModel()
@@ -98,8 +95,7 @@ private fun DashboardContent() {
                 .filter { it.type == TransactionType.INCOME }
                 .groupBy { it.categoryId }
                 .map { (categoryId, txList) ->
-                    val category =
-                        expenseState.categories.find { it.id == categoryId }
+                    val category = expenseState.categories.find { it.id == categoryId }
                     CategoryBreakdown(
                         categoryId = categoryId,
                         categoryName = category?.name ?: "Other",
@@ -118,8 +114,7 @@ private fun DashboardContent() {
                 .filter { it.type == TransactionType.EXPENSE }
                 .groupBy { it.categoryId }
                 .map { (categoryId, txList) ->
-                    val category =
-                        expenseState.categories.find { it.id == categoryId }
+                    val category = expenseState.categories.find { it.id == categoryId }
                     CategoryBreakdown(
                         categoryId = categoryId,
                         categoryName = category?.name ?: "Other",
@@ -132,113 +127,111 @@ private fun DashboardContent() {
                 .sortedByDescending { it.total }
         }
 
-    val incomeTotal =
-        transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-    val expenseTotal =
-        transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+    val navigator = LocalTabNavigator.current
+    var showFilterSheet by remember { mutableStateOf(false) }
+
+    // Use dashboard specific totals
+    val incomeTotal = expenseState.dashboardIncome
+    val expenseTotal = expenseState.dashboardExpense
+    val totalBalance = expenseState.totalBalance
+    val currencyCode = expenseState.currencyCode
+
+    // Formatting helper (simple for now, could be extracted)
+    fun formatMoney(amount: Double): String {
+        // Basic formatting, ideally use NumberFormat
+        // Assuming amount is potentially large, we just show it directly
+        // currencyCode + " " + amount
+        // But for better visuals let's just stick to code + space + amount
+        // Or if we want commas:
+        // val formatted = amount.toString() // naive
+        // Better:
+        val parts = amount.toString().split('.')
+        val integerPart = parts[0].reversed().chunked(3).joinToString(",").reversed()
+        val fractionalPart = if (parts.size > 1) "." + parts[1].take(2) else ""
+        return "$currencyCode $integerPart$fractionalPart"
+    }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 16.dp, bottom = 130.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(0.dp) // Manual spacing control
     ) {
         // Header
         item {
-            Text(
-                text = "Dashboard",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = ThemeColors.onSurface
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Dashboard",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ThemeColors.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Balance Card
+        // Account Cards Pager
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth().height(240.dp),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    DashboardCardBackground()
+            if (expenseState.accounts.isNotEmpty()) {
+                val pagerState = rememberPagerState(pageCount = { expenseState.accounts.size })
 
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
-                        verticalArrangement = Arrangement.SpaceBetween,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        pageSpacing = 8.dp,
+                        modifier = Modifier.fillMaxWidth().height(220.dp)
+                    ) { page ->
+                        val account = expenseState.accounts[page]
+                        DashboardAccountCard(
+                            account = account,
+                            onClick = {
+                                navigator.current =
+                                    com.aevrontech.finevo.presentation.home.tabs.ExpenseTab
+                            }
+                        )
+                    }
+
+                    // Pager Indicator
+                    Row(
+                        Modifier.height(10.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Column(
-                            horizontalAlignment =
-                                Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Your available balance",
-                                color =
-                                    Color.White.copy(
-                                        alpha = 0.9f
-                                    ),
-                                fontSize = 14.sp
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "$ 24,500",
-                                fontSize = 40.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .background(
-                                        color =
-                                            Color.White
-                                                .copy(
-                                                    alpha =
-                                                        0.15f
-                                                ),
-                                        shape =
-                                            RoundedCornerShape(
-                                                16.dp
-                                            )
-                                    )
-                                    .padding(
-                                        horizontal = 16.dp,
-                                        vertical = 12.dp
-                                    ),
-                            horizontalArrangement =
-                                Arrangement.SpaceBetween
-                        ) {
-                            BalanceItem(
-                                label = "Income",
-                                amount = "$5,086",
-                                color = Color.White,
-                                icon =
-                                    Icons.Filled
-                                        .KeyboardArrowDown
-                            )
-                            BalanceItem(
-                                label = "Expense",
-                                amount = "$5,086",
-                                color = Color.White,
-                                icon = Icons.Filled.KeyboardArrowUp
+                        repeat(pagerState.pageCount) { iteration ->
+                            val color =
+                                if (pagerState.currentPage == iteration)
+                                    androidx.compose.material3.MaterialTheme.colorScheme
+                                        .primary
+                                else ThemeColors.onSurface.copy(alpha = 0.2f)
+                            Box(
+                                modifier =
+                                    Modifier.padding(2.dp)
+                                        .clip(
+                                            androidx.compose.foundation.shape
+                                                .CircleShape
+                                        )
+                                        .background(color)
+                                        .size(8.dp)
                             )
                         }
                     }
                 }
+            } else {
+                Text("No accounts found", modifier = Modifier.padding(16.dp))
             }
+            // Space between Carousel and Quick Actions (Reduced from ~40dp to 16dp)
+            Spacer(modifier = Modifier.height(16.dp))
         }
-
-        // Quick Actions spacer
-        item { Spacer(modifier = Modifier.height(8.dp)) }
 
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 QuickActionButton(
@@ -266,142 +259,23 @@ private fun DashboardContent() {
                     backgroundColor = ActionModeBg
                 )
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         // Category Report Section
         item {
-            CategoryReportSection(
-                incomeTotal = incomeTotal,
-                expenseTotal = expenseTotal,
-                incomeBreakdown = incomeBreakdown,
-                expenseBreakdown = expenseBreakdown,
-                currencySymbol = "RM",
-                onIncomeClick = {},
-                onExpenseClick = {},
-                onSeeReportClick = {}
-            )
-        }
-    }
-}
-
-@Composable
-private fun DashboardCardBackground() {
-    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-        val width = size.width
-        val height = size.height
-
-        drawRect(
-            brush =
-                Brush.linearGradient(
-                    colors =
-                        listOf(
-                            DashboardGradientStart,
-                            DashboardGradientMid,
-                            DashboardGradientEnd
-                        ),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(width, height)
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                CategoryReportSection(
+                    incomeTotal = incomeTotal,
+                    expenseTotal = expenseTotal,
+                    incomeBreakdown = incomeBreakdown,
+                    expenseBreakdown = expenseBreakdown,
+                    currencySymbol = currencyCode,
+                    onIncomeClick = {},
+                    onExpenseClick = {},
+                    onSeeReportClick = {}
                 )
-        )
-
-        // Bubble Groups - Group 1 (Top Left)
-        drawCircle(
-            color = Color.White,
-            radius = 6.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.1f, height * 0.13f),
-            alpha = 0.25f
-        )
-        drawCircle(
-            color = Color.White,
-            radius = 4.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.15f, height * 0.2f),
-            alpha = 0.25f
-        )
-        drawCircle(
-            color = Color.White,
-            radius = 5.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.21f, height * 0.15f),
-            alpha = 0.25f
-        )
-
-        // Bubble Groups - Group 2 (Top Right)
-        drawCircle(
-            color = Color.White,
-            radius = 6.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.83f, height * 0.11f),
-            alpha = 0.25f
-        )
-        drawCircle(
-            color = Color.White,
-            radius = 4.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.89f, height * 0.20f),
-            alpha = 0.25f
-        )
-        drawCircle(
-            color = Color.White,
-            radius = 5.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.94f, height * 0.14f),
-            alpha = 0.25f
-        )
-
-        // Bubble Groups - Group 3 (Left Mid)
-        drawCircle(
-            color = Color.White,
-            radius = 8.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.14f, height * 0.39f),
-            alpha = 0.15f
-        )
-        drawCircle(
-            color = Color.White,
-            radius = 5.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.18f, height * 0.47f),
-            alpha = 0.15f
-        )
-
-        // Bubble Groups - Group 4 (Right Mid)
-        drawCircle(
-            color = Color.White,
-            radius = 7.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.76f, height * 0.55f),
-            alpha = 0.15f
-        )
-        drawCircle(
-            color = Color.White,
-            radius = 6.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(width * 0.90f, height * 0.58f),
-            alpha = 0.15f
-        )
-    }
-}
-
-@Composable
-private fun BalanceItem(label: String, amount: String, color: Color, icon: ImageVector) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier =
-                Modifier.size(32.dp)
-                    .background(
-                        color.copy(alpha = 0.2f),
-                        RoundedCornerShape(8.dp)
-                    ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(text = label, color = color.copy(alpha = 0.8f), fontSize = 12.sp)
-            Text(
-                text = amount,
-                color = color,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+            }
         }
     }
 }
@@ -414,10 +288,7 @@ private fun QuickActionButton(
     backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.clickable {}
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.clickable {}) {
         Box(
             modifier =
                 Modifier.size(56.dp)
@@ -433,11 +304,6 @@ private fun QuickActionButton(
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = OnSurface,
-            fontWeight = FontWeight.Medium
-        )
+        Text(text = label, fontSize = 12.sp, color = OnSurface, fontWeight = FontWeight.Medium)
     }
 }

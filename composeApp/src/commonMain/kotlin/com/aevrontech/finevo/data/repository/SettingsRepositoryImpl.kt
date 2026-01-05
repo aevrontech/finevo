@@ -13,8 +13,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 /** Stub implementation of SettingsRepository for Phase 1. */
 class SettingsRepositoryImpl : SettingsRepository {
 
-    private val _preferences = MutableStateFlow(UserPreferences(userId = ""))
     private val settings: Settings = Settings()
+
+    // Initialize with persisted values
+    private val _preferences =
+        MutableStateFlow(
+            UserPreferences(
+                userId = settings.getStringOrNull("current_user_id") ?: "",
+                currency =
+                    settings.getString(
+                        "currency_code",
+                        "MYR"
+                    ), // Default to MYR as seen in UI
+                locale = settings.getString("locale", "en"),
+                darkMode = settings.getBoolean("dark_mode", true)
+            )
+        )
 
     override fun getPreferences(): Flow<UserPreferences> = _preferences
 
@@ -52,10 +66,12 @@ class SettingsRepositoryImpl : SettingsRepository {
 
     override suspend fun updatePreferences(preferences: UserPreferences): Result<UserPreferences> {
         _preferences.value = preferences
+        // Ideally save all fields here, but for now we focus on what's requested
         return Result.success(preferences)
     }
 
     override suspend fun setCurrency(currencyCode: String): Result<Unit> {
+        settings.putString("currency_code", currencyCode)
         _preferences.value = _preferences.value.copy(currency = currencyCode)
         return Result.success(Unit)
     }

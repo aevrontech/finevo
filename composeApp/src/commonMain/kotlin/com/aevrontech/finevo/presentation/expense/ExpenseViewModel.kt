@@ -7,6 +7,7 @@ import com.aevrontech.finevo.domain.model.*
 import com.aevrontech.finevo.domain.repository.AccountRepository
 import com.aevrontech.finevo.domain.repository.ExpenseRepository
 import com.aevrontech.finevo.domain.repository.LabelRepository
+import com.aevrontech.finevo.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.*
@@ -15,7 +16,8 @@ import kotlinx.datetime.*
 class ExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
     private val accountRepository: AccountRepository,
-    private val labelRepository: LabelRepository
+    private val labelRepository: LabelRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
@@ -37,6 +39,15 @@ class ExpenseViewModel(
     init {
         loadAccounts()
         loadCategories()
+        observeCurrency()
+    }
+
+    private fun observeCurrency() {
+        viewModelScope.launch {
+            settingsRepository.getPreferences().collect { prefs ->
+                _uiState.update { it.copy(currencyCode = prefs.currency) }
+            }
+        }
     }
 
     private fun loadAccounts() {
@@ -53,10 +64,21 @@ class ExpenseViewModel(
 
                 val finalSelected = if (newSelected.isEmpty()) accounts.toSet() else newSelected
 
-                _uiState.update { it.copy(accounts = accounts, selectedAccounts = finalSelected) }
+                val totalBalance = accounts.sumOf { it.balance }
+                _uiState.update {
+                    it.copy(
+                        accounts = accounts,
+                        selectedAccounts = finalSelected,
+                        totalBalance = totalBalance
+                    )
+                }
 
-                // Load transactions for selected accounts
-                loadTransactionsForAccounts(finalSelected.map { it.id }.toSet())
+                // Load transactions for selected accounts AND Dashboard (All accounts)
+                // Filter by date range? "This Month" default?
+                // loadTransactionsForAccounts will handle selected accounts.
+                // We need separate load for Dashboard? Or shared?
+                // User wants Dashboard filtered by TimeRange too.
+                loadDataForTimeRange()
             }
         }
     }
@@ -625,6 +647,90 @@ class ExpenseViewModel(
             }
         }
     }
+
+    fun setTimeRange(range: TimeRange) {
+        _uiState.update { it.copy(timeRange = range) }
+
+        // Auto-switch chart period for better UX
+        val newPeriod =
+            when (range) {
+                TimeRange.ThisWeek, TimeRange.Last7Days -> FilterPeriod.WEEK
+                TimeRange.ThisMonth, TimeRange.Last30Days -> FilterPeriod.MONTH
+                TimeRange.ThisYear, TimeRange.LastYear, TimeRange.AllTime -> FilterPeriod.YEAR
+                else -> null
+            }
+        if (newPeriod != null) {
+            _filterPeriod.value = newPeriod
+        }
+
+        loadDataForTimeRange()
+    }
+
+    private fun loadDataForTimeRange() {
+        val range = _uiState.value.timeRange
+        val (startDate, endDate) = getTimeRangeDates(range)
+        val selectedIds = _uiState.value.selectedAccounts.map { it.id }.toSet()
+
+        viewModelScope.launch {
+            expenseRepository.getTransactions(startDate, endDate).collect { transactions ->
+                val enriched = enrichWithCategoryData(transactions)
+
+                // Dashboard: All Accounts, Filtered by Time
+                val dashboardIncome =
+                    enriched.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                val dashboardExpense =
+                    enriched.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+
+                // Wallet: Selected Accounts, Filtered by Time
+                val walletTransactions =
+                    enriched.filter { it.accountId in selectedIds || it.accountId == null }
+                val walletIncome =
+                    walletTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
+                        it.amount
+                    }
+                val walletExpense =
+                    walletTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf {
+                        it.amount
+                    }
+
+                _uiState.update {
+                    it.copy(
+                        transactions = walletTransactions,
+                        dashboardIncome = dashboardIncome,
+                        dashboardExpense = dashboardExpense,
+                        accountIncome = walletIncome,
+                        accountExpense = walletExpense,
+                        isLoading = false
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getTimeRangeDates(range: TimeRange): Pair<LocalDate, LocalDate> {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        return when (range) {
+            is TimeRange.Today -> today to today
+            is TimeRange.ThisWeek -> {
+                val start = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
+                start to start.plus(6, DateTimeUnit.DAY)
+            }
+            is TimeRange.ThisMonth ->
+                LocalDate(today.year, today.month, 1) to
+                    LocalDate(
+                        today.year,
+                        today.month,
+                        today.month.length(today.year % 4 == 0)
+                    )
+            is TimeRange.ThisYear -> LocalDate(today.year, 1, 1) to LocalDate(today.year, 12, 31)
+            is TimeRange.Last7Days -> today.minus(6, DateTimeUnit.DAY) to today
+            is TimeRange.Last30Days -> today.minus(29, DateTimeUnit.DAY) to today
+            is TimeRange.LastYear ->
+                LocalDate(today.year - 1, 1, 1) to LocalDate(today.year - 1, 12, 31)
+            is TimeRange.AllTime ->
+                LocalDate(2000, 1, 1) to LocalDate(2100, 12, 31) // Arbirtary range
+        }
+    }
 }
 
 /** UI state for Expense screen. */
@@ -637,12 +743,20 @@ data class ExpenseUiState(
     val summary: TransactionSummary? = null,
     val accountIncome: Double = 0.0,
     val accountExpense: Double = 0.0,
+    val dashboardIncome: Double = 0.0,
+    val dashboardExpense: Double = 0.0,
+    val totalBalance: Double = 0.0,
+    val timeRange: TimeRange = TimeRange.ThisMonth,
+    val currencyCode: String = "MYR",
     val showAddDialog: Boolean = false,
     val showAddAccountDialog: Boolean = false,
     val selectedTransactionType: TransactionType = TransactionType.EXPENSE,
     val error: String? = null,
     val successMessage: String? = null
 ) {
+    val currencySymbol: String
+        get() = CurrencyProvider.getCurrency(currencyCode)?.symbol ?: currencyCode
+
     val expenseTransactions: List<Transaction>
         get() = transactions.filter { it.type == TransactionType.EXPENSE }
 
@@ -675,6 +789,18 @@ enum class FilterPeriod(val label: String) {
     WEEK("Week"),
     MONTH("Month"),
     YEAR("Year")
+}
+
+/** Time range options for dashboard and wallet */
+sealed class TimeRange(val label: String) {
+    data object Today : TimeRange("Today")
+    data object ThisWeek : TimeRange("This Week")
+    data object ThisMonth : TimeRange("This Month")
+    data object ThisYear : TimeRange("This Year")
+    data object Last7Days : TimeRange("Last 7 Days")
+    data object Last30Days : TimeRange("Last 30 Days")
+    data object LastYear : TimeRange("Last Year")
+    data object AllTime : TimeRange("All Time")
 }
 
 /** Category breakdown data for pie chart */

@@ -215,6 +215,7 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                     onSeeAllClick = { /* Navigate to full history if needed */ },
                     onTransactionClick = { /* Open details */ },
                     availableLabels = labelState.labels,
+                    currencySymbol = expenseState.currencySymbol,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
