@@ -63,6 +63,19 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                 filteredTransactions.filter { it.type == TransactionType.EXPENSE }
 
             when (filterPeriod) {
+                FilterPeriod.DAY -> {
+                    val grouped =
+                        expenseTransactions.groupBy {
+                            it.time?.split(":")?.firstOrNull()?.toIntOrNull() ?: 0
+                        }
+                    (0 until 24).map { hour ->
+                        val total = grouped[hour]?.sumOf { it.amount } ?: 0.0
+                        BarChartItem(
+                            label = if (hour % 6 == 0) "${hour}h" else "",
+                            value = total
+                        )
+                    }
+                }
                 FilterPeriod.WEEK -> {
                     // Group by Day of Week (Mon-Sun)
                     val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -227,6 +240,10 @@ private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
     return when (period) {
+        FilterPeriod.DAY -> {
+            val targetDate = today.plus(offset, DateTimeUnit.DAY)
+            "${targetDate.dayOfMonth} ${targetDate.month.name.take(3)} ${targetDate.year}"
+        }
         FilterPeriod.WEEK -> {
             val weekStart =
                 today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)

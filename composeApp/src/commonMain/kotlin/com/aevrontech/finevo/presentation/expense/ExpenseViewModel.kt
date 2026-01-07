@@ -530,15 +530,16 @@ class ExpenseViewModel(
             .sortedByDescending { it.total }
     }
 
-    /** Get bar chart data (income vs expense by time periods) */
     fun getBarChartData(): List<BarChartDataItem> {
         val period = _filterPeriod.value
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val items = mutableListOf<BarChartDataItem>()
 
-        // For Month and Year, show 12 months. For Week, show 7 days
+        // For Month and Year, show 12 months. For Week, show 7 days. For Day, show 24 hours (or
+        // segments)
         val count =
             when (period) {
+                FilterPeriod.DAY -> 24 // Hours
                 FilterPeriod.WEEK -> 7 // Days of week
                 FilterPeriod.MONTH -> 12 // Months of year (for selected year based on offset)
                 FilterPeriod.YEAR -> 12 // Months of year
@@ -547,6 +548,21 @@ class ExpenseViewModel(
         for (i in 0 until count) {
             val (rangeStart, rangeEnd) =
                 when (period) {
+                    FilterPeriod.DAY -> {
+                        val startOfDay = today.plus(_periodOffset.value, DateTimeUnit.DAY)
+                        // Approximate hourly breakdown unavailable without DateTime
+                        // implementation that supports hours?
+                        // Transaction 'time' is String "HH:mm". Transaction 'date' is
+                        // LocalDate.
+                        // We can't filter by Hour easily using LocalDate.
+                        // We need to parse 'time'.
+                        // Simplified strategy: Show total for the day in one bar? Or skipping
+                        // Bar Chart for DAY?
+                        // Or implementing partial logic.
+                        // Current 'BarChartDataItem' is label/income/expense.
+                        // Let's rely on transaction time string "HH:mm".
+                        startOfDay to startOfDay
+                    }
                     FilterPeriod.WEEK -> {
                         val weekStart =
                             today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
@@ -577,9 +593,16 @@ class ExpenseViewModel(
                 }
 
             val periodTransactions =
-                _uiState.value.transactions.filter { tx ->
-                    tx.date >= rangeStart && tx.date <= rangeEnd
-                }
+                _uiState.value.transactions
+                    .filter { tx -> tx.date >= rangeStart && tx.date <= rangeEnd }
+                    .filter { tx ->
+                        if (period == FilterPeriod.DAY) {
+                            // Filter by Hour 'i'
+                            val hour =
+                                tx.time?.split(":")?.firstOrNull()?.toIntOrNull() ?: 0
+                            hour == i
+                        } else true
+                    }
 
             val income =
                 periodTransactions.filter { it.type == TransactionType.INCOME }.sumOf {
@@ -592,6 +615,7 @@ class ExpenseViewModel(
 
             val label =
                 when (period) {
+                    FilterPeriod.DAY -> if (i % 6 == 0) "${i}h" else "" // Sparse labels
                     FilterPeriod.WEEK -> rangeStart.dayOfWeek.name.take(3)
                     FilterPeriod.MONTH, FilterPeriod.YEAR -> Month(i + 1).name.take(3)
                 }
@@ -606,6 +630,10 @@ class ExpenseViewModel(
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
         return when (period) {
+            FilterPeriod.DAY -> {
+                val targetDate = today.plus(offset, DateTimeUnit.DAY)
+                targetDate to targetDate
+            }
             FilterPeriod.WEEK -> {
                 val weekStart =
                     today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
@@ -654,13 +682,19 @@ class ExpenseViewModel(
         // Auto-switch chart period for better UX
         val newPeriod =
             when (range) {
-                TimeRange.ThisWeek, TimeRange.Last7Days -> FilterPeriod.WEEK
-                TimeRange.ThisMonth, TimeRange.Last30Days -> FilterPeriod.MONTH
-                TimeRange.ThisYear, TimeRange.LastYear, TimeRange.AllTime -> FilterPeriod.YEAR
+                is CalendarTimeRange -> range.period
+                is LastDaysRange ->
+                    if (range.days <= 7) FilterPeriod.WEEK else FilterPeriod.MONTH
                 else -> null
             }
         if (newPeriod != null) {
             _filterPeriod.value = newPeriod
+            // Sync period offset
+            if (range is CalendarTimeRange) {
+                _periodOffset.value = range.offset
+            } else {
+                _periodOffset.value = 0
+            }
         }
 
         loadDataForTimeRange()
@@ -710,25 +744,54 @@ class ExpenseViewModel(
     private fun getTimeRangeDates(range: TimeRange): Pair<LocalDate, LocalDate> {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         return when (range) {
-            is TimeRange.Today -> today to today
-            is TimeRange.ThisWeek -> {
-                val start = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
-                start to start.plus(6, DateTimeUnit.DAY)
+            is LastDaysRange -> {
+                today.minus(range.days - 1, DateTimeUnit.DAY) to today
             }
-            is TimeRange.ThisMonth ->
-                LocalDate(today.year, today.month, 1) to
-                    LocalDate(
-                        today.year,
-                        today.month,
-                        today.month.length(today.year % 4 == 0)
-                    )
-            is TimeRange.ThisYear -> LocalDate(today.year, 1, 1) to LocalDate(today.year, 12, 31)
-            is TimeRange.Last7Days -> today.minus(6, DateTimeUnit.DAY) to today
-            is TimeRange.Last30Days -> today.minus(29, DateTimeUnit.DAY) to today
-            is TimeRange.LastYear ->
-                LocalDate(today.year - 1, 1, 1) to LocalDate(today.year - 1, 12, 31)
-            is TimeRange.AllTime ->
-                LocalDate(2000, 1, 1) to LocalDate(2100, 12, 31) // Arbirtary range
+            is CalendarTimeRange -> {
+                calculateDateRangeForPeriod(range.period, range.offset, today)
+            }
+            is CustomTimeRange -> range.start to range.end
+            is AllTimeRange -> LocalDate(2000, 1, 1) to LocalDate(2100, 12, 31)
+        }
+    }
+
+    private fun calculateDateRangeForPeriod(
+        period: FilterPeriod,
+        offset: Int,
+        today: LocalDate
+    ): Pair<LocalDate, LocalDate> {
+        return when (period) {
+            FilterPeriod.DAY -> {
+                val targetDate = today.plus(offset, DateTimeUnit.DAY)
+                targetDate to targetDate
+            }
+            FilterPeriod.WEEK -> {
+                // Assuming Week starts on Monday
+                val currentWeekStart = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
+                val targetWeekStart = currentWeekStart.plus(offset * 7, DateTimeUnit.DAY)
+                targetWeekStart to targetWeekStart.plus(6, DateTimeUnit.DAY)
+            }
+            FilterPeriod.MONTH -> {
+                val totalMonths = today.year * 12 + (today.monthNumber - 1) + offset
+                val year = totalMonths / 12
+                val month = (totalMonths % 12) + 1
+                val start = LocalDate(year, month, 1)
+                val lengthOfMonth =
+                    start.month.length(year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
+                start to LocalDate(year, month, lengthOfMonth)
+            }
+            FilterPeriod.YEAR -> {
+                val targetYear = today.year + offset
+                LocalDate(targetYear, 1, 1) to LocalDate(targetYear, 12, 31)
+            }
+        }
+    }
+
+    fun navigateTimeRange(direction: Int) {
+        val currentRange = _uiState.value.timeRange
+        if (currentRange is CalendarTimeRange) {
+            val newRange = currentRange.copy(offset = currentRange.offset + direction)
+            setTimeRange(newRange)
         }
     }
 }
@@ -784,24 +847,7 @@ data class ExpenseUiState(
         }
 }
 
-/** Filter period options for statistics */
-enum class FilterPeriod(val label: String) {
-    WEEK("Week"),
-    MONTH("Month"),
-    YEAR("Year")
-}
-
-/** Time range options for dashboard and wallet */
-sealed class TimeRange(val label: String) {
-    data object Today : TimeRange("Today")
-    data object ThisWeek : TimeRange("This Week")
-    data object ThisMonth : TimeRange("This Month")
-    data object ThisYear : TimeRange("This Year")
-    data object Last7Days : TimeRange("Last 7 Days")
-    data object Last30Days : TimeRange("Last 30 Days")
-    data object LastYear : TimeRange("Last Year")
-    data object AllTime : TimeRange("All Time")
-}
+// Definitions moved to TimeRange.kt
 
 /** Category breakdown data for pie chart */
 data class CategoryBreakdown(

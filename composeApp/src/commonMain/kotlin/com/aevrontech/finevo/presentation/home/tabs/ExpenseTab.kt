@@ -18,12 +18,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,6 +60,7 @@ import com.aevrontech.finevo.presentation.expense.ExpenseReportScreen
 import com.aevrontech.finevo.presentation.expense.ExpenseViewModel
 import com.aevrontech.finevo.presentation.expense.FilterPeriod
 import com.aevrontech.finevo.presentation.expense.IncomeExpenseCards
+import com.aevrontech.finevo.presentation.expense.TimeFilterSection
 import com.aevrontech.finevo.presentation.expense.TimeRangeSelectionSheet
 import com.aevrontech.finevo.presentation.expense.groupTransactionsByDate
 import com.aevrontech.finevo.presentation.expense.groupedTransactionItems
@@ -162,6 +161,19 @@ internal fun ExpenseTabContent() {
                 filteredTransactions.filter { it.type == TransactionType.EXPENSE }
 
             when (filterPeriod) {
+                FilterPeriod.DAY -> {
+                    val grouped =
+                        expenseTransactions.groupBy {
+                            it.time?.split(":")?.firstOrNull()?.toIntOrNull() ?: 0
+                        }
+                    (0 until 24).map { hour ->
+                        val total = grouped[hour]?.sumOf { it.amount } ?: 0.0
+                        BarChartItem(
+                            label = if (hour % 6 == 0) "${hour}h" else "",
+                            value = total
+                        )
+                    }
+                }
                 FilterPeriod.WEEK -> { // Group by Day of Week (Mon-Sun)
                     val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
                     val grouped = expenseTransactions.groupBy { it.date.dayOfWeek.ordinal }
@@ -284,24 +296,7 @@ internal fun ExpenseTabContent() {
                         // I'll show it always, maybe next to Select All if present.
                     }
 
-                    Row(
-                        modifier = Modifier.clickable { showFilterSheet = true }.padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = expenseState.timeRange.label,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Select Time Range",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    // Filter Icon Removed - Replaced by TimeFilterSection
                 }
             }
 
@@ -329,6 +324,14 @@ internal fun ExpenseTabContent() {
                     expense = expenseState.accountExpense,
                     currencySymbol = expenseState.currencySymbol,
                     modifier = Modifier.padding(horizontal = 20.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TimeFilterSection(
+                    currentRange = expenseState.timeRange,
+                    onNavigate = { direction -> expenseViewModel.navigateTimeRange(direction) },
+                    onFilterClick = { showFilterSheet = true }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp)) // Reduced from 24.dp
@@ -598,6 +601,10 @@ private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
     return when (period) {
+        FilterPeriod.DAY -> {
+            val targetDate = today.plus(offset, DateTimeUnit.DAY)
+            "${targetDate.dayOfMonth} ${targetDate.month.name.take(3)} ${targetDate.year}"
+        }
         FilterPeriod.WEEK -> {
             val weekStart =
                 today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)

@@ -37,10 +37,13 @@ fun TimeRangeSelectionSheet(
             TimeRange.ThisWeek,
             TimeRange.ThisMonth,
             TimeRange.ThisYear,
-            TimeRange.Last7Days,
-            TimeRange.Last30Days,
-            TimeRange.LastYear,
-            TimeRange.AllTime
+            LastDaysRange(7, "Last 7 Days"),
+            LastDaysRange(30, "Last 30 Days"),
+            CalendarTimeRange(
+                FilterPeriod.YEAR,
+                -1
+            ), // Last Year logic handled in getLabel/getTimeRangeDates
+            AllTimeRange
         )
 
     ModalBottomSheet(
