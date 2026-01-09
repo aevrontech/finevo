@@ -5,6 +5,7 @@ This document explains the database migration setup for the FinEvo app.
 ## Overview
 
 FinEvo uses **SQLDelight Native Migrations** for versioned database schema management. This approach:
+
 - Separates schema (tables) from queries
 - Enables incremental schema changes
 - Automatically handles database upgrades
@@ -21,26 +22,26 @@ composeApp/src/commonMain/sqldelight/com/aevrontech/finevo/data/local/
 
 ## Current Schema (v1)
 
-| Table | Purpose |
-|-------|---------|
-| `users` | User accounts |
-| `user_preferences` | Settings (theme, currency, etc.) |
-| `categories` | Income/expense categories |
-| `accounts` | Financial accounts (wallet, bank) |
-| `labels` | Transaction labels/tags |
-| `transactions` | Income/expense records |
-| `transaction_labels` | Transaction ↔ Label mapping |
-| `recurring_transactions` | Recurring templates |
-| `budgets` | Budget tracking |
-| `debts` | Debt tracking |
-| `debt_payments` | Debt payment history |
-| `bills` | Bill reminders |
-| `habits` | Habit tracking |
-| `habit_logs` | Habit completion logs |
-| `habit_categories` | Habit categories |
-| `user_stats` | Gamification stats |
-| `sync_queue` | Offline sync queue |
-| `app_config` | App settings |
+| Table                    | Purpose                           |
+|--------------------------|-----------------------------------|
+| `users`                  | User accounts                     |
+| `user_preferences`       | Settings (theme, currency, etc.)  |
+| `categories`             | Income/expense categories         |
+| `accounts`               | Financial accounts (wallet, bank) |
+| `labels`                 | Transaction labels/tags           |
+| `transactions`           | Income/expense records            |
+| `transaction_labels`     | Transaction ↔ Label mapping       |
+| `recurring_transactions` | Recurring templates               |
+| `budgets`                | Budget tracking                   |
+| `debts`                  | Debt tracking                     |
+| `debt_payments`          | Debt payment history              |
+| `bills`                  | Bill reminders                    |
+| `habits`                 | Habit tracking                    |
+| `habit_logs`             | Habit completion logs             |
+| `habit_categories`       | Habit categories                  |
+| `user_stats`             | Gamification stats                |
+| `sync_queue`             | Offline sync queue                |
+| `app_config`             | App settings                      |
 
 ## How Migrations Work
 
@@ -109,6 +110,7 @@ DELETE FROM reminders WHERE id = ?;
 ## Best Practices
 
 ### ✅ Do
+
 - Use `INTEGER` for booleans (0/1)
 - Use `TEXT` for dates (ISO format)
 - Use `INTEGER` for timestamps (epoch millis)
@@ -116,6 +118,7 @@ DELETE FROM reminders WHERE id = ?;
 - Use `ON DELETE CASCADE` for foreign keys
 
 ### ❌ Don't
+
 - Modify existing `.sqm` files after release
 - Delete columns in migration (use deprecation)
 - Change column types (add new column instead)
@@ -133,6 +136,7 @@ DELETE FROM reminders WHERE id = ?;
 ### Schema verification error
 
 Check that:
+
 1. All migrations are sequential (1.sqm, 2.sqm, 3.sqm...)
 2. SQL syntax is valid
 3. Foreign key references exist

@@ -161,17 +161,15 @@ internal fun ExpenseTabContent() {
                 filteredTransactions.filter { it.type == TransactionType.EXPENSE }
 
             when (filterPeriod) {
-                FilterPeriod.DAY -> {
+                FilterPeriod.DAY -> { // Group by Hour (0-23)
                     val grouped =
                         expenseTransactions.groupBy {
                             it.time?.split(":")?.firstOrNull()?.toIntOrNull() ?: 0
                         }
-                    (0 until 24).map { hour ->
+                    (0..23).map { hour ->
                         val total = grouped[hour]?.sumOf { it.amount } ?: 0.0
-                        BarChartItem(
-                            label = if (hour % 6 == 0) "${hour}h" else "",
-                            value = total
-                        )
+                        val label = if (hour % 6 == 0) "${hour}h" else ""
+                        BarChartItem(label = label, value = total)
                     }
                 }
                 FilterPeriod.WEEK -> { // Group by Day of Week (Mon-Sun)
@@ -296,7 +294,7 @@ internal fun ExpenseTabContent() {
                         // I'll show it always, maybe next to Select All if present.
                     }
 
-                    // Filter Icon Removed - Replaced by TimeFilterSection
+                    // Select All is not needed, user wants FilterBar below
                 }
             }
 
@@ -319,6 +317,14 @@ internal fun ExpenseTabContent() {
             // Account Summary Card
             // Income and Expense Summary Cards (Percentage Round)
             item {
+                TimeFilterSection(
+                    currentRange = expenseState.timeRange,
+                    onNavigate = { direction -> expenseViewModel.navigateTimeRange(direction) },
+                    onFilterClick = { showFilterSheet = true }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 IncomeExpenseCards(
                     income = expenseState.accountIncome,
                     expense = expenseState.accountExpense,
@@ -327,14 +333,6 @@ internal fun ExpenseTabContent() {
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                TimeFilterSection(
-                    currentRange = expenseState.timeRange,
-                    onNavigate = { direction -> expenseViewModel.navigateTimeRange(direction) },
-                    onFilterClick = { showFilterSheet = true }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp)) // Reduced from 24.dp
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),

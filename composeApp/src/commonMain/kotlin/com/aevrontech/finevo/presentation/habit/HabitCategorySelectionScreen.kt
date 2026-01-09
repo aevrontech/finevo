@@ -1,12 +1,22 @@
 package com.aevrontech.finevo.presentation.habit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -18,8 +28,25 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,9 +56,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.presentation.BackHandler
 import com.aevrontech.finevo.domain.model.HabitCategoryType
 import com.aevrontech.finevo.domain.model.HabitSubCategory
-import com.aevrontech.finevo.ui.theme.*
+import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
+import com.aevrontech.finevo.ui.theme.DashboardGradientMid
+import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 
 /** First screen of Add Habit flow - Category and sub-category selection */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +71,7 @@ fun HabitCategorySelectionScreen(
     onSubCategorySelected: (HabitSubCategory?) -> Unit // null = custom habit
 ) {
     // Handle Android back button
-    BackHandler { onDismiss() }
+    BackHandler(enabled = true) { onDismiss() }
 
     var selectedCategory by remember { mutableStateOf(HabitCategoryType.MOST_POPULAR) }
     var searchQuery by remember { mutableStateOf("") }
@@ -71,10 +101,8 @@ fun HabitCategorySelectionScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors =
                                 OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor =
-                                        Color.Transparent,
-                                    unfocusedBorderColor =
-                                        Color.Transparent
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent
                                 )
                         )
                     } else {
@@ -83,10 +111,7 @@ fun HabitCategorySelectionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -97,18 +122,14 @@ fun HabitCategorySelectionScreen(
                         }
                     ) {
                         Icon(
-                            if (isSearchActive) Icons.Filled.Close
-                            else Icons.Filled.Search,
-                            contentDescription =
-                                if (isSearchActive) "Close"
-                                else "Search"
+                            if (isSearchActive) Icons.Filled.Close else Icons.Filled.Search,
+                            contentDescription = if (isSearchActive) "Close" else "Search"
                         )
                     }
                 },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
-                        containerColor =
-                            MaterialTheme.colorScheme.background
+                        containerColor = MaterialTheme.colorScheme.background
                     )
             )
 
@@ -125,11 +146,7 @@ fun HabitCategorySelectionScreen(
                     text = selectedCategory.displayName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = 20.dp,
-                            vertical = 4.dp
-                        ),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -159,28 +176,15 @@ fun HabitCategorySelectionScreen(
                 if (subCategories.isEmpty()) {
                     item {
                         Box(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(32.dp),
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment =
-                                    Alignment.CenterHorizontally
-                            ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("🔍", fontSize = 48.sp)
-                                Spacer(
-                                    modifier =
-                                        Modifier.height(
-                                            8.dp
-                                        )
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     "No habits found",
-                                    color =
-                                        MaterialTheme
-                                            .colorScheme
-                                            .onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -202,14 +206,8 @@ fun HabitCategorySelectionScreen(
                         Modifier.shadow(
                             elevation = 8.dp,
                             shape = RoundedCornerShape(24.dp),
-                            ambientColor =
-                                DashboardGradientStart.copy(
-                                    alpha = 0.3f
-                                ),
-                            spotColor =
-                                DashboardGradientStart.copy(
-                                    alpha = 0.3f
-                                )
+                            ambientColor = DashboardGradientStart.copy(alpha = 0.3f),
+                            spotColor = DashboardGradientStart.copy(alpha = 0.3f)
                         ),
                     colors =
                         ButtonDefaults.buttonColors(
@@ -222,11 +220,7 @@ fun HabitCategorySelectionScreen(
                     Text(
                         "Custom Habit",
                         fontWeight = FontWeight.SemiBold,
-                        modifier =
-                            Modifier.padding(
-                                horizontal = 24.dp,
-                                vertical = 4.dp
-                            )
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -290,15 +284,11 @@ private fun CategoryTab(category: HabitCategoryType, isSelected: Boolean, onClic
                         shape = CircleShape,
                         ambientColor =
                             if (isSelected)
-                                DashboardGradientStart.copy(
-                                    alpha = 0.4f
-                                )
+                                DashboardGradientStart.copy(alpha = 0.4f)
                             else Color.Gray.copy(alpha = 0.2f),
                         spotColor =
                             if (isSelected)
-                                DashboardGradientStart.copy(
-                                    alpha = 0.4f
-                                )
+                                DashboardGradientStart.copy(alpha = 0.4f)
                             else Color.Gray.copy(alpha = 0.2f)
                     )
                     .clip(CircleShape)
@@ -311,9 +301,7 @@ private fun CategoryTab(category: HabitCategoryType, isSelected: Boolean, onClic
                                 )
                             )
                         } else {
-                            Brush.verticalGradient(
-                                listOf(Color.White, Color.White)
-                            )
+                            Brush.verticalGradient(listOf(Color.White, Color.White))
                         }
                     ),
             contentAlignment = Alignment.Center
@@ -330,9 +318,7 @@ private fun SubCategoryItem(subCategory: HabitSubCategory, onClick: () -> Unit) 
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

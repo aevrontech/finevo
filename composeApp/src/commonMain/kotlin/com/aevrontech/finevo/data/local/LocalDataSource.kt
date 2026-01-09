@@ -107,58 +107,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
             )
         }
 
-    suspend fun insertDefaultCategories() =
-        withContext(Dispatchers.IO) {
-            val now = Clock.System.now().toEpochMilliseconds()
-            val expenseCategories =
-                listOf(
-                    Triple("cat_food", "Food & Dining", "🍔" to "#FF5252"),
-                    Triple("cat_transport", "Transportation", "🚗" to "#FF9800"),
-                    Triple("cat_shopping", "Shopping", "🛍️" to "#E91E63"),
-                    Triple("cat_bills", "Bills & Utilities", "📄" to "#9C27B0"),
-                    Triple("cat_entertainment", "Entertainment", "🎬" to "#673AB7"),
-                    Triple("cat_health", "Health", "💊" to "#4CAF50"),
-                    Triple("cat_education", "Education", "📚" to "#2196F3"),
-                    Triple("cat_other_exp", "Other", "📦" to "#607D8B")
-                )
-
-            expenseCategories.forEachIndexed { index, (id, name, iconColor) ->
-                queries.insertCategory(
-                    id = id,
-                    user_id = null,
-                    name = name,
-                    icon = iconColor.first,
-                    color = iconColor.second,
-                    type = "EXPENSE",
-                    is_default = 1L,
-                    sort_order = index.toLong(),
-                    created_at = now
-                )
-            }
-
-            val incomeCategories =
-                listOf(
-                    Triple("cat_salary", "Salary", "💰" to "#4CAF50"),
-                    Triple("cat_freelance", "Freelance", "💼" to "#8BC34A"),
-                    Triple("cat_investment", "Investment", "📈" to "#00BCD4"),
-                    Triple("cat_gift", "Gift", "🎁" to "#FF4081"),
-                    Triple("cat_other_inc", "Other", "💵" to "#607D8B")
-                )
-
-            incomeCategories.forEachIndexed { index, (id, name, iconColor) ->
-                queries.insertCategory(
-                    id = id,
-                    user_id = null,
-                    name = name,
-                    icon = iconColor.first,
-                    color = iconColor.second,
-                    type = "INCOME",
-                    is_default = 1L,
-                    sort_order = index.toLong(),
-                    created_at = now
-                )
-            }
-        }
+    // insertDefaultCategories is now handled by SQL migration (2.sqm)
 
     suspend fun deleteCategory(id: String) =
         withContext(Dispatchers.IO) { queries.deleteCategory(id) }

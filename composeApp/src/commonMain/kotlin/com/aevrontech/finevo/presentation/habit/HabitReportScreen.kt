@@ -1,6 +1,5 @@
 package com.aevrontech.finevo.presentation.habit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,9 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.presentation.BackHandler
 import com.aevrontech.finevo.domain.model.Habit
 import com.aevrontech.finevo.domain.model.UserTier
 import com.aevrontech.finevo.ui.theme.*
@@ -60,7 +60,7 @@ fun HabitReportScreen(
         mutableStateOf(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date)
     }
 
-    BackHandler { onDismiss() }
+    BackHandler(enabled = true) { onDismiss() }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -317,7 +317,11 @@ private fun PeriodNavigator(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onPreviousPeriod) {
-            Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Previous", tint = Primary)
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = "Previous",
+                tint = Primary
+            )
         }
 
         Box(
@@ -328,7 +332,11 @@ private fun PeriodNavigator(
         ) { Text(text = periodText, fontWeight = FontWeight.Medium, fontSize = 16.sp) }
 
         IconButton(onClick = onNextPeriod) {
-            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Next", tint = Primary)
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Next",
+                tint = Primary
+            )
         }
     }
 }
@@ -523,7 +531,7 @@ private fun MonthlyHabitCard(habit: Habit, currentDate: LocalDate) {
 
 @Composable
 private fun MiniCalendarGrid(currentDate: LocalDate, habitColor: Color) {
-    val daysInMonth = currentDate.month.length(isLeapYear(currentDate.year))
+    val daysInMonth = getDaysInMonth(currentDate.month, currentDate.year)
     val firstDayOfMonth = LocalDate(currentDate.year, currentDate.month, 1)
     val startDayOfWeek = firstDayOfMonth.dayOfWeek.ordinal
 
@@ -717,4 +725,18 @@ private fun getNextPeriodDate(date: LocalDate, period: ReportPeriod): LocalDate 
 
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+private fun getDaysInMonth(month: Month, year: Int): Int {
+    return when (month) {
+        Month.JANUARY,
+        Month.MARCH,
+        Month.MAY,
+        Month.JULY,
+        Month.AUGUST,
+        Month.OCTOBER,
+        Month.DECEMBER -> 31
+        Month.APRIL, Month.JUNE, Month.SEPTEMBER, Month.NOVEMBER -> 30
+        Month.FEBRUARY -> if (isLeapYear(year)) 29 else 28
+    }
 }

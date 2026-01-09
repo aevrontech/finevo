@@ -89,7 +89,9 @@ class LoginScreen : Screen {
 
         var email by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
+        var confirmPassword by remember { mutableStateOf("") }
         var passwordVisible by remember { mutableStateOf(false) }
+        var confirmPasswordVisible by remember { mutableStateOf(false) }
         var isLoginMode by remember { mutableStateOf(true) }
 
         // Navigate on success
@@ -144,15 +146,11 @@ class LoginScreen : Screen {
                         snackbarData = data,
                         containerColor =
                             if (uiState.error != null)
-                                MaterialTheme.colorScheme
-                                    .errorContainer
-                            else
-                                MaterialTheme.colorScheme
-                                    .surfaceVariant,
+                                MaterialTheme.colorScheme.errorContainer
+                            else MaterialTheme.colorScheme.surfaceVariant,
                         contentColor =
                             if (uiState.error != null)
-                                MaterialTheme.colorScheme
-                                    .onErrorContainer
+                                MaterialTheme.colorScheme.onErrorContainer
                             else MaterialTheme.colorScheme.onSurface,
                         actionColor =
                             if (uiState.error != null) Error
@@ -189,9 +187,7 @@ class LoginScreen : Screen {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text =
-                            if (isLoginMode) "Welcome back!"
-                            else "Create your account",
+                        text = if (isLoginMode) "Welcome back!" else "Create your account",
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -203,12 +199,7 @@ class LoginScreen : Screen {
                         value = email,
                         onValueChange = { email = it },
                         label = { Text("Email") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Email,
-                                contentDescription = null
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         keyboardOptions =
                             KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
@@ -216,40 +207,26 @@ class LoginScreen : Screen {
                             ),
                         keyboardActions =
                             KeyboardActions(
-                                onNext = {
-                                    focusManager.moveFocus(
-                                        FocusDirection.Down
-                                    )
-                                }
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
                             ),
                         singleLine = true,
                         isError = uiState.error != null,
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
-                                focusedTextColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurface,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 unfocusedTextColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurface,
-                                focusedBorderColor =
-                                    DashboardGradientStart,
+                                    MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = DashboardGradientStart,
                                 unfocusedBorderColor =
-                                    MaterialTheme.colorScheme
-                                        .outline,
-                                focusedLabelColor =
-                                    DashboardGradientStart,
+                                    MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = DashboardGradientStart,
                                 unfocusedLabelColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurfaceVariant,
-                                cursorColor =
-                                    DashboardGradientStart,
-                                focusedLeadingIconColor =
-                                    DashboardGradientStart,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                cursorColor = DashboardGradientStart,
+                                focusedLeadingIconColor = DashboardGradientStart,
                                 unfocusedLeadingIconColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                 errorBorderColor = Error
                             ),
                         shape = RoundedCornerShape(12.dp)
@@ -262,59 +239,39 @@ class LoginScreen : Screen {
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Password") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = null
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         trailingIcon = {
-                            IconButton(
-                                onClick = {
-                                    passwordVisible =
-                                        !passwordVisible
-                                }
-                            ) {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
-                                    if (passwordVisible)
-                                        Icons.Default.Lock
+                                    if (passwordVisible) Icons.Default.Lock
                                     else Icons.Default.Person,
                                     contentDescription =
-                                        if (passwordVisible)
-                                            "Hide password"
+                                        if (passwordVisible) "Hide password"
                                         else "Show password"
                                 )
                             }
                         },
                         visualTransformation =
-                            if (passwordVisible)
-                                VisualTransformation.None
+                            if (passwordVisible) VisualTransformation.None
                             else PasswordVisualTransformation(),
                         keyboardOptions =
                             KeyboardOptions(
-                                keyboardType =
-                                    KeyboardType.Password,
-                                imeAction = ImeAction.Done
+                                keyboardType = KeyboardType.Password,
+                                imeAction =
+                                    if (isLoginMode) ImeAction.Done
+                                    else ImeAction.Next
                             ),
                         keyboardActions =
                             KeyboardActions(
+                                onNext = {
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                },
                                 onDone = {
                                     focusManager.clearFocus()
-                                    if (email.isNotBlank() &&
-                                        password.isNotBlank()
-                                    ) {
+                                    if (email.isNotBlank() && password.isNotBlank()) {
                                         if (isLoginMode)
-                                            viewModel
-                                                .signIn(
-                                                    email,
-                                                    password
-                                                )
-                                        else
-                                            viewModel
-                                                .signUp(
-                                                    email,
-                                                    password
-                                                )
+                                            viewModel.signIn(email, password)
+                                        else viewModel.signUp(email, password)
                                     }
                                 }
                             ),
@@ -323,39 +280,113 @@ class LoginScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             OutlinedTextFieldDefaults.colors(
-                                focusedTextColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurface,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 unfocusedTextColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurface,
-                                focusedBorderColor =
-                                    DashboardGradientStart,
+                                    MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = DashboardGradientStart,
                                 unfocusedBorderColor =
-                                    MaterialTheme.colorScheme
-                                        .outline,
-                                focusedLabelColor =
-                                    DashboardGradientStart,
+                                    MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = DashboardGradientStart,
                                 unfocusedLabelColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurfaceVariant,
-                                cursorColor =
-                                    DashboardGradientStart,
-                                focusedLeadingIconColor =
-                                    DashboardGradientStart,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                cursorColor = DashboardGradientStart,
+                                focusedLeadingIconColor = DashboardGradientStart,
                                 unfocusedLeadingIconColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                 focusedTrailingIconColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                 unfocusedTrailingIconColor =
-                                    MaterialTheme.colorScheme
-                                        .onSurfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
                                 errorBorderColor = Error
                             ),
                         shape = RoundedCornerShape(12.dp)
                     )
+
+                    if (!isLoginMode) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Confirm Password field
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            label = { Text("Confirm Password") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null)
+                            },
+                            trailingIcon = {
+                                IconButton(
+                                    onClick = {
+                                        confirmPasswordVisible = !confirmPasswordVisible
+                                    }
+                                ) {
+                                    Icon(
+                                        if (confirmPasswordVisible) Icons.Default.Lock
+                                        else Icons.Default.Person,
+                                        contentDescription =
+                                            if (confirmPasswordVisible) "Hide password"
+                                            else "Show password"
+                                    )
+                                }
+                            },
+                            visualTransformation =
+                                if (confirmPasswordVisible) VisualTransformation.None
+                                else PasswordVisualTransformation(),
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done
+                                ),
+                            keyboardActions =
+                                KeyboardActions(
+                                    onDone = {
+                                        focusManager.clearFocus()
+                                        if (email.isNotBlank() &&
+                                            password.isNotBlank() &&
+                                            confirmPassword.isNotBlank()
+                                        ) {
+                                            if (password != confirmPassword) {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(
+                                                        "Passwords do not match"
+                                                    )
+                                                }
+                                            } else {
+                                                viewModel.signUp(email, password)
+                                            }
+                                        }
+                                    }
+                                ),
+                            singleLine = true,
+                            isError =
+                                uiState.error != null ||
+                                    (confirmPassword.isNotBlank() &&
+                                        password != confirmPassword),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor =
+                                        MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor =
+                                        MaterialTheme.colorScheme.onSurface,
+                                    focusedBorderColor = DashboardGradientStart,
+                                    unfocusedBorderColor =
+                                        MaterialTheme.colorScheme.outline,
+                                    focusedLabelColor = DashboardGradientStart,
+                                    unfocusedLabelColor =
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    cursorColor = DashboardGradientStart,
+                                    focusedLeadingIconColor = DashboardGradientStart,
+                                    unfocusedLeadingIconColor =
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTrailingIconColor =
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unfocusedTrailingIconColor =
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    errorBorderColor = Error
+                                ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
 
                     if (isLoginMode) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -363,15 +394,12 @@ class LoginScreen : Screen {
                         TextButton(
                             onClick = {
                                 if (email.isNotBlank()) {
-                                    viewModel.sendPasswordReset(
-                                        email
-                                    )
+                                    viewModel.sendPasswordReset(email)
                                 } else {
                                     scope.launch {
-                                        snackbarHostState
-                                            .showSnackbar(
-                                                "Please enter your email first"
-                                            )
+                                        snackbarHostState.showSnackbar(
+                                            "Please enter your email first"
+                                        )
                                     }
                                 }
                             },
@@ -380,11 +408,9 @@ class LoginScreen : Screen {
                             Text(
                                 text = "Forgot password?",
                                 style =
-                                    MaterialTheme.typography
-                                        .bodyMedium.copy(
-                                            brush =
-                                                dashboardGradient
-                                        ),
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        brush = dashboardGradient
+                                    ),
                                 fontSize = 14.sp
                             )
                         }
@@ -395,23 +421,17 @@ class LoginScreen : Screen {
                     // Inline error display
                     uiState.error?.let { error ->
                         Card(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(bottom = 16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                             colors =
                                 CardDefaults.cardColors(
                                     containerColor =
-                                        MaterialTheme
-                                            .colorScheme
-                                            .errorContainer
+                                        MaterialTheme.colorScheme.errorContainer
                                 ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
                                 text = error,
-                                color =
-                                    MaterialTheme.colorScheme
-                                        .onErrorContainer,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(12.dp)
@@ -425,22 +445,26 @@ class LoginScreen : Screen {
                             if (isLoginMode) {
                                 viewModel.signIn(email, password)
                             } else {
-                                viewModel.signUp(email, password)
+                                if (password != confirmPassword) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Passwords do not match")
+                                    }
+                                } else {
+                                    viewModel.signUp(email, password)
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         enabled =
                             !uiState.isLoading &&
                                 email.isNotBlank() &&
-                                password.isNotBlank(),
+                                password.isNotBlank() &&
+                                (isLoginMode || confirmPassword.isNotBlank()),
                         colors =
                             ButtonDefaults.buttonColors(
-                                containerColor =
-                                    DashboardGradientMid,
+                                containerColor = DashboardGradientMid,
                                 disabledContainerColor =
-                                    DashboardGradientMid.copy(
-                                        alpha = 0.4f
-                                    )
+                                    DashboardGradientMid.copy(alpha = 0.4f)
                             ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -451,9 +475,7 @@ class LoginScreen : Screen {
                             )
                         } else {
                             Text(
-                                text =
-                                    if (isLoginMode) "Sign In"
-                                    else "Create Account",
+                                text = if (isLoginMode) "Sign In" else "Create Account",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White
@@ -474,9 +496,7 @@ class LoginScreen : Screen {
                         )
                         Text(
                             text = "  or continue with  ",
-                            color =
-                                MaterialTheme.colorScheme
-                                    .onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp
                         )
                         HorizontalDivider(
@@ -490,8 +510,7 @@ class LoginScreen : Screen {
                     // Social login buttons - Google only on Android, both on
                     // iOS
                     val socialLoginHandler = remember { SocialLoginHandler() }
-                    val activityContext =
-                        com.aevrontech.finevo.core.util.getActivityContext()
+                    val activityContext = com.aevrontech.finevo.core.util.getActivityContext()
 
                     if (Platform.isAndroid) {
                         // Android: Only Google Sign-In (full width)
@@ -499,35 +518,21 @@ class LoginScreen : Screen {
                             onClick = {
                                 viewModel.onSocialLoginStarted()
                                 scope.launch {
-                                    val activity =
-                                        activityContext
+                                    val activity = activityContext
                                     if (activity != null) {
-                                        socialLoginHandler
-                                            .signInWithGoogle(
-                                                activity =
-                                                    activity,
-                                                onSuccess = { idToken,
-                                                              nonce
-                                                    ->
-                                                    viewModel
-                                                        .signInWithGoogle(
-                                                            idToken,
-                                                            nonce
-                                                        )
-                                                },
-                                                onError = { error
-                                                    ->
-                                                    viewModel
-                                                        .onSocialLoginError(
-                                                            error
-                                                        )
-                                                }
-                                            )
+                                        socialLoginHandler.signInWithGoogle(
+                                            activity = activity,
+                                            onSuccess = { idToken, nonce ->
+                                                viewModel.signInWithGoogle(idToken, nonce)
+                                            },
+                                            onError = { error ->
+                                                viewModel.onSocialLoginError(error)
+                                            }
+                                        )
                                     } else {
-                                        viewModel
-                                            .onSocialLoginError(
-                                                "Unable to access activity for sign-in"
-                                            )
+                                        viewModel.onSocialLoginError(
+                                            "Unable to access activity for sign-in"
+                                        )
                                     }
                                 }
                             },
@@ -538,20 +543,16 @@ class LoginScreen : Screen {
                         // iOS: Both Google and Apple
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             GoogleSignInButton(
                                 onClick = {
-                                    viewModel
-                                        .onSocialLoginStarted()
+                                    viewModel.onSocialLoginStarted()
                                     scope.launch {
-                                        snackbarHostState
-                                            .showSnackbar(
-                                                "Google Sign-In requires additional setup on iOS"
-                                            )
-                                        viewModel
-                                            .clearError()
+                                        snackbarHostState.showSnackbar(
+                                            "Google Sign-In requires additional setup on iOS"
+                                        )
+                                        viewModel.clearError()
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -560,31 +561,17 @@ class LoginScreen : Screen {
 
                             AppleSignInButton(
                                 onClick = {
-                                    viewModel
-                                        .onSocialLoginStarted()
+                                    viewModel.onSocialLoginStarted()
                                     scope.launch {
-                                        socialLoginHandler
-                                            .signInWithApple(
-                                                activity =
-                                                    activityContext
-                                                        ?: Unit,
-                                                onSuccess = { idToken,
-                                                              nonce
-                                                    ->
-                                                    viewModel
-                                                        .signInWithApple(
-                                                            idToken,
-                                                            nonce
-                                                        )
-                                                },
-                                                onError = { error
-                                                    ->
-                                                    viewModel
-                                                        .onSocialLoginError(
-                                                            error
-                                                        )
-                                                }
-                                            )
+                                        socialLoginHandler.signInWithApple(
+                                            activity = activityContext ?: Unit,
+                                            onSuccess = { idToken, nonce ->
+                                                viewModel.signInWithApple(idToken, nonce)
+                                            },
+                                            onError = { error ->
+                                                viewModel.onSocialLoginError(error)
+                                            }
+                                        )
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -599,12 +586,9 @@ class LoginScreen : Screen {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text =
-                                if (isLoginMode)
-                                    "Don't have an account?"
+                                if (isLoginMode) "Don't have an account?"
                                 else "Already have an account?",
-                            color =
-                                MaterialTheme.colorScheme
-                                    .onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         TextButton(
                             onClick = {
@@ -613,15 +597,11 @@ class LoginScreen : Screen {
                             }
                         ) {
                             Text(
-                                text =
-                                    if (isLoginMode) "Sign Up"
-                                    else "Sign In",
+                                text = if (isLoginMode) "Sign Up" else "Sign In",
                                 style =
-                                    MaterialTheme.typography
-                                        .bodyLarge.copy(
-                                            brush =
-                                                dashboardGradient
-                                        ),
+                                    MaterialTheme.typography.bodyLarge.copy(
+                                        brush = dashboardGradient
+                                    ),
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -664,33 +644,13 @@ private fun GoogleSignInButton(
 
                 // Official Google "G" logo approximation
                 // Blue segment (right side, top-right of G)
-                drawArc(
-                    color = googleBlue,
-                    startAngle = -45f,
-                    sweepAngle = 90f,
-                    useCenter = true
-                )
+                drawArc(color = googleBlue, startAngle = -45f, sweepAngle = 90f, useCenter = true)
                 // Green segment (bottom-right of G)
-                drawArc(
-                    color = googleGreen,
-                    startAngle = 45f,
-                    sweepAngle = 90f,
-                    useCenter = true
-                )
+                drawArc(color = googleGreen, startAngle = 45f, sweepAngle = 90f, useCenter = true)
                 // Yellow segment (bottom-left of G)
-                drawArc(
-                    color = googleYellow,
-                    startAngle = 135f,
-                    sweepAngle = 90f,
-                    useCenter = true
-                )
+                drawArc(color = googleYellow, startAngle = 135f, sweepAngle = 90f, useCenter = true)
                 // Red segment (top-left of G)
-                drawArc(
-                    color = googleRed,
-                    startAngle = 225f,
-                    sweepAngle = 90f,
-                    useCenter = true
-                )
+                drawArc(color = googleRed, startAngle = 225f, sweepAngle = 90f, useCenter = true)
                 // Inner white circle to create the ring effect
                 drawCircle(color = Color.White, radius = size.minDimension * 0.35f)
                 // Blue horizontal bar for the "G" shape

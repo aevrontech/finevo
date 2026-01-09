@@ -81,6 +81,12 @@ import com.aevrontech.finevo.ui.theme.IncomeCardAccent
 import com.aevrontech.finevo.ui.theme.IncomeCardBg
 import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
 import com.aevrontech.finevo.ui.theme.Primary
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -88,12 +94,6 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.minus
-import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun TimeFilterTabs(
@@ -127,9 +127,12 @@ fun TimeFilterTabs(
             Box(
                 modifier =
                     Modifier.weight(1f)
-                        .clip(RoundedCornerShape(20.dp)) // Pill shape for item
+                        .clip(
+                            RoundedCornerShape(20.dp)
+                        ) // Pill shape for item
                         .then(
-                            if (isSelected) Modifier.background(gradientBrush)
+                            if (isSelected)
+                                Modifier.background(gradientBrush)
                             else Modifier.background(Color.Transparent)
                         )
                         .clickable { onPeriodSelected(period) }
@@ -139,7 +142,9 @@ fun TimeFilterTabs(
                 Text(
                     text = period.label,
                     fontSize = 14.sp,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    fontWeight =
+                        if (isSelected) FontWeight.SemiBold
+                        else FontWeight.Medium,
                     color =
                         if (isSelected) Color.White
                         else Color(0xFF64748B) // Slate Gray for unselected
@@ -173,7 +178,10 @@ fun IncomeExpenseCards(
     val displayExpensePercentage = (expensePercentageVal * 100).roundToInt()
     val displayIncomePercentage = (incomePercentageVal * 100).roundToInt()
 
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         // Income Card
         SummaryTypeCard(
             title = "Income",
@@ -192,7 +200,8 @@ fun IncomeExpenseCards(
         SummaryTypeCard(
             title = "Expense",
             amount = expense,
-            percentage = expensePercentageVal, // Can go > 1.0, progress indicator handles
+            percentage =
+                expensePercentageVal, // Can go > 1.0, progress indicator handles
             // scaling
             // usually
             displayPercentage = displayExpensePercentage,
@@ -252,12 +261,14 @@ private fun SummaryTypeCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "$currencySymbol${amount.formatDecimal(2, useGrouping = true)}",
+                    text =
+                        "$currencySymbol${amount.formatDecimal(2, useGrouping = true)}",
                     color = amountColor,
                     fontSize = 12.sp, // Reduced from 20.sp to fit millions
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    overflow =
+                        androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
@@ -359,7 +370,12 @@ fun GradientBarChart(
                         color = labelColor,
                         modifier =
                             Modifier.align(Alignment.TopEnd)
-                                .fillMaxHeight(verticalOffset.coerceAtLeast(0.001f))
+                                .fillMaxHeight(
+                                    verticalOffset
+                                        .coerceAtLeast(
+                                            0.001f
+                                        )
+                                )
                                 .wrapContentHeight(Alignment.Bottom)
                                 .offset(y = 6.dp)
                                 .padding(end = 4.dp)
@@ -373,17 +389,24 @@ fun GradientBarChart(
                     Modifier.weight(1f)
                         .fillMaxHeight()
                         .onGloballyPositioned { coordinates ->
-                            chartWidth = coordinates.size.width.toFloat()
+                            chartWidth =
+                                coordinates.size.width.toFloat()
                         }
                         .pointerInput(data.size) {
                             detectTapGestures(
                                 onPress = { offset ->
                                     if (data.isNotEmpty()) {
-                                        val barSlotWidth = chartWidth / data.size
+                                        val barSlotWidth =
+                                            chartWidth /
+                                                data.size
                                         val index =
-                                            (offset.x / barSlotWidth)
+                                            (offset.x /
+                                                barSlotWidth)
                                                 .toInt()
-                                                .coerceIn(0, data.lastIndex)
+                                                .coerceIn(
+                                                    0,
+                                                    data.lastIndex
+                                                )
                                         touchedIndex = index
                                         tryAwaitRelease()
                                         touchedIndex = null
@@ -395,23 +418,37 @@ fun GradientBarChart(
                             detectHorizontalDragGestures(
                                 onDragStart = { offset ->
                                     if (data.isNotEmpty()) {
-                                        val barSlotWidth = chartWidth / data.size
+                                        val barSlotWidth =
+                                            chartWidth /
+                                                data.size
                                         val index =
-                                            (offset.x / barSlotWidth)
+                                            (offset.x /
+                                                barSlotWidth)
                                                 .toInt()
-                                                .coerceIn(0, data.lastIndex)
+                                                .coerceIn(
+                                                    0,
+                                                    data.lastIndex
+                                                )
                                         touchedIndex = index
                                     }
                                 },
                                 onDragEnd = { touchedIndex = null },
-                                onDragCancel = { touchedIndex = null }
+                                onDragCancel = {
+                                    touchedIndex = null
+                                }
                             ) { change, _ ->
                                 if (data.isNotEmpty()) {
-                                    val barSlotWidth = chartWidth / data.size
+                                    val barSlotWidth =
+                                        chartWidth /
+                                            data.size
                                     val index =
-                                        (change.position.x / barSlotWidth)
+                                        (change.position.x /
+                                            barSlotWidth)
                                             .toInt()
-                                            .coerceIn(0, data.lastIndex)
+                                            .coerceIn(
+                                                0,
+                                                data.lastIndex
+                                            )
                                     touchedIndex = index
                                 }
                             }
@@ -419,7 +456,11 @@ fun GradientBarChart(
             ) {
                 // Canvas for precise bar rendering - bars drawn from bottom (0) up
                 val gradientColors =
-                    listOf(DashboardGradientStart, DashboardGradientMid, DashboardGradientEnd)
+                    listOf(
+                        DashboardGradientStart,
+                        DashboardGradientMid,
+                        DashboardGradientEnd
+                    )
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val canvasWidth = size.width
                     val canvasHeight = size.height
@@ -441,13 +482,20 @@ fun GradientBarChart(
 
                     // Draw bars - bottom edge at canvasHeight (the 0 line)
                     data.forEachIndexed { index, item ->
-                        val heightRatio = (item.value / yAxisMax).toFloat() * animatedProgress.value
+                        val heightRatio =
+                            (item.value / yAxisMax).toFloat() *
+                                animatedProgress.value
                         val barHeight = canvasHeight * heightRatio
                         val isTouched = touchedIndex == index
 
                         if (item.value > 0) {
-                            val actualBarWidth = if (isTouched) barWidthPx + 8f else barWidthPx
-                            val barLeft = barSlotWidth * index + (barSlotWidth - actualBarWidth) / 2
+                            val actualBarWidth =
+                                if (isTouched) barWidthPx + 8f
+                                else barWidthPx
+                            val barLeft =
+                                barSlotWidth * index +
+                                    (barSlotWidth -
+                                        actualBarWidth) / 2
                             val barTop = canvasHeight - barHeight
                             val barAlpha = if (isTouched) 1f else 0.7f
 
@@ -455,7 +503,10 @@ fun GradientBarChart(
                                 Brush.verticalGradient(
                                     colors =
                                         gradientColors.map {
-                                            it.copy(alpha = barAlpha)
+                                            it.copy(
+                                                alpha =
+                                                    barAlpha
+                                            )
                                         },
                                     startY = barTop,
                                     endY = canvasHeight
@@ -465,15 +516,17 @@ fun GradientBarChart(
                                 brush = barBrush,
                                 topLeft = Offset(barLeft, barTop),
                                 size =
-                                    androidx.compose.ui.geometry.Size(
-                                        actualBarWidth,
-                                        barHeight
-                                    ),
+                                    androidx.compose.ui.geometry
+                                        .Size(
+                                            actualBarWidth,
+                                            barHeight
+                                        ),
                                 cornerRadius =
-                                    androidx.compose.ui.geometry.CornerRadius(
-                                        cornerRadius,
-                                        cornerRadius
-                                    )
+                                    androidx.compose.ui.geometry
+                                        .CornerRadius(
+                                            cornerRadius,
+                                            cornerRadius
+                                        )
                             )
                         }
                     }
@@ -484,27 +537,45 @@ fun GradientBarChart(
                     val index = touchedIndex!!
                     if (index in data.indices) {
                         val item = data[index]
-                        Box(modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) {
+                        Box(
+                            modifier =
+                                Modifier.align(Alignment.TopCenter)
+                                    .padding(top = 8.dp)
+                        ) {
                             Card(
                                 colors =
                                     CardDefaults.cardColors(
                                         containerColor =
-                                            MaterialTheme.colorScheme.surface
+                                            MaterialTheme
+                                                .colorScheme
+                                                .surface
                                     ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                elevation =
+                                    CardDefaults.cardElevation(
+                                        defaultElevation =
+                                            4.dp
+                                    ),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    modifier =
+                                        Modifier.padding(
+                                            8.dp
+                                        ),
+                                    horizontalAlignment =
+                                        Alignment
+                                            .CenterHorizontally
                                 ) {
                                     // Show proper formatted
                                     // label in tooltip (e.g. "1
                                     // Jan" for
                                     // Month view)
                                     val tooltipLabel =
-                                        if (period == FilterPeriod.MONTH &&
-                                            monthPrefix.isNotEmpty()
+                                        if (period ==
+                                            FilterPeriod
+                                                .MONTH &&
+                                            monthPrefix
+                                                .isNotEmpty()
                                         ) {
                                             "$monthPrefix ${item.label}"
                                         } else {
@@ -513,13 +584,16 @@ fun GradientBarChart(
                                     Text(
                                         text = tooltipLabel,
                                         fontSize = 12.sp,
-                                        color = OnSurfaceVariant
+                                        color =
+                                            OnSurfaceVariant
                                     )
                                     Text(
                                         text =
                                             "$${item.value.formatDecimal(2, useGrouping = true)}",
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight =
+                                            FontWeight
+                                                .Bold,
                                         color = Primary
                                     )
                                 }
@@ -532,7 +606,8 @@ fun GradientBarChart(
 
         // X-Axis Labels Row (below 0 baseline)
         Row(
-            modifier = Modifier.fillMaxWidth().height(labelHeight).padding(start = 36.dp),
+            modifier =
+                Modifier.fillMaxWidth().height(labelHeight).padding(start = 36.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -542,12 +617,19 @@ fun GradientBarChart(
                     if (period == FilterPeriod.MONTH) {
                         val day = item.label.toIntOrNull()
                         day != null &&
-                            (day == 1 || day == 8 || day == 15 || day == 22 || day == 29)
+                            (day == 1 ||
+                                day == 8 ||
+                                day == 15 ||
+                                day == 22 ||
+                                day == 29)
                     } else {
                         true
                     }
 
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
                     if (showLabel) {
                         // For Month view, just show day number to save
                         // space
@@ -558,13 +640,22 @@ fun GradientBarChart(
                             text = labelText,
                             fontSize = 10.sp,
                             color =
-                                if (isTouched) MaterialTheme.colorScheme.primary
+                                if (isTouched)
+                                    MaterialTheme.colorScheme
+                                        .primary
                                 else labelColor,
                             maxLines = 1,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
+                            textAlign =
+                                androidx.compose.ui.text.style
+                                    .TextAlign.Center,
+                            overflow =
+                                androidx.compose.ui.text.style
+                                    .TextOverflow.Visible,
                             softWrap = false,
-                            modifier = if (rotateLabels) Modifier.rotate(-45f) else Modifier
+                            modifier =
+                                if (rotateLabels)
+                                    Modifier.rotate(-45f)
+                                else Modifier
                         )
                     }
                 }
@@ -610,7 +701,9 @@ fun LineChart(
 
     val lineColor = Primary
     val gradientBrush =
-        Brush.verticalGradient(colors = listOf(lineColor.copy(alpha = 0.3f), Color.Transparent))
+        Brush.verticalGradient(
+            colors = listOf(lineColor.copy(alpha = 0.3f), Color.Transparent)
+        )
     val labelColor = OnSurfaceVariant
 
     // Main Container - Column layout similar to GradientBarChart
@@ -630,9 +723,16 @@ fun LineChart(
                         color = labelColor,
                         modifier =
                             Modifier.align(Alignment.TopEnd)
-                                .fillMaxHeight(verticalOffset.coerceAtLeast(0.001f))
+                                .fillMaxHeight(
+                                    verticalOffset
+                                        .coerceAtLeast(
+                                            0.001f
+                                        )
+                                )
                                 .wrapContentHeight(Alignment.Bottom)
-                                .offset(y = 6.dp) // Match BarChart offset
+                                .offset(
+                                    y = 6.dp
+                                ) // Match BarChart offset
                                 .padding(end = 4.dp)
                     )
                 }
@@ -646,24 +746,30 @@ fun LineChart(
                             .pointerInput(data.size) {
                                 detectTapGestures(
                                     onPress = { offset ->
-                                        if (data.isNotEmpty()) {
+                                        if (data.isNotEmpty()
+                                        ) {
                                             val spacing =
                                                 size.width /
-                                                    (data.size - 1)
+                                                    (data.size -
+                                                        1)
                                                         .coerceAtLeast(
                                                             1
                                                         )
                                             val index =
-                                                ((offset.x + spacing / 2) /
+                                                ((offset.x +
+                                                    spacing /
+                                                    2) /
                                                     spacing)
                                                     .toInt()
                                                     .coerceIn(
                                                         0,
                                                         data.lastIndex
                                                     )
-                                            touchedIndex = index
+                                            touchedIndex =
+                                                index
                                             tryAwaitRelease()
-                                            touchedIndex = null
+                                            touchedIndex =
+                                                null
                                         }
                                     }
                                 )
@@ -671,36 +777,55 @@ fun LineChart(
                             .pointerInput(data.size) {
                                 detectHorizontalDragGestures(
                                     onDragStart = { offset ->
-                                        if (data.isNotEmpty()) {
+                                        if (data.isNotEmpty()
+                                        ) {
                                             val spacing =
                                                 size.width /
-                                                    (data.size - 1)
+                                                    (data.size -
+                                                        1)
                                                         .coerceAtLeast(
                                                             1
                                                         )
                                             val index =
-                                                ((offset.x + spacing / 2) /
+                                                ((offset.x +
+                                                    spacing /
+                                                    2) /
                                                     spacing)
                                                     .toInt()
                                                     .coerceIn(
                                                         0,
                                                         data.lastIndex
                                                     )
-                                            touchedIndex = index
+                                            touchedIndex =
+                                                index
                                         }
                                     },
-                                    onDragEnd = { touchedIndex = null },
-                                    onDragCancel = { touchedIndex = null }
+                                    onDragEnd = {
+                                        touchedIndex = null
+                                    },
+                                    onDragCancel = {
+                                        touchedIndex = null
+                                    }
                                 ) { change, _ ->
                                     if (data.isNotEmpty()) {
                                         val spacing =
                                             size.width /
-                                                (data.size - 1).coerceAtLeast(1)
+                                                (data.size -
+                                                    1)
+                                                    .coerceAtLeast(
+                                                        1
+                                                    )
                                         val index =
-                                            ((change.position.x + spacing / 2) /
+                                            ((change.position
+                                                .x +
+                                                spacing /
+                                                2) /
                                                 spacing)
                                                 .toInt()
-                                                .coerceIn(0, data.lastIndex)
+                                                .coerceIn(
+                                                    0,
+                                                    data.lastIndex
+                                                )
                                         touchedIndex = index
                                     }
                                 }
@@ -732,7 +857,11 @@ fun LineChart(
                             // height (bottom)
                             // value/max * height = height from bottom
                             // y = height - (value/max * height)
-                            val y = height - ((item.value / yAxisMax) * height).toFloat()
+                            val y =
+                                height -
+                                    ((item.value / yAxisMax) *
+                                        height)
+                                        .toFloat()
                             Offset(x, y)
                         }
 
@@ -744,8 +873,10 @@ fun LineChart(
                         for (i in 0 until points.size - 1) {
                             val p1 = points[i]
                             val p2 = points[i + 1]
-                            val controlPoint1 = Offset(p1.x + spacing / 2, p1.y)
-                            val controlPoint2 = Offset(p2.x - spacing / 2, p2.y)
+                            val controlPoint1 =
+                                Offset(p1.x + spacing / 2, p1.y)
+                            val controlPoint2 =
+                                Offset(p2.x - spacing / 2, p2.y)
                             path.cubicTo(
                                 controlPoint1.x,
                                 controlPoint1.y,
@@ -772,30 +903,51 @@ fun LineChart(
                             path = path,
                             color = lineColor,
                             style =
-                                androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = 2.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
+                                androidx.compose.ui.graphics
+                                    .drawscope.Stroke(
+                                        width = 2.dp.toPx(),
+                                        cap = StrokeCap.Round
+                                    )
                         )
 
                         touchedIndex?.let { index ->
                             val point = points.getOrNull(index)
                             if (point != null) {
                                 drawLine(
-                                    color = OnSurfaceVariant.copy(alpha = 0.5f),
+                                    color =
+                                        OnSurfaceVariant
+                                            .copy(
+                                                alpha =
+                                                    0.5f
+                                            ),
                                     start = Offset(point.x, 0f),
-                                    end = Offset(point.x, height),
+                                    end =
+                                        Offset(
+                                            point.x,
+                                            height
+                                        ),
                                     strokeWidth = 1.dp.toPx(),
                                     pathEffect =
-                                        androidx.compose.ui.graphics.PathEffect
-                                            .dashPathEffect(floatArrayOf(10f, 10f))
+                                        androidx.compose.ui
+                                            .graphics
+                                            .PathEffect
+                                            .dashPathEffect(
+                                                floatArrayOf(
+                                                    10f,
+                                                    10f
+                                                )
+                                            )
                                 )
                                 drawCircle(
                                     color = Color.White,
                                     radius = 6.dp.toPx(),
                                     center = point
                                 )
-                                drawCircle(color = lineColor, radius = 4.dp.toPx(), center = point)
+                                drawCircle(
+                                    color = lineColor,
+                                    radius = 4.dp.toPx(),
+                                    center = point
+                                )
                             }
                         }
                     }
@@ -810,32 +962,51 @@ fun LineChart(
                                 FilterPeriod.DAY -> item.label
                                 FilterPeriod.WEEK -> item.label
                                 FilterPeriod.YEAR -> item.label
-                                FilterPeriod.MONTH -> "$monthName ${item.label}"
+                                FilterPeriod.MONTH ->
+                                    "$monthName ${item.label}"
                             }
-                        Box(modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) {
+                        Box(
+                            modifier =
+                                Modifier.align(Alignment.TopCenter)
+                                    .padding(top = 8.dp)
+                        ) {
                             Card(
                                 colors =
                                     CardDefaults.cardColors(
                                         containerColor =
-                                            MaterialTheme.colorScheme.surface
+                                            MaterialTheme
+                                                .colorScheme
+                                                .surface
                                     ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                elevation =
+                                    CardDefaults.cardElevation(
+                                        defaultElevation =
+                                            4.dp
+                                    ),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    modifier =
+                                        Modifier.padding(
+                                            8.dp
+                                        ),
+                                    horizontalAlignment =
+                                        Alignment
+                                            .CenterHorizontally
                                 ) {
                                     Text(
                                         text = labelText,
                                         fontSize = 12.sp,
-                                        color = OnSurfaceVariant
+                                        color =
+                                            OnSurfaceVariant
                                     )
                                     Text(
                                         text =
                                             "$${item.value.formatDecimal(2, useGrouping = true)}",
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight =
+                                            FontWeight
+                                                .Bold,
                                         color = Primary
                                     )
                                 }
@@ -916,26 +1087,38 @@ fun StatisticsCard(
                         // Draw "Show Line Chart" icon (Zigzag)
                         Icon(
                             imageVector =
-                                androidx.compose.ui.graphics.vector.ImageVector.Builder(
-                                    defaultWidth = 24.dp,
-                                    defaultHeight = 24.dp,
-                                    viewportWidth = 24f,
-                                    viewportHeight = 24f
-                                )
+                                androidx.compose.ui.graphics.vector
+                                    .ImageVector.Builder(
+                                        defaultWidth =
+                                            24.dp,
+                                        defaultHeight =
+                                            24.dp,
+                                        viewportWidth = 24f,
+                                        viewportHeight = 24f
+                                    )
                                     .run {
                                         addPath(
                                             pathData =
-                                                androidx.compose.ui.graphics
-                                                    .vector.PathParser()
+                                                androidx.compose
+                                                    .ui
+                                                    .graphics
+                                                    .vector
+                                                    .PathParser()
                                                     .parsePathString(
                                                         "M3.5,18.49l6,-6.01l4,4L22,6.92l-1.41,-1.41l-7.09,7.97l-4,-4L2,16.99L3.5,18.49z"
                                                     )
                                                     .toNodes(),
-                                            fillAlpha = 1f,
-                                            strokeAlpha = 1f,
+                                            fillAlpha =
+                                                1f,
+                                            strokeAlpha =
+                                                1f,
                                             fill =
-                                                androidx.compose.ui.graphics
-                                                    .SolidColor(Primary)
+                                                androidx.compose
+                                                    .ui
+                                                    .graphics
+                                                    .SolidColor(
+                                                        Primary
+                                                    )
                                         )
                                         build()
                                     },
@@ -946,26 +1129,38 @@ fun StatisticsCard(
                         // Draw "Show Bar Chart" icon
                         Icon(
                             imageVector =
-                                androidx.compose.ui.graphics.vector.ImageVector.Builder(
-                                    defaultWidth = 24.dp,
-                                    defaultHeight = 24.dp,
-                                    viewportWidth = 24f,
-                                    viewportHeight = 24f
-                                )
+                                androidx.compose.ui.graphics.vector
+                                    .ImageVector.Builder(
+                                        defaultWidth =
+                                            24.dp,
+                                        defaultHeight =
+                                            24.dp,
+                                        viewportWidth = 24f,
+                                        viewportHeight = 24f
+                                    )
                                     .run {
                                         addPath(
                                             pathData =
-                                                androidx.compose.ui.graphics
-                                                    .vector.PathParser()
+                                                androidx.compose
+                                                    .ui
+                                                    .graphics
+                                                    .vector
+                                                    .PathParser()
                                                     .parsePathString(
                                                         "M5,9.2h3V19H5V9.2z M10.6,5h2.8v14h-2.8V5z M16.2,13H19v6h-2.8V13z"
                                                     )
                                                     .toNodes(),
-                                            fillAlpha = 1f,
-                                            strokeAlpha = 1f,
+                                            fillAlpha =
+                                                1f,
+                                            strokeAlpha =
+                                                1f,
                                             fill =
-                                                androidx.compose.ui.graphics
-                                                    .SolidColor(Primary)
+                                                androidx.compose
+                                                    .ui
+                                                    .graphics
+                                                    .SolidColor(
+                                                        Primary
+                                                    )
                                         )
                                         build()
                                     },
@@ -992,7 +1187,9 @@ fun StatisticsCard(
                     // Use Bar Chart
                     // Adjust bar width for Month view (30 bars) to avoid
                     // overlap
-                    val barWidth = if (selectedPeriod == FilterPeriod.MONTH) 6.dp else 16.dp
+                    val barWidth =
+                        if (selectedPeriod == FilterPeriod.MONTH) 6.dp
+                        else 16.dp
 
                     GradientBarChart(
                         data = barChartData,
@@ -1002,7 +1199,8 @@ fun StatisticsCard(
                         rotateLabels = selectedPeriod == FilterPeriod.YEAR,
                         period = selectedPeriod, // Pass period for custom
                         // label logic
-                        monthPrefix = monthName // Pass month name for sparse
+                        monthPrefix =
+                            monthName // Pass month name for sparse
                         // labels
                     )
                 }
@@ -1040,7 +1238,9 @@ fun TransactionHistorySection(
             )
             // 'See all' might be redundant if we show a good amount, but keeping as
             // requested
-            TextButton(onClick = onSeeAllClick) { Text(text = "See all", color = Primary) }
+            TextButton(onClick = onSeeAllClick) {
+                Text(text = "See all", color = Primary)
+            }
         }
 
         Spacer(modifier = Modifier.height(0.dp)) // Reduced gap as requested
@@ -1049,14 +1249,23 @@ fun TransactionHistorySection(
             Box(
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                 contentAlignment = Alignment.Center
-            ) { Text(text = "No transactions here", color = OnSurfaceVariant, fontSize = 14.sp) }
+            ) {
+                Text(
+                    text = "No transactions here",
+                    color = OnSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            }
         } else {
             // Group transactions by Date
             val groupedTransactions = transactions.take(limit).groupBy { it.date }
 
             groupedTransactions.forEach { (date, dailyTransactions) ->
                 // Date Header Logic: Today, Yesterday, or Date
-                val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+                val today =
+                    Clock.System.now()
+                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                        .date
                 val dateLabel =
                     when (date) {
                         today -> "Today"
@@ -1069,7 +1278,8 @@ fun TransactionHistorySection(
                     text = dateLabel,
                     fontSize = 12.sp,
                     color = OnSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+                    modifier =
+                        Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
                 )
 
                 // Card for the Day Group
@@ -1079,27 +1289,46 @@ fun TransactionHistorySection(
                     colors =
                         CardDefaults.cardColors(
                             containerColor =
-                                MaterialTheme.colorScheme.surface // White in Light
+                                MaterialTheme.colorScheme
+                                    .surface // White in Light
                             // Mode
                         ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                    elevation =
+                        CardDefaults.cardElevation(
+                            defaultElevation = 0.5.dp
+                        )
                 ) {
                     Column {
-                        dailyTransactions.forEachIndexed { index, transaction ->
+                        dailyTransactions.forEachIndexed { index,
+                                                           transaction ->
                             TransactionHistoryItem(
                                 transaction = transaction,
                                 availableLabels = availableLabels,
                                 currencySymbol = currencySymbol,
-                                onClick = { onTransactionClick(transaction) }
+                                onClick = {
+                                    onTransactionClick(
+                                        transaction
+                                    )
+                                }
                             )
                             // Divider between items, but not after the
                             // last one
                             if (index < dailyTransactions.lastIndex) {
-                                androidx.compose.material3.HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    thickness = 0.5.dp,
-                                    color = OnSurfaceVariant.copy(alpha = 0.1f)
-                                )
+                                androidx.compose.material3
+                                    .HorizontalDivider(
+                                        modifier =
+                                            Modifier.padding(
+                                                horizontal =
+                                                    16.dp
+                                            ),
+                                        thickness = 0.5.dp,
+                                        color =
+                                            OnSurfaceVariant
+                                                .copy(
+                                                    alpha =
+                                                        0.1f
+                                                )
+                                    )
                             }
                         }
                     }
@@ -1135,7 +1364,8 @@ private fun TransactionHistoryItem(
                     .background(
                         try {
                             val colorString =
-                                (transaction.categoryColor ?: "#42A5F5")
+                                (transaction.categoryColor
+                                    ?: "#42A5F5")
                                     .removePrefix("#")
                             Color(("FF$colorString").toLong(16))
                         } catch (e: Exception) {
@@ -1163,7 +1393,9 @@ private fun TransactionHistoryItem(
                     lineHeight = 15.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp)
+                    modifier =
+                        Modifier.weight(1f, fill = false)
+                            .padding(end = 8.dp)
                 )
 
                 // Amount
@@ -1200,7 +1432,9 @@ private fun TransactionHistoryItem(
                     fontSize = 13.sp,
                     lineHeight = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp)
+                    modifier =
+                        Modifier.weight(1f, fill = false)
+                            .padding(end = 8.dp)
                 )
 
                 // Time
@@ -1225,7 +1459,8 @@ private fun TransactionHistoryItem(
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    overflow =
+                        androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
@@ -1237,27 +1472,51 @@ private fun TransactionHistoryItem(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     transaction.labels.forEach { labelId ->
-                        val label = availableLabels.find { it.id == labelId }
+                        val label =
+                            availableLabels.find { it.id == labelId }
                         if (label != null) {
                             val labelColor =
                                 try {
-                                    val colorString = label.color.removePrefix("#")
-                                    Color(("FF$colorString").toLong(16))
+                                    val colorString =
+                                        label.color
+                                            .removePrefix(
+                                                "#"
+                                            )
+                                    Color(
+                                        ("FF$colorString")
+                                            .toLong(16)
+                                    )
                                 } catch (e: Exception) {
                                     Primary
                                 }
 
                             Box(
                                 modifier =
-                                    Modifier.clip(RoundedCornerShape(4.dp))
-                                        .background(labelColor.copy(alpha = 0.2f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    Modifier.clip(
+                                        RoundedCornerShape(
+                                            4.dp
+                                        )
+                                    )
+                                        .background(
+                                            labelColor
+                                                .copy(
+                                                    alpha =
+                                                        0.2f
+                                                )
+                                        )
+                                        .padding(
+                                            horizontal =
+                                                6.dp,
+                                            vertical =
+                                                2.dp
+                                        )
                             ) {
                                 Text(
                                     text = label.name,
                                     color = labelColor,
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight =
+                                        FontWeight.Medium
                                 )
                             }
                         }
@@ -1367,7 +1626,8 @@ fun CategoryReportSection(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors =
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -1417,10 +1677,12 @@ fun CategoryReportSection(
                 contentAlignment = Alignment.Center
             ) {
                 val currentBreakdown =
-                    if (selectedType == TransactionType.EXPENSE) expenseBreakdown
+                    if (selectedType == TransactionType.EXPENSE)
+                        expenseBreakdown
                     else incomeBreakdown
                 val currentTotal =
-                    if (selectedType == TransactionType.EXPENSE) expenseTotal else incomeTotal
+                    if (selectedType == TransactionType.EXPENSE) expenseTotal
+                    else incomeTotal
 
                 CategoryDonutChartWithIcons(
                     breakdown = currentBreakdown,
@@ -1443,7 +1705,8 @@ fun CategoryReportSection(
             ) {
                 // Box icon
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                    imageVector =
+                        androidx.compose.material.icons.Icons.Default.Add,
                     contentDescription = null,
                     tint = Primary,
                     modifier = Modifier.size(20.dp)
@@ -1500,7 +1763,8 @@ private fun CategorySummaryCard(
                 Text(text = title, fontSize = 12.sp, color = OnSurfaceVariant)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "$currencySymbol ${amount.formatDecimal(2, useGrouping = true)}",
+                    text =
+                        "$currencySymbol ${amount.formatDecimal(2, useGrouping = true)}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = accentColor
@@ -1552,7 +1816,14 @@ private fun CategoryDonutChart(
                     val sweepAngle = ((category.total / total) * 360f).toFloat()
                     val color =
                         try {
-                            Color(("FF" + category.categoryColor.removePrefix("#")).toLong(16))
+                            Color(
+                                ("FF" +
+                                    category.categoryColor
+                                        .removePrefix(
+                                            "#"
+                                        ))
+                                    .toLong(16)
+                            )
                         } catch (e: Exception) {
                             Primary
                         }
@@ -1563,10 +1834,11 @@ private fun CategoryDonutChart(
                         sweepAngle = sweepAngle.coerceAtLeast(1f),
                         useCenter = false,
                         style =
-                            androidx.compose.ui.graphics.drawscope.Stroke(
-                                width = strokePx,
-                                cap = StrokeCap.Butt
-                            )
+                            androidx.compose.ui.graphics.drawscope
+                                .Stroke(
+                                    width = strokePx,
+                                    cap = StrokeCap.Butt
+                                )
                     )
                     startAngle += sweepAngle
                 }
@@ -1651,8 +1923,11 @@ private fun CategoryDonutChartWithIcons(
                     lastAngle = adjustedAngle
 
                     val data =
-                        Triple(category, currentStart.toFloat(), sweep.toFloat()) to
-                            adjustedAngle
+                        Triple(
+                            category,
+                            currentStart.toFloat(),
+                            sweep.toFloat()
+                        ) to adjustedAngle
                     currentStart += sweep
                     data
                 }
@@ -1668,10 +1943,15 @@ private fun CategoryDonutChartWithIcons(
                                 val dx = offset.x - size.width / 2
                                 val dy = offset.y - size.height / 2
                                 val angle =
-                                    (atan2(dy.toDouble(), dx.toDouble()) * 180 /
-                                        PI)
+                                    (atan2(
+                                        dy.toDouble(),
+                                        dx.toDouble()
+                                    ) * 180 / PI)
                                 selectedCategory =
-                                    getCategoryAtAngle(angle, layoutData)
+                                    getCategoryAtAngle(
+                                        angle,
+                                        layoutData
+                                    )
                             },
                             onTap = { selectedCategory = null }
                         )
@@ -1682,20 +1962,30 @@ private fun CategoryDonutChartWithIcons(
                                 val dx = offset.x - size.width / 2
                                 val dy = offset.y - size.height / 2
                                 val angle =
-                                    (atan2(dy.toDouble(), dx.toDouble()) * 180 /
-                                        PI)
+                                    (atan2(
+                                        dy.toDouble(),
+                                        dx.toDouble()
+                                    ) * 180 / PI)
                                 selectedCategory =
-                                    getCategoryAtAngle(angle, layoutData)
+                                    getCategoryAtAngle(
+                                        angle,
+                                        layoutData
+                                    )
                             },
                             onDrag = { change, _ ->
                                 val offset = change.position
                                 val dx = offset.x - size.width / 2
                                 val dy = offset.y - size.height / 2
                                 val angle =
-                                    (atan2(dy.toDouble(), dx.toDouble()) * 180 /
-                                        PI)
+                                    (atan2(
+                                        dy.toDouble(),
+                                        dx.toDouble()
+                                    ) * 180 / PI)
                                 selectedCategory =
-                                    getCategoryAtAngle(angle, layoutData)
+                                    getCategoryAtAngle(
+                                        angle,
+                                        layoutData
+                                    )
                             },
                             onDragEnd = { selectedCategory = null },
                             onDragCancel = { selectedCategory = null }
@@ -1713,14 +2003,22 @@ private fun CategoryDonutChartWithIcons(
                         startAngle = 0f,
                         sweepAngle = 360f,
                         useCenter = false,
-                        style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                        style =
+                            Stroke(
+                                width = strokePx,
+                                cap = StrokeCap.Round
+                            )
                     )
                 } else {
                     // Draw Inner Track
                     drawCircle(
                         color = Color(0xFFF0F0F0),
                         radius = radius,
-                        style = Stroke(width = strokePx, cap = StrokeCap.Butt)
+                        style =
+                            Stroke(
+                                width = strokePx,
+                                cap = StrokeCap.Butt
+                            )
                     )
 
                     layoutData.forEach { (sliceData, _) ->
@@ -1728,14 +2026,19 @@ private fun CategoryDonutChartWithIcons(
                         val isSelected = selectedCategory == category
 
                         val shiftPx = if (isSelected) 24f else 0f
-                        val midRad = (startAngle + sweepAngle / 2.0) * PI / 180.0
+                        val midRad =
+                            (startAngle + sweepAngle / 2.0) * PI / 180.0
                         val shiftX = (shiftPx * cos(midRad)).toFloat()
                         val shiftY = (shiftPx * sin(midRad)).toFloat()
 
                         val color =
                             try {
                                 Color(
-                                    ("FF" + category.categoryColor.removePrefix("#"))
+                                    ("FF" +
+                                        category.categoryColor
+                                            .removePrefix(
+                                                "#"
+                                            ))
                                         .toLong(16)
                                 )
                             } catch (e: Exception) {
@@ -1747,13 +2050,21 @@ private fun CategoryDonutChartWithIcons(
                             startAngle = startAngle,
                             sweepAngle = sweepAngle,
                             useCenter = false,
-                            style = Stroke(width = strokePx, cap = StrokeCap.Butt),
+                            style =
+                                Stroke(
+                                    width = strokePx,
+                                    cap = StrokeCap.Butt
+                                ),
                             topLeft =
                                 Offset(
                                     center.x - radius + shiftX,
                                     center.y - radius + shiftY
                                 ),
-                            size = androidx.compose.ui.geometry.Size(chartSizePx, chartSizePx)
+                            size =
+                                androidx.compose.ui.geometry.Size(
+                                    chartSizePx,
+                                    chartSizePx
+                                )
                         )
                     }
                 }
@@ -1766,7 +2077,8 @@ private fun CategoryDonutChartWithIcons(
 
                         // Calculate start point with same pop-out shift
                         val shiftPx = if (isSelected) 24f else 0f
-                        val sliceMidRad = (startAngle + sweepAngle / 2.0) * PI / 180.0
+                        val sliceMidRad =
+                            (startAngle + sweepAngle / 2.0) * PI / 180.0
                         val shiftX = (shiftPx * cos(sliceMidRad)).toFloat()
                         val shiftY = (shiftPx * sin(sliceMidRad)).toFloat()
 
@@ -1776,19 +2088,26 @@ private fun CategoryDonutChartWithIcons(
                         val startX =
                             center.x +
                                 shiftX +
-                                (chartOuterRadiusPx + 2) * cos(startRad).toFloat()
+                                (chartOuterRadiusPx + 2) *
+                                cos(startRad).toFloat()
                         val startY =
                             center.y +
                                 shiftY +
-                                (chartOuterRadiusPx + 2) * sin(startRad).toFloat()
+                                (chartOuterRadiusPx + 2) *
+                                sin(startRad).toFloat()
 
                         // End point
                         val endRad = adjustedAngle * PI / 180.0
-                        val iconDistPx = with(density) { iconDistance.dp.toPx() }
+                        val iconDistPx =
+                            with(density) { iconDistance.dp.toPx() }
 
                         val lineEndDist = iconDistPx - 24
-                        val endX = center.x + lineEndDist * cos(endRad).toFloat()
-                        val endY = center.y + lineEndDist * sin(endRad).toFloat()
+                        val endX =
+                            center.x +
+                                lineEndDist * cos(endRad).toFloat()
+                        val endY =
+                            center.y +
+                                lineEndDist * sin(endRad).toFloat()
 
                         drawLine(
                             color = OnSurfaceVariant.copy(alpha = 0.5f),
@@ -1811,7 +2130,11 @@ private fun CategoryDonutChartWithIcons(
                 val scale by
                 animateFloatAsState(
                     targetValue = if (isSelected) 1.2f else 1.0f,
-                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
+                    animationSpec =
+                        spring(
+                            dampingRatio = 0.7f,
+                            stiffness = 300f
+                        )
                 )
 
                 val angleRad = adjustedAngle * PI / 180.0
@@ -1823,13 +2146,20 @@ private fun CategoryDonutChartWithIcons(
                     modifier =
                         Modifier.offset(x = offsetX.dp, y = offsetY.dp)
                             .zIndex(if (isSelected) 10f else 1f)
-                            .graphicsLayer(scaleX = scale, scaleY = scale),
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale
+                            ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier =
                             Modifier.size(24.dp)
-                                .shadow(if (isSelected) 8.dp else 2.dp, CircleShape)
+                                .shadow(
+                                    if (isSelected) 8.dp
+                                    else 2.dp,
+                                    CircleShape
+                                )
                                 .clip(CircleShape)
                                 .background(
                                     try {
@@ -1839,7 +2169,9 @@ private fun CategoryDonutChartWithIcons(
                                                     .removePrefix(
                                                         "#"
                                                     ))
-                                                .toLong(16)
+                                                .toLong(
+                                                    16
+                                                )
                                         )
                                     } catch (e: Exception) {
                                         Primary
@@ -1847,7 +2179,10 @@ private fun CategoryDonutChartWithIcons(
                                 )
                                 .clickable {
                                     selectedCategory =
-                                        if (selectedCategory == category) null
+                                        if (selectedCategory ==
+                                            category
+                                        )
+                                            null
                                         else category
                                 },
                         contentAlignment = Alignment.Center
@@ -1857,41 +2192,69 @@ private fun CategoryDonutChartWithIcons(
                     if (isSelected) {
                         androidx.compose.ui.window.Popup(
                             alignment = Alignment.TopCenter,
-                            onDismissRequest = { selectedCategory = null },
+                            onDismissRequest = {
+                                selectedCategory = null
+                            },
                             offset = IntOffset(0, -110)
                         ) {
                             Card(
                                 colors =
                                     CardDefaults.cardColors(
                                         containerColor =
-                                            MaterialTheme.colorScheme.inverseSurface
+                                            MaterialTheme
+                                                .colorScheme
+                                                .inverseSurface
                                     ),
                                 shape = RoundedCornerShape(8.dp),
-                                elevation = CardDefaults.cardElevation(4.dp)
+                                elevation =
+                                    CardDefaults.cardElevation(
+                                        4.dp
+                                    )
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                    modifier =
+                                        Modifier.padding(
+                                            8.dp
+                                        ),
+                                    horizontalAlignment =
+                                        Alignment
+                                            .CenterHorizontally
                                 ) {
                                     Text(
-                                        text = category.categoryName,
-                                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                                        text =
+                                            category.categoryName,
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .inverseOnSurface,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight =
+                                            FontWeight
+                                                .Bold
                                     )
                                     Text(
-                                        text = "$percentage%",
-                                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                                        text =
+                                            "$percentage%",
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .inverseOnSurface,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Normal
+                                        fontWeight =
+                                            FontWeight
+                                                .Normal
                                     )
                                     Text(
                                         text =
                                             "$currencySymbol${category.total.formatDecimal(2)}",
                                         color =
-                                            MaterialTheme.colorScheme.inverseOnSurface.copy(
-                                                alpha = 0.8f
-                                            ),
+                                            MaterialTheme
+                                                .colorScheme
+                                                .inverseOnSurface
+                                                .copy(
+                                                    alpha =
+                                                        0.8f
+                                                ),
                                         fontSize = 10.sp
                                     )
                                 }
@@ -1910,7 +2273,11 @@ private fun CategoryDonutChartWithIcons(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = OnSurfaceVariant,
-                    modifier = Modifier.offset(x = textOffsetX.dp, y = textOffsetY.dp)
+                    modifier =
+                        Modifier.offset(
+                            x = textOffsetX.dp,
+                            y = textOffsetY.dp
+                        )
                 )
             }
         }

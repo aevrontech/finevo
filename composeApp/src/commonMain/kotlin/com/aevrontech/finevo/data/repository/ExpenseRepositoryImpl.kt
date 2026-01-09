@@ -204,10 +204,4 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
     override fun getPendingChangesCount(): Flow<Int> = flowOf(0)
 
     /** Initialize default categories if none exist. */
-    suspend fun initializeDefaultCategories() {
-        val categories = localDataSource.getCategories().first()
-        if (categories.isEmpty()) {
-            localDataSource.insertDefaultCategories()
-        }
-    }
 }

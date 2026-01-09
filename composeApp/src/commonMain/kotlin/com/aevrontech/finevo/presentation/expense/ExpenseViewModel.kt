@@ -94,13 +94,13 @@ class ExpenseViewModel(
             currentSelected.add(account)
         }
         _uiState.update { it.copy(selectedAccounts = currentSelected) }
-        loadTransactionsForAccounts(currentSelected.map { it.id }.toSet())
+        loadDataForTimeRange()
     }
 
     fun selectAllAccounts() {
         val allAccounts = _uiState.value.accounts.toSet()
         _uiState.update { it.copy(selectedAccounts = allAccounts) }
-        loadTransactionsForAccounts(allAccounts.map { it.id }.toSet())
+        loadDataForTimeRange()
     }
 
     private fun loadTransactionsForAccounts(accountIds: Set<String>) {
@@ -285,9 +285,7 @@ class ExpenseViewModel(
                     }
 
                     // Reload transactions for selected accounts
-                    loadTransactionsForAccounts(
-                        _uiState.value.selectedAccounts.map { it.id }.toSet()
-                    )
+                    loadDataForTimeRange()
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -323,9 +321,7 @@ class ExpenseViewModel(
                     }
                     _uiState.update { it.copy(successMessage = "Transaction deleted") }
                     // Reload transactions for selected accounts
-                    loadTransactionsForAccounts(
-                        _uiState.value.selectedAccounts.map { it.id }.toSet()
-                    )
+                    loadDataForTimeRange()
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -387,8 +383,6 @@ class ExpenseViewModel(
             when (val result = expenseRepository.updateTransaction(transaction)) {
                 is Result.Success<*> -> {
                     // Update account balance: reverse old effect, apply new effect
-                    var netChange = 0.0
-                    val currentAccount = _uiState.value.accounts.find { it.id == accountId }
 
                     if (oldTransaction != null && accountId != null && selectedAccount != null) {
                         // Calculate old balance effect (what we need to reverse)
@@ -412,7 +406,7 @@ class ExpenseViewModel(
                             }
 
                         // Net change = reverse old + apply new
-                        netChange = oldEffect + newEffect
+                        val netChange = oldEffect + newEffect
 
                         // Only update if there's actually a change
                         if (netChange != 0.0) {
@@ -431,9 +425,7 @@ class ExpenseViewModel(
                     labelRepository.setLabelsForTransaction(transaction.id, labels)
 
                     // Reload transactions
-                    loadTransactionsForAccounts(
-                        _uiState.value.selectedAccounts.map { it.id }.toSet()
-                    )
+                    loadDataForTimeRange()
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -530,6 +522,8 @@ class ExpenseViewModel(
             .sortedByDescending { it.total }
     }
 
+    /** Get bar chart data (income vs expense by time periods) */
+    /** Get bar chart data (income vs expense by time periods) */
     fun getBarChartData(): List<BarChartDataItem> {
         val period = _filterPeriod.value
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -550,17 +544,6 @@ class ExpenseViewModel(
                 when (period) {
                     FilterPeriod.DAY -> {
                         val startOfDay = today.plus(_periodOffset.value, DateTimeUnit.DAY)
-                        // Approximate hourly breakdown unavailable without DateTime
-                        // implementation that supports hours?
-                        // Transaction 'time' is String "HH:mm". Transaction 'date' is
-                        // LocalDate.
-                        // We can't filter by Hour easily using LocalDate.
-                        // We need to parse 'time'.
-                        // Simplified strategy: Show total for the day in one bar? Or skipping
-                        // Bar Chart for DAY?
-                        // Or implementing partial logic.
-                        // Current 'BarChartDataItem' is label/income/expense.
-                        // Let's rely on transaction time string "HH:mm".
                         startOfDay to startOfDay
                     }
                     FilterPeriod.WEEK -> {
@@ -571,7 +554,6 @@ class ExpenseViewModel(
                         dayStart to dayStart
                     }
                     FilterPeriod.MONTH, FilterPeriod.YEAR -> {
-                        // For both Month and Year filters, show monthly data
                         val targetYear = today.year + _periodOffset.value
                         val month = i + 1
                         val daysInMonth =
@@ -684,7 +666,13 @@ class ExpenseViewModel(
             when (range) {
                 is CalendarTimeRange -> range.period
                 is LastDaysRange ->
-                    if (range.days <= 7) FilterPeriod.WEEK else FilterPeriod.MONTH
+                    if (range.days <= 7) FilterPeriod.WEEK
+                    else if (range.days <= 31) FilterPeriod.MONTH else FilterPeriod.YEAR
+                is CustomTimeRange -> {
+                    val days = range.end.toEpochDays() - range.start.toEpochDays()
+                    if (days <= 7) FilterPeriod.WEEK
+                    else if (days <= 31) FilterPeriod.MONTH else FilterPeriod.YEAR
+                }
                 else -> null
             }
         if (newPeriod != null) {
@@ -748,42 +736,10 @@ class ExpenseViewModel(
                 today.minus(range.days - 1, DateTimeUnit.DAY) to today
             }
             is CalendarTimeRange -> {
-                calculateDateRangeForPeriod(range.period, range.offset, today)
+                getDateRange(range.period, range.offset) // Use existing logic
             }
             is CustomTimeRange -> range.start to range.end
             is AllTimeRange -> LocalDate(2000, 1, 1) to LocalDate(2100, 12, 31)
-        }
-    }
-
-    private fun calculateDateRangeForPeriod(
-        period: FilterPeriod,
-        offset: Int,
-        today: LocalDate
-    ): Pair<LocalDate, LocalDate> {
-        return when (period) {
-            FilterPeriod.DAY -> {
-                val targetDate = today.plus(offset, DateTimeUnit.DAY)
-                targetDate to targetDate
-            }
-            FilterPeriod.WEEK -> {
-                // Assuming Week starts on Monday
-                val currentWeekStart = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
-                val targetWeekStart = currentWeekStart.plus(offset * 7, DateTimeUnit.DAY)
-                targetWeekStart to targetWeekStart.plus(6, DateTimeUnit.DAY)
-            }
-            FilterPeriod.MONTH -> {
-                val totalMonths = today.year * 12 + (today.monthNumber - 1) + offset
-                val year = totalMonths / 12
-                val month = (totalMonths % 12) + 1
-                val start = LocalDate(year, month, 1)
-                val lengthOfMonth =
-                    start.month.length(year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
-                start to LocalDate(year, month, lengthOfMonth)
-            }
-            FilterPeriod.YEAR -> {
-                val targetYear = today.year + offset
-                LocalDate(targetYear, 1, 1) to LocalDate(targetYear, 12, 31)
-            }
         }
     }
 
@@ -847,7 +803,7 @@ data class ExpenseUiState(
         }
 }
 
-// Definitions moved to TimeRange.kt
+// Removed bottom duplicate class definitions to use the implementation in TimeRange.kt
 
 /** Category breakdown data for pie chart */
 data class CategoryBreakdown(

@@ -13,16 +13,16 @@ import kotlinx.coroutines.launch
 
 /** UI state for Account management. */
 data class AccountUiState(
-        val isLoading: Boolean = false,
-        val accounts: List<Account> = emptyList(),
-        val selectedAccount: Account? = null,
-        val totalBalance: Double = 0.0,
-        val totalAssets: Double = 0.0,
-        val totalLiabilities: Double = 0.0,
-        val netWorth: Double = 0.0,
-        val showAddDialog: Boolean = false,
-        val errorMessage: String? = null,
-        val successMessage: String? = null
+    val isLoading: Boolean = false,
+    val accounts: List<Account> = emptyList(),
+    val selectedAccount: Account? = null,
+    val totalBalance: Double = 0.0,
+    val totalAssets: Double = 0.0,
+    val totalLiabilities: Double = 0.0,
+    val netWorth: Double = 0.0,
+    val showAddDialog: Boolean = false,
+    val errorMessage: String? = null,
+    val successMessage: String? = null
 )
 
 /** ViewModel for Account management operations. */
@@ -50,13 +50,13 @@ class AccountViewModel(private val accountRepository: AccountRepository) : ViewM
 
                 _uiState.update { state ->
                     state.copy(
-                            isLoading = false,
-                            accounts = accounts,
-                            selectedAccount = state.selectedAccount ?: accounts.firstOrNull(),
-                            totalBalance = totalBalance,
-                            totalAssets = totalAssets,
-                            totalLiabilities = totalLiabilities,
-                            netWorth = netWorth
+                        isLoading = false,
+                        accounts = accounts,
+                        selectedAccount = state.selectedAccount ?: accounts.firstOrNull(),
+                        totalBalance = totalBalance,
+                        totalAssets = totalAssets,
+                        totalLiabilities = totalLiabilities,
+                        netWorth = netWorth
                     )
                 }
             }
@@ -76,33 +76,33 @@ class AccountViewModel(private val accountRepository: AccountRepository) : ViewM
     }
 
     fun createAccount(
-            name: String,
-            initialBalance: Double,
-            currency: String,
-            type: AccountType,
-            color: String,
-            icon: String = type.icon
+        name: String,
+        initialBalance: Double,
+        currency: String,
+        type: AccountType,
+        color: String,
+        icon: String = type.icon
     ) {
         viewModelScope.launch {
             try {
                 val isFirst = _uiState.value.accounts.isEmpty()
                 val newAccount =
-                        accountRepository.createAccount(
-                                userId = userId,
-                                name = name,
-                                initialBalance = initialBalance,
-                                currency = currency,
-                                type = type,
-                                color = color,
-                                icon = icon,
-                                isDefault = isFirst
-                        )
+                    accountRepository.createAccount(
+                        userId = userId,
+                        name = name,
+                        initialBalance = initialBalance,
+                        currency = currency,
+                        type = type,
+                        color = color,
+                        icon = icon,
+                        isDefault = isFirst
+                    )
 
                 _uiState.update {
                     it.copy(
-                            showAddDialog = false,
-                            successMessage = "Account created successfully",
-                            selectedAccount = newAccount
+                        showAddDialog = false,
+                        successMessage = "Account created successfully",
+                        selectedAccount = newAccount
                     )
                 }
 
@@ -140,12 +140,12 @@ class AccountViewModel(private val accountRepository: AccountRepository) : ViewM
     }
 
     fun updateAccount(
-            accountId: String,
-            name: String,
-            balance: Double,
-            currency: String,
-            type: AccountType,
-            color: String
+        accountId: String,
+        name: String,
+        balance: Double,
+        currency: String,
+        type: AccountType,
+        color: String
     ) {
         viewModelScope.launch {
             try {
@@ -154,14 +154,14 @@ class AccountViewModel(private val accountRepository: AccountRepository) : ViewM
 
                 if (existingAccount != null) {
                     val updatedAccount =
-                            existingAccount.copy(
-                                    name = name,
-                                    balance = balance,
-                                    currency = currency,
-                                    type = type,
-                                    color = color,
-                                    icon = type.icon // Ensure icon matches new type
-                            )
+                        existingAccount.copy(
+                            name = name,
+                            balance = balance,
+                            currency = currency,
+                            type = type,
+                            color = color,
+                            icon = type.icon // Ensure icon matches new type
+                        )
 
                     accountRepository.updateAccount(updatedAccount)
                     _uiState.update { it.copy(successMessage = "Account updated") }

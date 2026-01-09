@@ -17,11 +17,17 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aevrontech.finevo.presentation.components.DateRangePickerDialog
 import com.aevrontech.finevo.ui.theme.ThemeColors
+import kotlinx.datetime.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +37,19 @@ fun TimeRangeSelectionSheet(
     onDismissRequest: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
+    var showCustomPicker by remember { mutableStateOf(false) }
+
+    if (showCustomPicker) {
+        DateRangePickerDialog(
+            onDismissRequest = { showCustomPicker = false },
+            onDateRangeSelected = { start, end ->
+                showCustomPicker = false
+                onRangeSelected(CustomTimeRange(start, end))
+                onDismissRequest() // Close the sheet too
+            }
+        )
+    }
+
     val ranges =
         listOf(
             TimeRange.Today,
@@ -39,11 +58,11 @@ fun TimeRangeSelectionSheet(
             TimeRange.ThisYear,
             LastDaysRange(7, "Last 7 Days"),
             LastDaysRange(30, "Last 30 Days"),
-            CalendarTimeRange(
-                FilterPeriod.YEAR,
-                -1
-            ), // Last Year logic handled in getLabel/getTimeRangeDates
-            AllTimeRange
+            LastDaysRange(365, "Last 1 Year"),
+            CustomTimeRange(
+                LocalDate(1970, 1, 1),
+                LocalDate(1970, 1, 1)
+            ) // Placeholder for UI, we will detect click
         )
 
     ModalBottomSheet(
@@ -67,8 +86,12 @@ fun TimeRangeSelectionSheet(
                         range = range,
                         isSelected = range == currentRange,
                         onClick = {
-                            onRangeSelected(range)
-                            onDismissRequest()
+                            if (range is CustomTimeRange) {
+                                showCustomPicker = true
+                            } else {
+                                onRangeSelected(range)
+                                onDismissRequest()
+                            }
                         }
                     )
                 }

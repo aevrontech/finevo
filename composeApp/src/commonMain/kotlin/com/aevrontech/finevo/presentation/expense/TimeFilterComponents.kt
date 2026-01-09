@@ -56,10 +56,7 @@ fun TimeFilterSection(
                                 )
                         )
                 )
-                .padding(
-                    horizontal = 8.dp,
-                    vertical = 2.dp
-                ), // Tighter inner padding
+                .padding(horizontal = 8.dp, vertical = 2.dp), // Tighter inner padding
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
