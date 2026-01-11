@@ -35,28 +35,27 @@ import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 fun TimeFilterSection(
     currentRange: TimeRange,
     onNavigate: (Int) -> Unit,
-    onFilterClick: () -> Unit
+    onFilterClick: () -> Unit,
+    containerBrush: Brush =
+        Brush.horizontalGradient(
+            colors =
+                listOf(
+                    DashboardGradientStart,
+                    DashboardGradientMid,
+                    DashboardGradientEnd
+                )
+        )
 ) {
     val isNavigable = currentRange is CalendarTimeRange
 
-    // Full Gradient Pill Container
+    // Pill Container with Gradient Background
     Row(
         modifier =
             Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(50)) // Fully rounded pill
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    DashboardGradientStart,
-                                    DashboardGradientMid,
-                                    DashboardGradientEnd
-                                )
-                        )
-                )
-                .padding(horizontal = 8.dp, vertical = 2.dp), // Tighter inner padding
+                .clip(RoundedCornerShape(50))
+                .background(brush = containerBrush)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -64,7 +63,7 @@ fun TimeFilterSection(
         IconButton(
             onClick = { onNavigate(-1) },
             enabled = isNavigable,
-            modifier = Modifier.size(32.dp) // Smaller button
+            modifier = Modifier.size(32.dp)
         ) {
             if (isNavigable) {
                 Icon(
@@ -82,10 +81,10 @@ fun TimeFilterSection(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AnimatedContent(targetState = currentRange.label) { label ->
+            AnimatedContent(targetState = currentRange.displayLabel) { label ->
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.titleSmall, // Smaller font
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -95,7 +94,7 @@ fun TimeFilterSection(
                 imageVector = Icons.Default.ArrowDropDown,
                 contentDescription = "Select Range",
                 tint = Color.White,
-                modifier = Modifier.size(20.dp) // Smaller icon
+                modifier = Modifier.size(20.dp)
             )
         }
 

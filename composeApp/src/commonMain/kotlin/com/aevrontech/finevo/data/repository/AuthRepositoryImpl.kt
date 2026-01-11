@@ -133,6 +133,23 @@ class AuthRepositoryImpl(
         return Result.success(updatedUser)
     }
 
+    override suspend fun updateBaseCurrency(currency: String): Result<Unit> {
+        val userId = _currentUserId.value ?: "local_user"
+
+        // Update DB
+        try {
+            localDataSource.updateCurrencyForUserAndAccounts(userId, currency)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return Result.error(AppException.Unknown(e.message ?: "Failed to update currency"))
+        }
+
+        // Update shared prefs
+        settingsRepository.setCurrency(currency)
+
+        return Result.success(Unit)
+    }
+
     override suspend fun deleteAccount(): Result<Unit> {
         // Clear local data first
         _currentUserId.value?.let { localDataSource.deleteUser(it) }
@@ -164,7 +181,30 @@ class AuthRepositoryImpl(
      * 3. Update internal state
      */
     private suspend fun handleLoginSuccess(user: User) {
+        val currentUserId = settingsRepository.getCurrentUserId()
+
+        // Check for migration: If we are logged out (null) or using "local_user",
+        // and we are logging in as a different user, attempt to migrate data.
+        if (currentUserId == "local_user" || currentUserId == null) {
+            // Check if local_user actually exists with data
+            val localUser = localDataSource.getUserSync("local_user")
+            if (localUser != null && user.id != "local_user") {
+                try {
+                    localDataSource.migrateUserData("local_user", user.id)
+                    // We don't need to log success, if it doesn't throw, it worked.
+                } catch (e: Exception) {
+                    // Log error but proceed with login? Or fail?
+                    // Safe to proceed, worst case data isn't migrated but user can login.
+                    // TODO: Log migration error to Crashlytics/Analytics
+                    e.printStackTrace()
+                }
+            }
+        }
+
         // 1. Cache user in local database
+        // Insert AFTER migration to ensure we don't violate PK if we somehow migrated ONTO this
+        // user (unlikely)
+        // But mainly to ensure the user record exists.
         localDataSource.insertUser(user)
 
         // 2. Set session flags for fast startup

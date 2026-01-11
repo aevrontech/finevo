@@ -155,15 +155,50 @@ SELECT * FROM budgets WHERE user_id = ?;
 selectActiveBudgets:
 SELECT * FROM budgets WHERE user_id = ? AND is_active = 1;
 
+selectBudgetById:
+SELECT * FROM budgets WHERE id = ?;
+
 insertBudget:
-INSERT OR REPLACE INTO budgets(id, user_id, category_id, amount, spent, period, start_date, alert_threshold, rollover, is_active, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO budgets(id, user_id, category_id, amount, spent, period, start_date, end_date, alert_threshold, rollover, is_active, name, notify_overspent, notify_risk, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateBudgetSpent:
 UPDATE budgets SET spent = ?, updated_at = ? WHERE id = ?;
 
 deleteBudget:
 DELETE FROM budgets WHERE id = ?;
+
+-- ============================================
+-- BUDGET CATEGORIES QUERIES
+-- ============================================
+
+selectCategoriesByBudgetId:
+SELECT category_id FROM budget_categories WHERE budget_id = ?;
+
+insertBudgetCategory:
+INSERT OR IGNORE INTO budget_categories(budget_id, category_id) VALUES (?, ?);
+
+deleteBudgetCategories:
+DELETE FROM budget_categories WHERE budget_id = ?;
+
+deleteBudgetCategory:
+DELETE FROM budget_categories WHERE budget_id = ? AND category_id = ?;
+
+-- ============================================
+-- BUDGET ACCOUNTS QUERIES
+-- ============================================
+
+selectAccountsByBudgetId:
+SELECT account_id FROM budget_accounts WHERE budget_id = ?;
+
+insertBudgetAccount:
+INSERT OR IGNORE INTO budget_accounts(budget_id, account_id) VALUES (?, ?);
+
+deleteBudgetAccounts:
+DELETE FROM budget_accounts WHERE budget_id = ?;
+
+deleteBudgetAccount:
+DELETE FROM budget_accounts WHERE budget_id = ? AND account_id = ?;
 
 -- ============================================
 -- DEBTS QUERIES
@@ -262,3 +297,53 @@ SELECT value FROM app_config WHERE key = ?;
 
 insertAppConfig:
 INSERT OR REPLACE INTO app_config(key, value, updated_at) VALUES (?, ?, ?);
+
+-- ============================================
+-- USER DATA MIGRATION
+-- ============================================
+
+updateCategoriesUserId:
+UPDATE categories SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateAccountsUserId:
+UPDATE accounts SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateTransactionsUserId:
+UPDATE transactions SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateBudgetsUserId:
+UPDATE budgets SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateHabitsUserId:
+UPDATE habits SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateDebtsUserId:
+UPDATE debts SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateLabelsUserId:
+UPDATE labels SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateRecurringTransactionsUserId:
+UPDATE recurring_transactions SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateBillsUserId:
+UPDATE bills SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateHabitCategoriesUserId:
+UPDATE habit_categories SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+updateUserStatsUserId:
+UPDATE user_stats SET user_id = :newUserId WHERE user_id = :oldUserId;
+
+deleteUserById:
+DELETE FROM users WHERE id = :userId;
+
+-- ============================================
+-- CURRENCY UPDATES
+-- ============================================
+
+updateUserCurrency:
+UPDATE users SET currency = :currency, updated_at = :updatedAt WHERE id = :userId;
+
+updateAllAccountsCurrency:
+UPDATE accounts SET currency = :currency, updated_at = :updatedAt WHERE user_id = :userId;

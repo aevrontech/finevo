@@ -80,9 +80,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getCategories(): Flow<List<Category>> {
-        return queries.selectAllCategories(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list ->
-            list.map { it.toDomainCategory() }
-        }
+        return queries.selectAllCategories(defaultUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainCategory() } }
     }
 
     fun getCategoriesByType(type: TransactionType): Flow<List<Category>> {
@@ -259,11 +260,31 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getBudgets(): Flow<List<Budget>> {
-        return queries.selectAllBudgets(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list
-            ->
-            list.map { it.toDomainBudget() }
-        }
+        return queries.selectAllBudgets(defaultUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list ->
+                list.map { budgetRow ->
+                    val categoryIds =
+                        queries.selectCategoriesByBudgetId(budgetRow.id)
+                            .executeAsList()
+                    val accountIds =
+                        queries.selectAccountsByBudgetId(budgetRow.id)
+                            .executeAsList()
+                    budgetRow.toDomainBudget(categoryIds, accountIds)
+                }
+            }
     }
+
+    suspend fun getBudgetCategoryIds(budgetId: String): List<String> =
+        withContext(Dispatchers.IO) {
+            queries.selectCategoriesByBudgetId(budgetId).executeAsList()
+        }
+
+    suspend fun getBudgetAccountIds(budgetId: String): List<String> =
+        withContext(Dispatchers.IO) {
+            queries.selectAccountsByBudgetId(budgetId).executeAsList()
+        }
 
     suspend fun insertBudget(budget: Budget) =
         withContext(Dispatchers.IO) {
@@ -276,12 +297,28 @@ class LocalDataSource(private val database: FinEvoDatabase) {
                 spent = budget.spent,
                 period = budget.period.name,
                 start_date = budget.startDate.toString(),
+                end_date = budget.endDate?.toString(),
                 alert_threshold = budget.alertThreshold.toLong(),
-                rollover = 0L,
+                rollover = if (budget.rollover) 1L else 0L,
                 is_active = if (budget.isActive) 1L else 0L,
+                name = budget.name,
+                notify_overspent = if (budget.notifyOverspent) 1L else 0L,
+                notify_risk = if (budget.notifyRisk) 1L else 0L,
                 created_at = now,
                 updated_at = now
             )
+
+            // Save categoryIds to junction table
+            queries.deleteBudgetCategories(budget.id)
+            budget.categoryIds.forEach { categoryId ->
+                queries.insertBudgetCategory(budget.id, categoryId)
+            }
+
+            // Save accountIds to junction table
+            queries.deleteBudgetAccounts(budget.id)
+            budget.accountIds.forEach { accountId ->
+                queries.insertBudgetAccount(budget.id, accountId)
+            }
         }
 
     // ============================================
@@ -289,16 +326,17 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getHabits(): Flow<List<Habit>> {
-        return queries.selectAllHabits(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list
-            ->
-            list.map { it.toDomainHabit() }
-        }
+        return queries.selectAllHabits(defaultUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainHabit() } }
     }
 
     fun getActiveHabits(): Flow<List<Habit>> {
-        return queries.selectActiveHabits(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list ->
-            list.map { it.toDomainHabit() }
-        }
+        return queries.selectActiveHabits(defaultUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainHabit() } }
     }
 
     suspend fun insertHabit(habit: Habit) =
@@ -349,7 +387,8 @@ class LocalDataSource(private val database: FinEvoDatabase) {
             )
         }
 
-    suspend fun deleteHabit(id: String) = withContext(Dispatchers.IO) { queries.deleteHabit(id) }
+    suspend fun deleteHabit(id: String) =
+        withContext(Dispatchers.IO) { queries.deleteHabit(id) }
 
     // ============================================
     // HABIT LOGS
@@ -363,9 +402,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     }
 
     fun getHabitLogsForHabit(habitId: String): Flow<List<HabitLog>> {
-        return queries.selectHabitLogsByHabitId(habitId).asFlow().mapToList(Dispatchers.IO).map { list ->
-            list.map { it.toDomainHabitLog() }
-        }
+        return queries.selectHabitLogsByHabitId(habitId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainHabitLog() } }
     }
 
     suspend fun insertHabitLog(log: HabitLog) =
@@ -389,16 +429,17 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getDebts(): Flow<List<Debt>> {
-        return queries.selectAllDebts(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list
-            ->
-            list.map { it.toDomainDebt() }
-        }
+        return queries.selectAllDebts(defaultUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainDebt() } }
     }
 
     fun getActiveDebts(): Flow<List<Debt>> {
-        return queries.selectActiveDebts(defaultUserId).asFlow().mapToList(Dispatchers.IO).map { list ->
-            list.map { it.toDomainDebt() }
-        }
+        return queries.selectActiveDebts(defaultUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainDebt() } }
     }
 
     suspend fun insertDebt(debt: Debt) =
@@ -437,10 +478,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getPaymentsForDebt(debtId: String): Flow<List<DebtPayment>> {
-        return queries.selectPaymentsByDebtId(debtId).asFlow().mapToList(Dispatchers.IO).map { list
-            ->
-            list.map { it.toDomainDebtPayment() }
-        }
+        return queries.selectPaymentsByDebtId(debtId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainDebtPayment() } }
     }
 
     suspend fun insertDebtPayment(payment: DebtPayment) =
@@ -467,7 +508,11 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun setConfigValue(key: String, value: String) =
         withContext(Dispatchers.IO) {
-            queries.insertAppConfig(key, value, Clock.System.now().toEpochMilliseconds())
+            queries.insertAppConfig(
+                key,
+                value,
+                Clock.System.now().toEpochMilliseconds()
+            )
         }
 
     // ============================================
@@ -475,7 +520,8 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     // ============================================
 
     fun getLabels(userId: String): Flow<List<Label>> {
-        return queries.selectAllLabels(userId).asFlow().mapToList(Dispatchers.IO).map { list ->
+        return queries.selectAllLabels(userId).asFlow().mapToList(Dispatchers.IO).map { list
+            ->
             list.map { it.toDomainLabel() }
         }
     }
@@ -486,10 +532,10 @@ class LocalDataSource(private val database: FinEvoDatabase) {
         }
 
     fun getAutoAssignLabels(userId: String): Flow<List<Label>> {
-        return queries.selectAutoAssignLabels(userId).asFlow().mapToList(Dispatchers.IO).map { list
-            ->
-            list.map { it.toDomainLabel() }
-        }
+        return queries.selectAutoAssignLabels(userId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { list -> list.map { it.toDomainLabel() } }
     }
 
     suspend fun insertLabel(label: Label) =
@@ -518,7 +564,8 @@ class LocalDataSource(private val database: FinEvoDatabase) {
             )
         }
 
-    suspend fun deleteLabel(id: String) = withContext(Dispatchers.IO) { queries.deleteLabel(id) }
+    suspend fun deleteLabel(id: String) =
+        withContext(Dispatchers.IO) { queries.deleteLabel(id) }
 
     suspend fun getLabelUsageCount(labelId: String): Long =
         withContext(Dispatchers.IO) {
@@ -537,13 +584,56 @@ class LocalDataSource(private val database: FinEvoDatabase) {
         }
 
     suspend fun addLabelToTransaction(transactionId: String, labelId: String) =
-        withContext(Dispatchers.IO) { queries.insertTransactionLabel(transactionId, labelId) }
+        withContext(Dispatchers.IO) {
+            queries.insertTransactionLabel(transactionId, labelId)
+        }
 
     suspend fun removeLabelFromTransaction(transactionId: String, labelId: String) =
-        withContext(Dispatchers.IO) { queries.deleteTransactionLabel(transactionId, labelId) }
+        withContext(Dispatchers.IO) {
+            queries.deleteTransactionLabel(transactionId, labelId)
+        }
 
     suspend fun removeAllLabelsFromTransaction(transactionId: String) =
         withContext(Dispatchers.IO) { queries.deleteAllLabelsForTransaction(transactionId) }
+
+    // ============================================
+    // MIGRATION
+    // ============================================
+
+    /**
+     * Migrates all data from an old user ID to a new user ID. Used when promoting a local user
+     * to an authenticated user.
+     */
+    suspend fun migrateUserData(oldUserId: String, newUserId: String) =
+        withContext(Dispatchers.IO) {
+            queries.transaction {
+                // Update all foreign keys
+                queries.updateCategoriesUserId(newUserId, oldUserId)
+                queries.updateAccountsUserId(newUserId, oldUserId)
+                queries.updateTransactionsUserId(newUserId, oldUserId)
+                queries.updateBudgetsUserId(newUserId, oldUserId)
+                queries.updateHabitsUserId(newUserId, oldUserId)
+                queries.updateDebtsUserId(newUserId, oldUserId)
+                queries.updateLabelsUserId(newUserId, oldUserId)
+                queries.updateRecurringTransactionsUserId(newUserId, oldUserId)
+                queries.updateBillsUserId(newUserId, oldUserId)
+                queries.updateHabitCategoriesUserId(newUserId, oldUserId)
+                queries.updateUserStatsUserId(newUserId, oldUserId)
+
+                // Delete the old "local_user" record
+                queries.deleteUserById(oldUserId)
+            }
+        }
+
+    suspend fun updateCurrencyForUserAndAccounts(userId: String, currency: String) {
+        withContext(Dispatchers.IO) {
+            queries.transaction {
+                val timestamp = Clock.System.now().toEpochMilliseconds()
+                queries.updateUserCurrency(currency, timestamp, userId)
+                queries.updateAllAccountsCurrency(currency, timestamp, userId)
+            }
+        }
+    }
 }
 
 // ============================================
@@ -606,13 +696,40 @@ private fun Budgets.toDomainBudget(): Budget =
     Budget(
         id = id,
         userId = user_id,
+        name = name,
         categoryId = category_id,
         amount = amount,
         spent = spent,
         period = BudgetPeriod.valueOf(period),
         startDate = LocalDate.parse(start_date),
+        endDate = end_date?.let { LocalDate.parse(it) },
         isActive = is_active == 1L,
         alertThreshold = alert_threshold.toInt(),
+        rollover = rollover == 1L,
+        notifyOverspent = notify_overspent == 1L,
+        notifyRisk = notify_risk == 1L,
+        createdAt = Instant.fromEpochMilliseconds(created_at),
+        updatedAt = Instant.fromEpochMilliseconds(updated_at)
+    )
+
+private fun Budgets.toDomainBudget(categoryIds: List<String>, accountIds: List<String>): Budget =
+    Budget(
+        id = id,
+        userId = user_id,
+        name = name,
+        categoryId = category_id,
+        categoryIds = categoryIds,
+        accountIds = accountIds,
+        amount = amount,
+        spent = spent,
+        period = BudgetPeriod.valueOf(period),
+        startDate = LocalDate.parse(start_date),
+        endDate = end_date?.let { LocalDate.parse(it) },
+        isActive = is_active == 1L,
+        alertThreshold = alert_threshold.toInt(),
+        rollover = rollover == 1L,
+        notifyOverspent = notify_overspent == 1L,
+        notifyRisk = notify_risk == 1L,
         createdAt = Instant.fromEpochMilliseconds(created_at),
         updatedAt = Instant.fromEpochMilliseconds(updated_at)
     )

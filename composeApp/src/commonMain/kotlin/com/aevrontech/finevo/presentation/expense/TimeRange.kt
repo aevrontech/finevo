@@ -17,6 +17,7 @@ enum class FilterPeriod(val label: String) {
 
 sealed interface TimeRange {
     val label: String
+    val displayLabel: String // Explicit date label (e.g. "Jan 2026")
 
     companion object {
         val Today
@@ -30,14 +31,24 @@ sealed interface TimeRange {
     }
 }
 
-data class LastDaysRange(val days: Int, override val label: String) : TimeRange
+data class LastDaysRange(val days: Int, override val label: String) : TimeRange {
+    override val displayLabel: String
+        get() = label
+}
 
 data class CalendarTimeRange(val period: FilterPeriod, val offset: Int = 0) : TimeRange {
+    override val displayLabel: String
+        get() {
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val (start, end) = getRangeDates(period, offset, today)
+            return getFormattedDate(period, start, end, today)
+        }
+
     override val label: String
         get() {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
-            // Special cases for "Today", "Yesterday", "This/Last Week"
+            // Special cases for Selection List ("Today", "This Month", etc)
             if (offset == 0) {
                 return when (period) {
                     FilterPeriod.DAY -> "Today"
@@ -47,52 +58,60 @@ data class CalendarTimeRange(val period: FilterPeriod, val offset: Int = 0) : Ti
                 }
             }
             if (offset == -1) {
-                when (period) {
-                    FilterPeriod.DAY -> return "Yesterday"
-                    FilterPeriod.WEEK -> return "Last Week"
-                    else -> Unit // Month/Year fall through to specific formatting
+                return when (period) {
+                    FilterPeriod.DAY -> "Yesterday"
+                    FilterPeriod.WEEK -> "Last Week"
+                    FilterPeriod.MONTH -> "Last Month"
+                    FilterPeriod.YEAR -> "Last Year"
                 }
             }
 
-            // Calculate dates
-            val (start, end) = getRangeDates(period, offset, today)
+            // Default to displayLabel for other offsets
+            return displayLabel
+        }
 
-            return when (period) {
-                FilterPeriod.DAY -> {
-                    // "Jan 5" or "Dec 31, 2025"
-                    if (start.year == today.year) {
-                        "${
-                            start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-                        } ${start.dayOfMonth}"
-                    } else {
-                        "${
-                            start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-                        } ${start.dayOfMonth}, ${start.year}"
-                    }
+    private fun getFormattedDate(
+        period: FilterPeriod,
+        start: LocalDate,
+        end: LocalDate,
+        today: LocalDate
+    ): String {
+        return when (period) {
+            FilterPeriod.DAY -> {
+                // "Jan 5" or "Dec 31, 2025"
+                if (start.year == today.year) {
+                    "${
+                        start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+                    } ${start.dayOfMonth}"
+                } else {
+                    "${
+                        start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+                    } ${start.dayOfMonth}, ${start.year}"
                 }
-                FilterPeriod.WEEK -> {
-                    // "Dec 29, 2025 - Jan 4, 2026"
-                    // User requested full years in example "Dec 22, 2025 - Dec 28, 2025"
-                    val startStr =
-                        "${
-                            start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-                        } ${start.dayOfMonth}, ${start.year}"
-                    val endStr =
-                        "${
-                            end.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-                        } ${end.dayOfMonth}, ${end.year}"
-                    "$startStr - $endStr"
-                }
-                FilterPeriod.MONTH -> {
-                    // "Dec 2025"
-                    "${start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${start.year}"
-                }
-                FilterPeriod.YEAR -> {
-                    // "2025"
-                    "${start.year}"
-                }
+            }
+            FilterPeriod.WEEK -> {
+                // "Dec 29, 2025 - Jan 4, 2026"
+                // User requested full years in example "Dec 22, 2025 - Dec 28, 2025"
+                val startStr =
+                    "${
+                        start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+                    } ${start.dayOfMonth}, ${start.year}"
+                val endStr =
+                    "${
+                        end.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+                    } ${end.dayOfMonth}, ${end.year}"
+                "$startStr - $endStr"
+            }
+            FilterPeriod.MONTH -> {
+                // "Dec 2025"
+                "${start.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${start.year}"
+            }
+            FilterPeriod.YEAR -> {
+                // "2025"
+                "${start.year}"
             }
         }
+    }
 
     private fun getRangeDates(
         period: FilterPeriod,
@@ -147,6 +166,9 @@ data class CalendarTimeRange(val period: FilterPeriod, val offset: Int = 0) : Ti
 }
 
 data class CustomTimeRange(val start: LocalDate, val end: LocalDate) : TimeRange {
+    override val displayLabel: String
+        get() = label
+
     override val label: String
         get() {
             val startStr =
@@ -166,4 +188,5 @@ data class CustomTimeRange(val start: LocalDate, val end: LocalDate) : TimeRange
 
 data object AllTimeRange : TimeRange {
     override val label: String = "All Time"
+    override val displayLabel: String = "All Time"
 }

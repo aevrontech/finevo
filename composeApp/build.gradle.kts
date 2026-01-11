@@ -137,6 +137,9 @@ kotlin {
 
             // Map (OpenStreetMap)
             implementation(libs.osmdroid.android)
+
+            // System UI Controller
+            implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
         }
 
         iosMain.dependencies {
@@ -163,9 +166,11 @@ android {
         // Inject secrets from local.properties
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "")}\"")
-        buildConfigField("String",
+        buildConfigField(
+            "String",
             "GOOGLE_WEB_CLIENT_ID",
-            "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")}\"")
+            "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")}\""
+        )
     }
 
     packaging {

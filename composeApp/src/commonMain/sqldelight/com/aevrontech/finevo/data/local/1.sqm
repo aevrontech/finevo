@@ -184,12 +184,16 @@ CREATE TABLE budgets (
     id TEXT NOT NULL PRIMARY KEY,
     user_id TEXT NOT NULL,
     category_id TEXT NOT NULL,
+    name TEXT,
     amount REAL NOT NULL,
     spent REAL NOT NULL DEFAULT 0,
     period TEXT NOT NULL,
     start_date TEXT NOT NULL,
+    end_date TEXT,
     alert_threshold INTEGER NOT NULL DEFAULT 80,
     rollover INTEGER NOT NULL DEFAULT 0,
+    notify_overspent INTEGER NOT NULL DEFAULT 1,
+    notify_risk INTEGER NOT NULL DEFAULT 1,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -199,6 +203,36 @@ CREATE TABLE budgets (
 
 CREATE INDEX idx_budgets_user ON budgets(user_id);
 CREATE INDEX idx_budgets_category ON budgets(category_id);
+
+-- ============================================
+-- BUDGET CATEGORIES JUNCTION TABLE
+-- ============================================
+-- Allows budgets to track multiple categories
+CREATE TABLE budget_categories (
+    budget_id TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    PRIMARY KEY (budget_id, category_id),
+    FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_budget_categories_budget ON budget_categories(budget_id);
+CREATE INDEX idx_budget_categories_category ON budget_categories(category_id);
+
+-- ============================================
+-- BUDGET ACCOUNTS JUNCTION TABLE
+-- ============================================
+-- Allows budgets to track spending from specific accounts
+CREATE TABLE budget_accounts (
+    budget_id TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    PRIMARY KEY (budget_id, account_id),
+    FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_budget_accounts_budget ON budget_accounts(budget_id);
+CREATE INDEX idx_budget_accounts_account ON budget_accounts(account_id);
 
 -- ============================================
 -- DEBTS TABLE

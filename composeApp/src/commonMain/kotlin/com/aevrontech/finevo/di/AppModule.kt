@@ -5,6 +5,7 @@ import com.aevrontech.finevo.data.local.createDatabase
 import com.aevrontech.finevo.data.remote.AuthService
 import com.aevrontech.finevo.data.repository.AccountRepositoryImpl
 import com.aevrontech.finevo.data.repository.AuthRepositoryImpl
+import com.aevrontech.finevo.data.repository.BudgetRepositoryImpl
 import com.aevrontech.finevo.data.repository.CategoryRepositoryImpl
 import com.aevrontech.finevo.data.repository.DebtRepositoryImpl
 import com.aevrontech.finevo.data.repository.ExpenseRepositoryImpl
@@ -13,6 +14,7 @@ import com.aevrontech.finevo.data.repository.LabelRepositoryImpl
 import com.aevrontech.finevo.data.repository.SettingsRepositoryImpl
 import com.aevrontech.finevo.domain.repository.AccountRepository
 import com.aevrontech.finevo.domain.repository.AuthRepository
+import com.aevrontech.finevo.domain.repository.BudgetRepository
 import com.aevrontech.finevo.domain.repository.CategoryRepository
 import com.aevrontech.finevo.domain.repository.DebtRepository
 import com.aevrontech.finevo.domain.repository.ExpenseRepository
@@ -20,6 +22,7 @@ import com.aevrontech.finevo.domain.repository.HabitRepository
 import com.aevrontech.finevo.domain.repository.LabelRepository
 import com.aevrontech.finevo.domain.repository.SettingsRepository
 import com.aevrontech.finevo.presentation.auth.AuthViewModel
+import com.aevrontech.finevo.presentation.budget.BudgetViewModel
 import com.aevrontech.finevo.presentation.category.CategoryViewModel
 import com.aevrontech.finevo.presentation.debt.DebtViewModel
 import com.aevrontech.finevo.presentation.expense.AccountViewModel
@@ -52,6 +55,7 @@ val appModule = module {
     single<CategoryRepository> { CategoryRepositoryImpl(get()) }
     single<LabelRepository> { LabelRepositoryImpl(get()) }
     single<SettingsRepository> { SettingsRepositoryImpl() }
+    single<BudgetRepository> { BudgetRepositoryImpl(get()) }
 
     // ViewModels
     viewModel { OnboardingViewModel(get()) }
@@ -67,6 +71,7 @@ val appModule = module {
     viewModel { CategoryViewModel(get()) }
     viewModel { LabelViewModel(get()) }
     viewModel { UserProfileViewModel(get()) }
+    viewModel { BudgetViewModel(get(), get(), get()) } // BudgetRepo + ExpenseRepo + AccountRepo
 }
 
 /** Platform-specific module - override this in each platform. */

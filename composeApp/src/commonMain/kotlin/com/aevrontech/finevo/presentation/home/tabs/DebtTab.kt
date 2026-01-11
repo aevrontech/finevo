@@ -1,6 +1,13 @@
 package com.aevrontech.finevo.presentation.home.tabs
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,13 +24,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,13 +44,17 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.aevrontech.finevo.core.util.formatDecimal
 import com.aevrontech.finevo.domain.model.Debt
+import com.aevrontech.finevo.presentation.budget.AddBudgetScreen
+import com.aevrontech.finevo.presentation.budget.BudgetCard
+import com.aevrontech.finevo.presentation.budget.BudgetOverviewCard
+import com.aevrontech.finevo.presentation.budget.BudgetViewModel
+import com.aevrontech.finevo.presentation.budget.EmptyBudgetState
 import com.aevrontech.finevo.presentation.components.AddDebtDialog
 import com.aevrontech.finevo.presentation.debt.DebtViewModel
+import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
+import com.aevrontech.finevo.ui.theme.DashboardGradientMid
+import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 import com.aevrontech.finevo.ui.theme.Income
-import com.aevrontech.finevo.ui.theme.OnSurface
-import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
-import com.aevrontech.finevo.ui.theme.SurfaceContainer
-import com.aevrontech.finevo.ui.theme.SurfaceContainerHighest
 import com.aevrontech.finevo.ui.theme.Warning
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -47,7 +64,7 @@ object DebtTab : Tab {
         get() =
             TabOptions(
                 index = 2u,
-                title = "Debts",
+                title = "Budget",
                 icon =
                     androidx.compose.ui.graphics.vector.rememberVectorPainter(
                         Icons.Filled.Add
@@ -62,100 +79,286 @@ object DebtTab : Tab {
 
 @Composable
 private fun DebtTabContent() {
-    val viewModel: DebtViewModel = koinViewModel()
-    val uiState by viewModel.uiState.collectAsState()
+    val debtViewModel: DebtViewModel = koinViewModel()
+    val budgetViewModel: BudgetViewModel = koinViewModel()
+
+    val debtState by debtViewModel.uiState.collectAsState()
+    val budgetState by budgetViewModel.uiState.collectAsState()
+
+    // Refresh budget data when tab becomes active
+    androidx.compose.runtime.LaunchedEffect(Unit) { budgetViewModel.refresh() }
+
+    // 0 = Budgets, 1 = Debts
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     // Show AddDebt dialog
-    if (uiState.showAddDialog) {
+    if (debtState.showAddDialog) {
         AddDebtDialog(
-            onDismiss = { viewModel.hideAddDialog() },
+            onDismiss = { debtViewModel.hideAddDialog() },
             onConfirm = { name, type, amount, interest, minPayment, dueDay ->
-                viewModel.addDebt(name, type, amount, amount, interest, minPayment, dueDay)
+                debtViewModel.addDebt(name, type, amount, amount, interest, minPayment, dueDay)
             }
         )
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 130.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    // Show Budget Detail Screen
+    if (budgetState.selectedBudget != null && !budgetState.showAddDialog) {
+        com.aevrontech.finevo.presentation.budget.BudgetDetailScreen(
+            budget = budgetState.selectedBudget!!,
+            onBack = { budgetViewModel.clearSelectedBudget() },
+            onEdit = { budgetViewModel.showEditDialog(budgetState.selectedBudget!!) }
+        )
+    } else if (budgetState.showAddDialog) {
+        AddBudgetScreen(
+            categories = budgetState.availableCategories,
+            accounts = budgetState.accounts,
+            editingBudget = budgetState.editingBudget,
+            onDismiss = { budgetViewModel.hideDialog() },
+            onSave = { name,
+                       categoryIds,
+                       accountIds,
+                       amount,
+                       currency,
+                       period,
+                       startDate,
+                       endDate,
+                       notifyOverspent,
+                       alertThreshold,
+                       notifyRisk ->
+                if (budgetState.editingBudget != null) {
+                    budgetViewModel.updateBudget(
+                        budgetState.editingBudget!!,
+                        name,
+                        categoryIds,
+                        accountIds,
+                        amount,
+                        period,
+                        startDate,
+                        endDate,
+                        notifyOverspent,
+                        alertThreshold,
+                        notifyRisk
+                    )
+                } else {
+                    budgetViewModel.addBudget(
+                        name,
+                        categoryIds,
+                        accountIds,
+                        amount,
+                        currency,
+                        period,
+                        startDate,
+                        endDate,
+                        notifyOverspent,
+                        alertThreshold,
+                        notifyRisk
+                    )
+                }
+            }
+        )
+    } else {
+        // Regular content - only shown when not adding/editing budget
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 130.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header with Tab Selector
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Tab Selector
+                    TabSelector(
+                        tabs = listOf("Budgets", "Debts"),
+                        selectedIndex = selectedTab,
+                        onTabSelected = { selectedTab = it }
+                    )
+
+                    // Add Button (context-aware)
+                    GradientFab(
+                        onClick = {
+                            if (selectedTab == 0) {
+                                budgetViewModel.showAddDialog()
+                            } else {
+                                debtViewModel.showAddDialog()
+                            }
+                        },
+                        icon = Icons.Filled.Add,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+            }
+
+            // Content based on selected tab
+            item {
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "tab_content"
+                ) { tab ->
+                    when (tab) {
+                        0 ->
+                            BudgetContent(
+                                budgetState = budgetState,
+                                onBudgetClick = { budgetViewModel.selectBudget(it) },
+                                onAddClick = { budgetViewModel.showAddDialog() },
+                                onPeriodSelected = { budgetViewModel.setPeriodFilter(it) }
+                            )
+                        1 -> DebtContent(debtState = debtState)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Tab Selector Component */
+@Composable
+private fun TabSelector(
+    tabs: List<String>,
+    selectedIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier =
+            modifier.clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Header
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        tabs.forEachIndexed { index, title ->
+            val isSelected = index == selectedIndex
+            Box(
+                modifier =
+                    Modifier.clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isSelected) {
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        DashboardGradientStart,
+                                        DashboardGradientMid,
+                                        DashboardGradientEnd
+                                    )
+                                )
+                            } else {
+                                Brush.horizontalGradient(
+                                    listOf(Color.Transparent, Color.Transparent)
+                                )
+                            }
+                        )
+                        .clickable { onTabSelected(index) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Debts",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OnSurface
-                )
-                GradientFab(
-                    onClick = { viewModel.showAddDialog() },
-                    icon = Icons.Filled.Add,
-                    modifier = Modifier.size(48.dp)
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color =
+                        if (isSelected) Color.White
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
 
+/** Budget Content Section */
+@Composable
+private fun BudgetContent(
+    budgetState: com.aevrontech.finevo.presentation.budget.BudgetUiState,
+    onBudgetClick: (com.aevrontech.finevo.domain.model.Budget) -> Unit,
+    onAddClick: () -> Unit,
+    onPeriodSelected: (com.aevrontech.finevo.domain.model.BudgetPeriod?) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Overview Card (Always show to allow filtering)
+        BudgetOverviewCard(
+            totalBudget = budgetState.totalBudget,
+            totalSpent = budgetState.totalSpent,
+            budgetCount = budgetState.budgetCount,
+            onTrackCount = budgetState.onTrackCount,
+            warningCount = budgetState.warningCount,
+            overCount = budgetState.overCount,
+            selectedPeriod = budgetState.periodFilter,
+            onPeriodSelected = { onPeriodSelected(it) }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Budget List or Empty State
+        if (budgetState.budgets.isNotEmpty()) {
+            budgetState.budgets.forEach { budget ->
+                BudgetCard(budget = budget, onClick = { onBudgetClick(budget) })
+            }
+        } else if (!budgetState.isLoading) {
+            EmptyBudgetState(onAddClick = onAddClick)
+        }
+    }
+}
+
+/** Debt Content Section */
+@Composable
+private fun DebtContent(debtState: com.aevrontech.finevo.presentation.debt.DebtUiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Total Debt Card
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Total Debt", color = OnSurfaceVariant, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "Total Debt",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "RM ${debtState.totalDebt.formatDecimal(2)}",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (debtState.totalDebt > 0) Warning else Income
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        text = "RM ${uiState.totalDebt.formatDecimal(2)}",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (uiState.totalDebt > 0) Warning else Income
+                        "${debtState.debtCount} debts",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text(
-                            "${uiState.debtCount} debts",
-                            color = OnSurfaceVariant,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            "Min. payment: RM ${uiState.totalMinimumPayment.formatDecimal(0)}/mo",
-                            color = OnSurfaceVariant,
-                            fontSize = 12.sp
-                        )
-                    }
+                    Text(
+                        "Min. payment: RM ${debtState.totalMinimumPayment.formatDecimal(0)}/mo",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
 
         // Debt List
-        if (uiState.debts.isEmpty() && !uiState.isLoading) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+        if (debtState.debts.isEmpty() && !debtState.isLoading) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("🎯", fontSize = 48.sp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("No debts tracked", color = OnSurfaceVariant)
-                        Text("You're debt-free! 🎉", color = Income, fontWeight = FontWeight.Bold)
-                    }
+                    Text("🎯", fontSize = 48.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("No debts tracked", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("You're debt-free! 🎉", color = Income, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
-            items(uiState.debts.size) { index ->
-                val debt = uiState.debts[index]
-                DebtItem(debt = debt)
-            }
+            debtState.debts.forEach { debt -> DebtItem(debt = debt) }
         }
     }
 }
@@ -164,7 +367,8 @@ private fun DebtTabContent() {
 private fun DebtItem(debt: Debt) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(
@@ -173,10 +377,14 @@ private fun DebtItem(debt: Debt) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = debt.name, color = OnSurface, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = debt.name,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(
                         text = debt.type.name.replace("_", " "),
-                        color = OnSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -188,7 +396,7 @@ private fun DebtItem(debt: Debt) {
                     )
                     Text(
                         text = "${debt.interestRate.formatDecimal(1)}% APR",
-                        color = OnSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -198,12 +406,12 @@ private fun DebtItem(debt: Debt) {
                 progress = { (debt.percentPaid / 100).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                 color = Income,
-                trackColor = SurfaceContainerHighest
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${debt.percentPaid.formatDecimal(1)}% paid off",
-                color = OnSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
         }

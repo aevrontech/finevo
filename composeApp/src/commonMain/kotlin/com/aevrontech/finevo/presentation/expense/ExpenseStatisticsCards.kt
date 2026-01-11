@@ -95,13 +95,15 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-@Composable
+@Composable // Line 98
 fun TimeFilterTabs(
     selectedPeriod: FilterPeriod,
     onPeriodSelected: (FilterPeriod) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val gradientBrush =
+    modifier: Modifier = Modifier,
+    containerColor: Color = Color(0xFFE3F2FD),
+    selectedContentColor: Color = Color.White,
+    unselectedContentColor: Color = Color(0xFF64748B),
+    indicatorBrush: Brush =
         Brush.horizontalGradient(
             colors =
                 listOf(
@@ -110,14 +112,12 @@ fun TimeFilterTabs(
                     DashboardGradientEnd
                 )
         )
-
+) {
     Row(
         modifier =
             modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp)) // Pill shape for container
-                .background(
-                    Color(0xFFE3F2FD)
-                ) // Soft Blue Background (Light Mode friendly)
+                .background(containerColor)
                 .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -132,7 +132,7 @@ fun TimeFilterTabs(
                         ) // Pill shape for item
                         .then(
                             if (isSelected)
-                                Modifier.background(gradientBrush)
+                                Modifier.background(indicatorBrush)
                             else Modifier.background(Color.Transparent)
                         )
                         .clickable { onPeriodSelected(period) }
@@ -146,8 +146,8 @@ fun TimeFilterTabs(
                         if (isSelected) FontWeight.SemiBold
                         else FontWeight.Medium,
                     color =
-                        if (isSelected) Color.White
-                        else Color(0xFF64748B) // Slate Gray for unselected
+                        if (isSelected) selectedContentColor
+                        else unselectedContentColor
                 )
             }
         }
@@ -160,7 +160,8 @@ fun IncomeExpenseCards(
     income: Double,
     expense: Double,
     currencySymbol: String = "$",
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     // Logic:
     // Income Percentage = (Income - Expense) / Income -> "Remaining" or "Safe" percentage?
@@ -193,7 +194,8 @@ fun IncomeExpenseCards(
             accentColor = IncomeCardAccent,
             amountColor = Color.Black, // User requested Black
             icon = Icons.Default.Add,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onClick = onClick
         )
 
         // Expense Card
@@ -210,7 +212,8 @@ fun IncomeExpenseCards(
             accentColor = ExpenseCardAccent,
             amountColor = Color.Black, // User requested Black
             icon = Icons.Default.Close,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onClick = onClick
         )
     }
 }
@@ -224,15 +227,16 @@ private fun SummaryTypeCard(
     currencySymbol: String,
     backgroundColor: Color,
     accentColor: Color,
-    amountColor: Color,
+    amountColor: Color = Color.White,
     icon: ImageVector,
-    modifier: Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -319,7 +323,10 @@ fun GradientBarChart(
     maxHeight: Dp = 200.dp,
     rotateLabels: Boolean = false,
     period: FilterPeriod? = null,
-    monthPrefix: String = ""
+    monthPrefix: String = "",
+    barBrush: Brush? = null,
+    axisLabelColor: Color = OnSurfaceVariant,
+    gridLineColor: Color = Color.Gray.copy(alpha = 0.15f)
 ) {
     val maxValue = data.maxOfOrNull { it.value } ?: 1.0
     // Round up max value to nice number for Y-axis
@@ -339,7 +346,7 @@ fun GradientBarChart(
         )
     }
 
-    val gradientBrush =
+    val defaultGradientBrush =
         Brush.verticalGradient(
             colors =
                 listOf(
@@ -350,7 +357,7 @@ fun GradientBarChart(
         )
 
     // Theme-aware label color
-    val labelColor = OnSurfaceVariant
+    val labelColor = axisLabelColor
     val labelHeight = if (rotateLabels) 32.dp else 20.dp
 
     // Main Container - Column layout: Chart Area + X-Labels
@@ -455,12 +462,6 @@ fun GradientBarChart(
                         }
             ) {
                 // Canvas for precise bar rendering - bars drawn from bottom (0) up
-                val gradientColors =
-                    listOf(
-                        DashboardGradientStart,
-                        DashboardGradientMid,
-                        DashboardGradientEnd
-                    )
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val canvasWidth = size.width
                     val canvasHeight = size.height
@@ -469,7 +470,7 @@ fun GradientBarChart(
                     val cornerRadius = 4.dp.toPx()
 
                     // Draw horizontal grid lines at Y-axis tick positions
-                    val gridColor = Color.Gray.copy(alpha = 0.15f)
+                    val gridColor = gridLineColor
                     for (i in 0..5) {
                         val y = canvasHeight * (1f - i / 5f)
                         drawLine(
@@ -499,21 +500,17 @@ fun GradientBarChart(
                             val barTop = canvasHeight - barHeight
                             val barAlpha = if (isTouched) 1f else 0.7f
 
-                            val barBrush =
-                                Brush.verticalGradient(
-                                    colors =
-                                        gradientColors.map {
-                                            it.copy(
-                                                alpha =
-                                                    barAlpha
-                                            )
-                                        },
-                                    startY = barTop,
-                                    endY = canvasHeight
-                                )
+                            val computedBrush =
+                                barBrush ?: defaultGradientBrush
+
+                            // Adjust alpha for touch
+                            // Note: We can't easily modify a Brush
+                            // instance's alpha unless we
+                            // recreate it or draw with alpha.
+                            // drawRoundRect has 'alpha' param.
 
                             drawRoundRect(
-                                brush = barBrush,
+                                brush = computedBrush,
                                 topLeft = Offset(barLeft, barTop),
                                 size =
                                     androidx.compose.ui.geometry
@@ -526,7 +523,10 @@ fun GradientBarChart(
                                         .CornerRadius(
                                             cornerRadius,
                                             cornerRadius
-                                        )
+                                        ),
+                                alpha = barAlpha // Use alpha here
+                                // instead of
+                                // modifying brush
                             )
                         }
                     }
@@ -669,7 +669,7 @@ fun LineChart(
     data: List<BarChartItem>,
     modifier: Modifier = Modifier,
     monthName: String,
-    period: FilterPeriod // Added to handle dynamic labels
+    period: FilterPeriod
 ) {
     // Generate X-Axis Labels dynamically
     val xLabels =
@@ -699,20 +699,20 @@ fun LineChart(
 
     var touchedIndex by remember { androidx.compose.runtime.mutableStateOf<Int?>(null) }
 
-    val lineColor = Primary
+    val lineColor = Color.White
     val gradientBrush =
         Brush.verticalGradient(
             colors = listOf(lineColor.copy(alpha = 0.3f), Color.Transparent)
         )
-    val labelColor = OnSurfaceVariant
+    val labelColor = Color.White
 
-    // Main Container - Column layout similar to GradientBarChart
+    // Main Container
     Column(modifier = modifier) {
 
         // Chart Area (Y-axis + Canvas)
         Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
 
-            // Y-Axis Labels - positioned to align with Canvas grid lines
+            // Y-Axis Labels
             Box(modifier = Modifier.width(36.dp).fillMaxHeight()) {
                 for (i in 5 downTo 0) {
                     val label = (yAxisMax * i / 5).toInt().toString()
@@ -730,9 +730,7 @@ fun LineChart(
                                         )
                                 )
                                 .wrapContentHeight(Alignment.Bottom)
-                                .offset(
-                                    y = 6.dp
-                                ) // Match BarChart offset
+                                .offset(y = 6.dp)
                                 .padding(end = 4.dp)
                     )
                 }
@@ -836,7 +834,7 @@ fun LineChart(
                     val spacing = width / (data.size - 1).coerceAtLeast(1)
 
                     // Draw horizontal grid lines
-                    val gridColor = Color.Gray.copy(alpha = 0.15f)
+                    val gridColor = Color.White.copy(alpha = 0.2f)
                     for (i in 0..5) {
                         val y = height * (1f - i / 5f)
                         drawLine(
@@ -853,10 +851,6 @@ fun LineChart(
                     val points =
                         data.mapIndexed { index, item ->
                             val x = index * spacing
-                            // Fix Y calculation: 0 value should be at
-                            // height (bottom)
-                            // value/max * height = height from bottom
-                            // y = height - (value/max * height)
                             val y =
                                 height -
                                     ((item.value / yAxisMax) *
@@ -910,6 +904,15 @@ fun LineChart(
                                     )
                         )
 
+                        // Draw dots
+                        points.forEach { point ->
+                            drawCircle(
+                                color = Color.White,
+                                radius = 4.dp.toPx(),
+                                center = point
+                            )
+                        }
+
                         touchedIndex?.let { index ->
                             val point = points.getOrNull(index)
                             if (point != null) {
@@ -943,17 +946,12 @@ fun LineChart(
                                     radius = 6.dp.toPx(),
                                     center = point
                                 )
-                                drawCircle(
-                                    color = lineColor,
-                                    radius = 4.dp.toPx(),
-                                    center = point
-                                )
                             }
                         }
                     }
                 }
 
-                // Tooltip (Overlaying Canvas Box)
+                // Tooltip
                 touchedIndex?.let { index ->
                     val item = data.getOrNull(index)
                     if (item != null) {
@@ -1017,20 +1015,15 @@ fun LineChart(
             }
         }
 
-        // X-Axis Labels (Separate Row below canvas)
+        // X-Axis Labels
         Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .height(28.dp) // Fixed height for labels
-                    .padding(start = 36.dp), // Align with Y-axis width
+            modifier = Modifier.fillMaxWidth().height(28.dp).padding(start = 36.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             xLabels.forEach { label ->
-                val text =
-                    if (label is Int) "$label"
-                    else label.toString() // Use short day number for month
-                Text(text = text, fontSize = 10.sp, color = OnSurfaceVariant)
+                val text = label.toString()
+                Text(text = text, fontSize = 10.sp, color = labelColor)
             }
         }
     }
@@ -1861,7 +1854,7 @@ private fun CategoryDonutChart(
 
 /** Donut chart with category icons connected by lines (for expense) */
 @Composable
-private fun CategoryDonutChartWithIcons(
+fun CategoryDonutChartWithIcons(
     breakdown: List<CategoryBreakdown>,
     totalAmount: Double,
     chartSize: Dp,

@@ -85,6 +85,9 @@ private fun DashboardContent() {
     val expenseViewModel: ExpenseViewModel = koinViewModel()
     val expenseState by expenseViewModel.uiState.collectAsState()
 
+    // Refresh dashboard data when tab becomes active
+    androidx.compose.runtime.LaunchedEffect(Unit) { expenseViewModel.refresh() }
+
     // Get transactions for category breakdown
     val transactions = expenseState.transactions
 

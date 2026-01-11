@@ -354,10 +354,32 @@ class PreferencesSetupScreen : Screen {
                                         // Save dark mode preference
                                         ThemeManager.setDarkMode(isDarkMode)
                                         settingsRepository.setDarkMode(isDarkMode)
-                                        // Save currency preference
-                                        settingsRepository.setCurrency(
-                                            selectedCurrency.code
-                                        )
+
+                                        // Update currency in DB (User + Accounts) AND
+                                        // SharedPrefs
+                                        val currencyCode = selectedCurrency.code
+
+                                        // We use the authRepository to update
+                                        // everywhere
+                                        // This ensures the local user and default
+                                        // accounts get the new currency
+                                        try {
+                                            val authRepository:
+                                                com.aevrontech.finevo.domain.repository.AuthRepository =
+                                                org.koin.core.context.GlobalContext
+                                                    .get()
+                                                    .get()
+                                            authRepository.updateBaseCurrency(
+                                                currencyCode
+                                            )
+                                        } catch (e: Exception) {
+                                            // Fallback to just settings repo if
+                                            // something fails (shouldn't happen with
+                                            // Koin)
+                                            e.printStackTrace()
+                                            settingsRepository.setCurrency(currencyCode)
+                                        }
+
                                         // Mark onboarding as completed
                                         settingsRepository.setOnboardingCompleted(true)
                                         // Navigate to login

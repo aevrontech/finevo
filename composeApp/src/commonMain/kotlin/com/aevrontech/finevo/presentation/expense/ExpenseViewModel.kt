@@ -688,6 +688,10 @@ class ExpenseViewModel(
         loadDataForTimeRange()
     }
 
+    fun refresh() {
+        loadDataForTimeRange()
+    }
+
     private fun loadDataForTimeRange() {
         val range = _uiState.value.timeRange
         val (startDate, endDate) = getTimeRangeDates(range)

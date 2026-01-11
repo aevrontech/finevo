@@ -3,6 +3,7 @@ package com.aevrontech.finevo.presentation.expense
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,8 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,29 +24,46 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.presentation.label.LabelViewModel
+import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
+import com.aevrontech.finevo.ui.theme.DashboardGradientMid
+import com.aevrontech.finevo.ui.theme.DashboardGradientStart
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.minus
-import kotlinx.datetime.plus
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Full screen report with swipe-able charts and history */
+/** Full screen report with swipe-able charts and history - Redesigned with Blue Header */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseReportScreen(onDismiss: () -> Unit) {
+    val systemUiController = rememberSystemUiController()
+
+    DisposableEffect(systemUiController) {
+        // Set transparent status and navigation bars
+        systemUiController.setSystemBarsColor(color = Color.Transparent, darkIcons = false)
+        // Also set specifically if needed
+        systemUiController.setStatusBarColor(Color.Transparent, darkIcons = false)
+        systemUiController.setNavigationBarColor(Color.Transparent, darkIcons = false)
+
+        onDispose {}
+    }
+
     val expenseViewModel: ExpenseViewModel = koinViewModel()
     val labelViewModel: LabelViewModel = koinViewModel()
     val expenseState by expenseViewModel.uiState.collectAsState()
@@ -50,11 +71,19 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
     val filterPeriod by expenseViewModel.filterPeriod.collectAsState()
     val periodOffset by expenseViewModel.periodOffset.collectAsState()
 
+    // Filter Sheet State
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var isLineChart by remember { mutableStateOf(false) }
+
     // Filter transactions based on selected period
     val filteredTransactions =
         remember(expenseState.transactions, filterPeriod, periodOffset) {
             expenseViewModel.getFilteredTransactions()
         }
+
+    // Group transactions by date for the unified list
+    val transactionGroups =
+        remember(filteredTransactions) { groupTransactionsByDate(filteredTransactions) }
 
     // Chart Data Computation
     val barChartData =
@@ -86,20 +115,15 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                     }
                 }
                 FilterPeriod.MONTH -> {
-                    // Group by Day of Month
-                    // Label every 5th day to avoid clutter or logic inside chart
                     val grouped = expenseTransactions.groupBy { it.date.dayOfMonth }
-                    val daysInMonth = 30 // Approx, or calculate based on date
-                    // To show all days might be too wide. Let's show all and let chart handle
-                    // spacing or just specific days.
-                    // For simplicity/visuals: 1..31
                     (1..31).map { day ->
                         val total = grouped[day]?.sumOf { it.amount } ?: 0.0
-                        BarChartItem(label = day.toString(), value = total)
+                        // Sparse labels: Show every odd day (1, 3, 5...)
+                        val label = if (day % 2 != 0) day.toString() else ""
+                        BarChartItem(label = label, value = total)
                     }
                 }
                 FilterPeriod.YEAR -> {
-                    // Group by Month
                     val monthNames =
                         listOf(
                             "Jan",
@@ -124,152 +148,153 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
             }
         }
 
-    Box(
+    // Gestures for swiping time periods
+    val swipeModifier =
+        Modifier.pointerInput(Unit) {
+            var totalDrag = 0f
+            detectHorizontalDragGestures(
+                onDragEnd = {
+                    if (totalDrag > 100) { // Dragged Right -> Previous
+                        expenseViewModel.setPeriodOffset(periodOffset - 1)
+                    } else if (totalDrag < -100) { // Dragged Left -> Next
+                        if (periodOffset < 0) {
+                            expenseViewModel.setPeriodOffset(periodOffset + 1)
+                        }
+                    }
+                    totalDrag = 0f
+                }
+            ) { change, dragAmount ->
+                change.consume()
+                totalDrag += dragAmount
+            }
+        }
+
+    if (showFilterSheet) {
+        TimeRangeSelectionSheet(
+            currentRange = expenseState.timeRange,
+            onRangeSelected = {
+                expenseViewModel.setTimeRange(it)
+                // Note: setTimeRange updates filterPeriod/offset internally in VM
+            },
+            onDismissRequest = { showFilterSheet = false }
+        )
+    }
+
+    Column(
         modifier =
             Modifier.fillMaxSize()
                 .background(
-                    MaterialTheme.colorScheme.background
-                ) // Use theme background (White in Light)
-                .pointerInput(Unit) {
-                    var totalDrag = 0f
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            if (totalDrag > 100) { // Dragged Right
-                                expenseViewModel.setPeriodOffset(periodOffset - 1)
-                            } else if (totalDrag < -100) { // Dragged Left
-                                if (periodOffset < 0
-                                ) { // Can't go to future (offset > 0 usually logic)
-                                    expenseViewModel.setPeriodOffset(
-                                        periodOffset + 1
-                                    )
-                                }
-                            }
-                            totalDrag = 0f
-                        }
-                    ) { change, dragAmount ->
-                        change.consume()
-                        totalDrag += dragAmount
-                    }
-                }
+                    brush =
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    DashboardGradientStart,
+                                    DashboardGradientMid,
+                                    DashboardGradientEnd
+                                )
+                        )
+                )
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 100.dp)
+        // --- HEADER SECTION (Gradient) ---
+        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+            // Top Bar
+            TopAppBar(
+                title = {
+                    Text(text = "Statistics", fontWeight = FontWeight.Bold, color = Color.White)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { isLineChart = !isLineChart }) {
+                        Icon(
+                            imageVector =
+                                if (isLineChart) Icons.Filled.SignalCellularAlt
+                                else Icons.Filled.Timeline,
+                            contentDescription = "Toggle Chart",
+                            tint = Color.White
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+
+            // Smart Filter (Central)
+            TimeFilterSection(
+                currentRange = expenseState.timeRange,
+                onNavigate = { direction -> expenseViewModel.navigateTimeRange(direction) },
+                onFilterClick = { showFilterSheet = true },
+                containerBrush =
+                    Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Chart (Line or Bar)
+            Box(Modifier.padding(horizontal = 20.dp).height(200.dp)) {
+                if (isLineChart) {
+                    LineChart(
+                        data = barChartData,
+                        modifier = Modifier.fillMaxSize(),
+                        monthName = "",
+                        period = filterPeriod
+                    )
+                } else {
+                    GradientBarChart(
+                        data = barChartData,
+                        modifier = Modifier.fillMaxSize(),
+                        barWidth = if (filterPeriod == FilterPeriod.MONTH) 6.dp else 16.dp,
+                        barBrush =
+                            Brush.verticalGradient(
+                                listOf(Color.White, Color.White.copy(alpha = 0.5f))
+                            ),
+                        axisLabelColor = Color.White,
+                        gridLineColor = Color.White.copy(alpha = 0.2f),
+                        period = filterPeriod
+                    )
+                }
+            }
+        }
+
+        // --- BODY SECTION (White Sheet) ---
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .weight(1f) // Fill remaining space
+                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .background(MaterialTheme.colorScheme.background) // White
+                    .then(swipeModifier) // Apply swipe to body too
         ) {
-            // Header
-            item {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "Statistics",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface // Theme aware
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
-                        )
-                )
-            }
-
-            // 1. Time Filter Tabs (Top, Outside Card)
-            item {
-                TimeFilterTabs(
-                    selectedPeriod = filterPeriod,
-                    onPeriodSelected = { expenseViewModel.setFilterPeriod(it) },
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // 2. Period Navigator (Arrows + Date Range) - Below Tabs
-            item {
-                val periodLabel = getPeriodLabelForReport(filterPeriod, periodOffset)
-
-                PeriodNavigator(
-                    periodLabel = periodLabel,
-                    onPrevious = { expenseViewModel.setPeriodOffset(periodOffset - 1) },
-                    onNext = { expenseViewModel.setPeriodOffset(periodOffset + 1) },
-                    canGoNext = periodOffset < 0,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 3. Statistics Card (Chart Only)
-
-                StatisticsCard(
-                    selectedPeriod = filterPeriod,
-                    periodOffset = periodOffset,
-                    barChartData = barChartData,
-                    monthName = periodLabel.split(" ").firstOrNull() ?: "",
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-
-            // Transaction History
-            item {
-                TransactionHistorySection(
-                    transactions = filteredTransactions,
-                    limit = 100, // Show more in full report
-                    onSeeAllClick = { /* Navigate to full history if needed */ },
-                    onTransactionClick = { /* Open details */ },
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
+            ) {
+                // Unified Transaction History (Grouped)
+                groupedTransactionItems(
+                    groups = transactionGroups,
                     availableLabels = labelState.labels,
                     currencySymbol = expenseState.currencySymbol,
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                    onTransactionClick = { /* No-op for report mode per request */ },
+                    onTransactionDelete = { transaction ->
+                        expenseViewModel.deleteTransaction(transaction.id)
+                    },
+                    onDateClick = { date ->
+                        // Optional: Navigate/Zoom to that date.
+                        // For now, mirroring Wallet behavior or leaving as simple interaction.
+                        // Wallet calculates offset and sets to DAY view.
+                        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                        val daysDiff = date.toEpochDays() - today.toEpochDays()
+                        expenseViewModel.setFilterPeriod(FilterPeriod.DAY)
+                        expenseViewModel.setPeriodOffset(daysDiff)
+                    }
                 )
             }
-        }
-    }
-}
-
-private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
-    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-
-    return when (period) {
-        FilterPeriod.DAY -> {
-            val targetDate = today.plus(offset, DateTimeUnit.DAY)
-            "${targetDate.dayOfMonth} ${targetDate.month.name.take(3)} ${targetDate.year}"
-        }
-        FilterPeriod.WEEK -> {
-            val weekStart =
-                today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
-                    .plus(offset * 7, DateTimeUnit.DAY)
-            val weekEnd = weekStart.plus(6, DateTimeUnit.DAY)
-            "${weekStart.dayOfMonth} - ${weekEnd.dayOfMonth} ${weekEnd.month.name.take(3)} ${weekEnd.year}"
-        }
-        FilterPeriod.MONTH -> {
-            var targetYear = today.year
-            var targetMonth = today.monthNumber + offset
-            while (targetMonth < 1) {
-                targetMonth += 12
-                targetYear -= 1
-            }
-            while (targetMonth > 12) {
-                targetMonth -= 12
-                targetYear += 1
-            }
-            val monthName =
-                Month(targetMonth).name.take(3).lowercase().replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase() else it.toString()
-                }
-            "$monthName $targetYear"
-        }
-        FilterPeriod.YEAR -> {
-            (today.year + offset).toString()
         }
     }
 }

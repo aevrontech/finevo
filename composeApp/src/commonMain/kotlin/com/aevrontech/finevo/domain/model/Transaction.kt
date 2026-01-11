@@ -82,41 +82,7 @@ enum class RecurringFrequency {
     YEARLY
 }
 
-/** Budget for a category */
-@Serializable
-data class Budget(
-    val id: String,
-    val userId: String,
-    val categoryId: String,
-    val categoryName: String? = null,
-    val amount: Double,
-    val spent: Double = 0.0,
-    val period: BudgetPeriod,
-    val startDate: LocalDate,
-    val alertThreshold: Int = 80, // Percentage (0-100)
-    val rollover: Boolean = false,
-    val isActive: Boolean = true,
-    val createdAt: Instant,
-    val updatedAt: Instant
-) {
-    val remaining: Double
-        get() = amount - spent
-    val percentUsed: Double
-        get() = if (amount > 0) (spent / amount) * 100 else 0.0
-    val isOverBudget: Boolean
-        get() = spent > amount
-    val isNearLimit: Boolean
-        get() = percentUsed >= alertThreshold
-}
-
-/** Budget period options */
-@Serializable
-enum class BudgetPeriod {
-    DAILY,
-    WEEKLY,
-    MONTHLY,
-    YEARLY
-}
+// Note: Budget and BudgetPeriod are now defined in Budget.kt
 
 /** Summary of transactions for a period */
 data class TransactionSummary(

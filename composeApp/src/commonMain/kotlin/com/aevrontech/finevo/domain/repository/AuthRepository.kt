@@ -38,6 +38,9 @@ interface AuthRepository {
         currency: String? = null
     ): Result<User>
 
+    /** Update base currency for user and all their accounts */
+    suspend fun updateBaseCurrency(currency: String): Result<Unit>
+
     /** Delete user account */
     suspend fun deleteAccount(): Result<Unit>
 

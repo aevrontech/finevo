@@ -46,6 +46,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.aevrontech.finevo.domain.model.Account
@@ -55,7 +57,6 @@ import com.aevrontech.finevo.presentation.expense.AccountCardsRow
 import com.aevrontech.finevo.presentation.expense.AccountViewModel
 import com.aevrontech.finevo.presentation.expense.AddAccountScreen
 import com.aevrontech.finevo.presentation.expense.AddTransactionScreen
-import com.aevrontech.finevo.presentation.expense.BarChartItem
 import com.aevrontech.finevo.presentation.expense.ExpenseReportScreen
 import com.aevrontech.finevo.presentation.expense.ExpenseViewModel
 import com.aevrontech.finevo.presentation.expense.FilterPeriod
@@ -77,6 +78,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 object ExpenseTab : Tab {
@@ -122,8 +124,7 @@ internal fun ExpenseTabContent() {
     var accountToManage by remember { mutableStateOf<Account?>(null) }
 
     // Filter state
-    val filterPeriod by expenseViewModel.filterPeriod.collectAsState()
-    val periodOffset by expenseViewModel.periodOffset.collectAsState()
+
     var showReportScreen by remember { mutableStateOf(false) }
 
     // List of transactions to show in Wallet Tab
@@ -152,52 +153,6 @@ internal fun ExpenseTabContent() {
             onDismissRequest = { showFilterSheet = false }
         )
     }
-
-    // Bar Chart Data computation
-    // Bar Chart Data computation
-    val barChartData =
-        remember(filteredTransactions, filterPeriod) {
-            val expenseTransactions =
-                filteredTransactions.filter { it.type == TransactionType.EXPENSE }
-
-            when (filterPeriod) {
-                FilterPeriod.DAY -> { // Group by Hour (0-23)
-                    val grouped =
-                        expenseTransactions.groupBy {
-                            it.time?.split(":")?.firstOrNull()?.toIntOrNull() ?: 0
-                        }
-                    (0..23).map { hour ->
-                        val total = grouped[hour]?.sumOf { it.amount } ?: 0.0
-                        val label = if (hour % 6 == 0) "${hour}h" else ""
-                        BarChartItem(label = label, value = total)
-                    }
-                }
-                FilterPeriod.WEEK -> { // Group by Day of Week (Mon-Sun)
-                    val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                    val grouped = expenseTransactions.groupBy { it.date.dayOfWeek.ordinal }
-                    dayNames.mapIndexed { index, name ->
-                        val total = grouped[index]?.sumOf { it.amount } ?: 0.0
-                        BarChartItem(label = name, value = total)
-                    }
-                }
-                FilterPeriod.MONTH -> { // Group by Day of Month (1-31)
-                    val grouped = expenseTransactions.groupBy { it.date.dayOfMonth }
-                    (1..31).map { day ->
-                        val total = grouped[day]?.sumOf { it.amount } ?: 0.0
-                        BarChartItem(label = day.toString(), value = total)
-                    }
-                }
-                FilterPeriod.YEAR -> { // Group by Month (J, F, M...)
-                    val monthNames =
-                        listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
-                    val grouped = expenseTransactions.groupBy { it.date.monthNumber }
-                    monthNames.mapIndexed { index, name ->
-                        val total = grouped[index + 1]?.sumOf { it.amount } ?: 0.0
-                        BarChartItem(label = name, value = total)
-                    }
-                }
-            }
-        }
 
     // Update nav bar visibility when any overlay is shown
     val isOverlayVisible =
@@ -329,7 +284,8 @@ internal fun ExpenseTabContent() {
                     income = expenseState.accountIncome,
                     expense = expenseState.accountExpense,
                     currencySymbol = expenseState.currencySymbol,
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    onClick = { showReportScreen = true }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -375,6 +331,15 @@ internal fun ExpenseTabContent() {
                     onTransactionClick = { transaction -> transactionToEdit = transaction },
                     onTransactionDelete = { transaction ->
                         expenseViewModel.deleteTransaction(transaction.id)
+                    },
+                    onDateClick = { date ->
+                        // Calculate offset from today to the selected date
+                        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                        val daysDiff = date.toEpochDays() - today.toEpochDays()
+
+                        expenseViewModel.setFilterPeriod(FilterPeriod.DAY)
+                        expenseViewModel.setPeriodOffset(daysDiff)
+                        showReportScreen = true
                     }
                 )
             }
@@ -549,15 +514,12 @@ internal fun ExpenseTabContent() {
         }
 
         // Report Screen Overlay
-        AnimatedVisibility(
-            visible = showReportScreen,
-            enter =
-                slideInVertically(initialOffsetY = { it }, animationSpec = tween(200)) +
-                    fadeIn(tween(200)),
-            exit =
-                slideOutVertically(targetOffsetY = { it }, animationSpec = tween(200)) +
-                    fadeOut(tween(200))
-        ) { ExpenseReportScreen(onDismiss = { showReportScreen = false }) }
+        if (showReportScreen) {
+            Dialog(
+                onDismissRequest = { showReportScreen = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) { ExpenseReportScreen(onDismiss = { showReportScreen = false }) }
+        }
     }
 }
 

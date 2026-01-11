@@ -2,6 +2,7 @@ package com.aevrontech.finevo.presentation.expense
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -126,7 +127,8 @@ fun LazyListScope.groupedTransactionItems(
     availableLabels: List<Label>,
     currencySymbol: String,
     onTransactionClick: (Transaction) -> Unit,
-    onTransactionDelete: (Transaction) -> Unit
+    onTransactionDelete: (Transaction) -> Unit,
+    onDateClick: (LocalDate) -> Unit
 ) {
     groups.forEach { group ->
         item(key = "group_${group.date}") {
@@ -145,7 +147,8 @@ fun LazyListScope.groupedTransactionItems(
                         date = group.date,
                         totalExpense = group.totalExpense,
                         totalIncome = group.totalIncome,
-                        currencySymbol = currencySymbol
+                        currencySymbol = currencySymbol,
+                        onClick = { onDateClick(group.date) }
                     )
 
                     HorizontalDivider(
@@ -180,13 +183,17 @@ private fun TransactionDateHeader(
     date: LocalDate,
     totalExpense: Double,
     totalIncome: Double,
-    currencySymbol: String
+    currencySymbol: String,
+    onClick: () -> Unit
 ) {
     val dayOfWeek = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
     val dateString = formatDateLabel(date)
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
