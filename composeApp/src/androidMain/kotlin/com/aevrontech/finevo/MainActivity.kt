@@ -2,9 +2,9 @@ package com.aevrontech.finevo
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.fragment.app.FragmentActivity
 import com.aevrontech.finevo.domain.repository.SettingsRepository
 import com.aevrontech.finevo.presentation.auth.LoginScreen
 import com.aevrontech.finevo.presentation.auth.SocialLoginHandler
@@ -13,12 +13,14 @@ import com.aevrontech.finevo.presentation.home.HomeScreen
 import com.aevrontech.finevo.presentation.onboarding.OnboardingScreen
 import com.aevrontech.finevo.ui.theme.ThemeManager
 import com.aevrontech.finevo.ui.theme.initThemePreferences
+import com.aevrontech.finevo.util.ActivityProvider
 import org.koin.android.ext.android.inject
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ActivityProvider.currentActivity = this
         val activityStart = System.currentTimeMillis()
         android.util.Log.i("StartupTiming", "▶ MainActivity.onCreate START")
 
@@ -51,14 +53,17 @@ class MainActivity : ComponentActivity() {
         val checksStart = System.currentTimeMillis()
         val isLoggedIn = settingsRepository.isLoggedIn()
         val hasCompletedOnboarding = settingsRepository.hasCompletedOnboarding()
+        val isPinEnabled = settingsRepository.isPinEnabled()
         android.util.Log.i(
             "StartupTiming",
-            "  Settings checks: ${System.currentTimeMillis() - checksStart}ms (loggedIn=$isLoggedIn, onboarding=$hasCompletedOnboarding)"
+            "  Settings checks: ${System.currentTimeMillis() - checksStart}ms (loggedIn=$isLoggedIn, onboarding=$hasCompletedOnboarding, pin=$isPinEnabled)"
         )
 
         // Determine initial screen without any network calls
         val initialScreen =
             when {
+                isLoggedIn && isPinEnabled ->
+                    com.aevrontech.finevo.presentation.security.SecurityScreen()
                 isLoggedIn -> HomeScreen()
                 hasCompletedOnboarding -> LoginScreen()
                 else -> OnboardingScreen()
@@ -79,10 +84,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clear callback to avoid memory leak
         if (isFinishing) {
             ThemeManager.onThemeChanged = null
         }
+        ActivityProvider.currentActivity = null
     }
 
     @Deprecated("Deprecated in Java")

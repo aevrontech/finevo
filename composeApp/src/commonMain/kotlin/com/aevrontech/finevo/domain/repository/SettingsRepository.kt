@@ -66,6 +66,12 @@ interface SettingsRepository {
     /** Enable/disable biometric */
     suspend fun setBiometricEnabled(enabled: Boolean): Result<Unit>
 
+    /** Check if PIN is enabled (synchronous) */
+    fun isPinEnabled(): Boolean
+
+    /** Check if biometric is enabled (synchronous) */
+    fun isBiometricEnabled(): Boolean
+
     // ============================================
     // NOTIFICATIONS
     // ============================================

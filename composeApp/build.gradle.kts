@@ -123,6 +123,8 @@ kotlin {
 
             // Security
             implementation(libs.androidx.security.crypto)
+            implementation(libs.androidx.biometric)
+            implementation(libs.androidx.fragment.ktx)
 
             // Credential Manager for Google Sign-In
             implementation("androidx.credentials:credentials:1.3.0")

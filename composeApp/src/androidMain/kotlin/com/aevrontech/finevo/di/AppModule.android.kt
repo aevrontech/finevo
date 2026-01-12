@@ -13,4 +13,7 @@ actual fun platformModule() = module {
     single<com.aevrontech.finevo.domain.manager.NotificationManager> {
         com.aevrontech.finevo.data.manager.AndroidNotificationManager(androidContext())
     }
+    single<com.aevrontech.finevo.domain.manager.BiometricManager> {
+        com.aevrontech.finevo.data.manager.AndroidBiometricManager(androidContext())
+    }
 }

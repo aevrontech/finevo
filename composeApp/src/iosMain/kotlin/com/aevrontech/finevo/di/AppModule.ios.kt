@@ -12,4 +12,7 @@ actual fun platformModule() = module {
     single<com.aevrontech.finevo.domain.manager.NotificationManager> {
         com.aevrontech.finevo.data.manager.IosNotificationManager()
     }
+    single<com.aevrontech.finevo.domain.manager.BiometricManager> {
+        com.aevrontech.finevo.data.manager.IosBiometricManager()
+    }
 }

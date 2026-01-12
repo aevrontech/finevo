@@ -83,13 +83,20 @@ class SettingsViewModel(
         }
     }
 
-    fun sendTestNotification() {
+    fun disablePin() {
         viewModelScope.launch {
-            notificationManager.showNotification(
-                id = 999,
-                title = "Test Notification",
-                message = "This confirms that notifications are working!"
-            )
+            _uiState.update { it.copy(isLoading = true) }
+            settingsRepository.setPinEnabled(false, null)
+            settingsRepository.setBiometricEnabled(false) // Disable bio if pin disabled
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun toggleBiometric(enabled: Boolean) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            settingsRepository.setBiometricEnabled(enabled)
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 }

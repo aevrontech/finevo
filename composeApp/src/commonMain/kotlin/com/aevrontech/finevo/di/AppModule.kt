@@ -47,7 +47,7 @@ val appModule = module {
     single { AuthService() }
 
     // Repositories
-    single<AuthRepository> { AuthRepositoryImpl(get(), get(), get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get(), get(), get(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get()) }
     single<DebtRepository> { DebtRepositoryImpl(get()) }
     single<HabitRepository> { HabitRepositoryImpl(get()) }
@@ -72,6 +72,8 @@ val appModule = module {
     viewModel { LabelViewModel(get()) }
     viewModel { UserProfileViewModel(get()) }
     viewModel { BudgetViewModel(get(), get(), get()) } // BudgetRepo + ExpenseRepo + AccountRepo
+    factory { com.aevrontech.finevo.presentation.security.SecurityViewModel(get(), get()) }
+    factory { com.aevrontech.finevo.presentation.security.PinSetupViewModel(get()) }
 }
 
 /** Platform-specific module - override this in each platform. */

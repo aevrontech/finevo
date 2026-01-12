@@ -22,13 +22,14 @@ class SettingsRepositoryImpl(
         MutableStateFlow(
             UserPreferences(
                 userId = settings.getStringOrNull("current_user_id") ?: "",
-                currency =
-                    settings.getString(
-                        "currency_code",
-                        "MYR"
-                    ), // Default to MYR as seen in UI
+                currency = settings.getString("currency_code", "MYR"),
                 locale = settings.getString("locale", "en"),
-                darkMode = settings.getBoolean("dark_mode", true)
+                darkMode = settings.getBoolean("dark_mode", true),
+                pinEnabled = settings.getBoolean("pin_enabled", false),
+                biometricEnabled = settings.getBoolean("biometric_enabled", false),
+                dailyReminderEnabled =
+                    settings.getBoolean("daily_reminder_enabled", false),
+                dailyReminderTime = settings.getStringOrNull("daily_reminder_time")
             )
         )
 
@@ -36,6 +37,48 @@ class SettingsRepositoryImpl(
 
     override fun hasCompletedOnboarding(): Boolean {
         return settings.getBoolean("onboarding_completed", false)
+    }
+
+    override fun isPinEnabled(): Boolean {
+        return settings.getBoolean("pin_enabled", false)
+    }
+
+    override fun isBiometricEnabled(): Boolean {
+        return settings.getBoolean("biometric_enabled", false)
+    }
+
+    override suspend fun setPinEnabled(enabled: Boolean, pin: String?): Result<Unit> {
+        if (enabled && pin != null) {
+            secureStorage.saveSecret("user_pin", pin)
+        } else if (!enabled) {
+            secureStorage.removeSecret("user_pin")
+        }
+
+        settings.putBoolean("pin_enabled", enabled)
+        if (!enabled) setBiometricEnabled(false) // Auto disable bio if pin disabled
+
+        _preferences.value = _preferences.value.copy(pinEnabled = enabled)
+        return Result.success(Unit)
+    }
+
+    override suspend fun verifyPin(pin: String): Result<Boolean> {
+        val storedPin = secureStorage.getSecret("user_pin")
+        return Result.success(storedPin == pin)
+    }
+
+    override suspend fun changePin(oldPin: String, newPin: String): Result<Unit> {
+        val storedPin = secureStorage.getSecret("user_pin")
+        if (storedPin == oldPin) {
+            secureStorage.saveSecret("user_pin", newPin)
+            return Result.success(Unit)
+        }
+        return Result.error(com.aevrontech.finevo.core.util.AppException.Unauthorized)
+    }
+
+    override suspend fun setBiometricEnabled(enabled: Boolean): Result<Unit> {
+        settings.putBoolean("biometric_enabled", enabled)
+        _preferences.value = _preferences.value.copy(biometricEnabled = enabled)
+        return Result.success(Unit)
     }
 
     override suspend fun setOnboardingCompleted(completed: Boolean) {
@@ -90,35 +133,6 @@ class SettingsRepositoryImpl(
 
     override suspend fun setUseDecimals(enabled: Boolean): Result<Unit> {
         _preferences.value = _preferences.value.copy(useDecimals = enabled)
-        return Result.success(Unit)
-    }
-
-    override suspend fun setPinEnabled(enabled: Boolean, pin: String?): Result<Unit> {
-        if (enabled && pin != null) {
-            secureStorage.saveSecret("user_pin", pin)
-        } else if (!enabled) {
-            secureStorage.removeSecret("user_pin")
-        }
-        _preferences.value = _preferences.value.copy(pinEnabled = enabled)
-        return Result.success(Unit)
-    }
-
-    override suspend fun verifyPin(pin: String): Result<Boolean> {
-        val storedPin = secureStorage.getSecret("user_pin")
-        return Result.success(storedPin == pin)
-    }
-
-    override suspend fun changePin(oldPin: String, newPin: String): Result<Unit> {
-        val storedPin = secureStorage.getSecret("user_pin")
-        if (storedPin == oldPin) {
-            secureStorage.saveSecret("user_pin", newPin)
-            return Result.success(Unit)
-        }
-        return Result.error(com.aevrontech.finevo.core.util.AppException.Unauthorized)
-    }
-
-    override suspend fun setBiometricEnabled(enabled: Boolean): Result<Unit> {
-        _preferences.value = _preferences.value.copy(biometricEnabled = enabled)
         return Result.success(Unit)
     }
 

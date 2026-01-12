@@ -25,8 +25,30 @@ import kotlinx.coroutines.flow.map
 class AuthRepositoryImpl(
     private val authService: AuthService,
     private val localDataSource: LocalDataSource,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val biometricManager: com.aevrontech.finevo.domain.manager.BiometricManager
 ) : AuthRepository {
+
+    override fun isBiometricAvailable(): Boolean {
+        return biometricManager.canAuthenticate()
+    }
+
+    override suspend fun enableBiometric(): Result<Unit> {
+        // Just checking availability again before enabling
+        return if (biometricManager.canAuthenticate()) {
+            settingsRepository.setBiometricEnabled(true)
+        } else {
+            Result.error(AppException.Unknown("Biometric not available"))
+        }
+    }
+
+    override suspend fun authenticateWithBiometric(): Result<Boolean> {
+        return if (biometricManager.canAuthenticate()) {
+            Result.success(biometricManager.authenticate("Unlock Finevo", "Confirm your identity"))
+        } else {
+            Result.error(AppException.Unknown("Biometric not available"))
+        }
+    }
 
     // Internal state to track current user ID for Flow switching
     private val _currentUserId = MutableStateFlow(settingsRepository.getCurrentUserId())
@@ -160,18 +182,6 @@ class AuthRepositoryImpl(
     override suspend fun refreshToken(): Result<Unit> {
         // Supabase SDK handles token refresh automatically
         return Result.success(Unit)
-    }
-
-    override fun isBiometricAvailable(): Boolean {
-        return false
-    }
-
-    override suspend fun enableBiometric(): Result<Unit> {
-        return Result.success(Unit)
-    }
-
-    override suspend fun authenticateWithBiometric(): Result<Boolean> {
-        return Result.success(false)
     }
 
     /**
