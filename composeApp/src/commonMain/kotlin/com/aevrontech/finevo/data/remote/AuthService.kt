@@ -2,6 +2,7 @@ package com.aevrontech.finevo.data.remote
 
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.User
 import com.aevrontech.finevo.domain.model.UserTier
 import io.github.jan.supabase.auth.Auth
@@ -14,7 +15,7 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 
 /**
  * Service layer for Supabase authentication. Handles email/password auth, social login, and session
@@ -316,7 +317,7 @@ private fun UserInfo.toDomainUser(): User {
         tier = UserTier.FREE,
         country = userMetadata?.get("country")?.toString() ?: "MY",
         currency = userMetadata?.get("currency")?.toString() ?: "MYR",
-        createdAt = Clock.System.now(),
-        updatedAt = Clock.System.now()
+        createdAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis()),
+        updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
     )
 }

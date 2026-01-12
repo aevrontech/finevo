@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.aevrontech.finevo.core.util.formatDecimal
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
@@ -81,7 +82,6 @@ import com.aevrontech.finevo.ui.theme.IncomeCardAccent
 import com.aevrontech.finevo.ui.theme.IncomeCardBg
 import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
 import com.aevrontech.finevo.ui.theme.Primary
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -1255,10 +1255,7 @@ fun TransactionHistorySection(
 
             groupedTransactions.forEach { (date, dailyTransactions) ->
                 // Date Header Logic: Today, Yesterday, or Date
-                val today =
-                    Clock.System.now()
-                        .toLocalDateTime(TimeZone.currentSystemDefault())
-                        .date
+                val today = getCurrentLocalDate()
                 val dateLabel =
                     when (date) {
                         today -> "Today"
@@ -1527,6 +1524,7 @@ private fun formatDateFull(date: LocalDate): String {
     } ${date.dayOfMonth} ${date.month.name.take(3)} ${date.year.toString().takeLast(2)}"
 }
 
+@OptIn(kotlin.time.ExperimentalTime::class)
 private fun formatTimeFromInstant(instant: kotlinx.datetime.Instant): String {
     val localTime = instant.toLocalDateTime(TimeZone.currentSystemDefault()).time
     // Simple 12h format manually since standard formatter might need library

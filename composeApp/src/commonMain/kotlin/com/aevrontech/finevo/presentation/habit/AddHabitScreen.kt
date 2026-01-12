@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.aevrontech.finevo.core.presentation.BackHandler
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.core.util.padZero
 import com.aevrontech.finevo.domain.model.GoalPeriod
 import com.aevrontech.finevo.domain.model.GoalUnit
@@ -85,11 +86,8 @@ import com.aevrontech.finevo.presentation.label.LabelColors
 import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
 import com.aevrontech.finevo.ui.theme.DashboardGradientMid
 import com.aevrontech.finevo.ui.theme.DashboardGradientStart
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /** Second screen of Add Habit flow - Habit configuration */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -185,10 +183,7 @@ fun AddHabitScreen(
 
     // Habit Term
     var startDate by remember {
-        mutableStateOf<LocalDate?>(
-            habitToEdit?.startDate
-                ?: Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-        )
+        mutableStateOf<LocalDate?>(habitToEdit?.startDate ?: getCurrentLocalDate())
     }
     var endDate by remember { mutableStateOf<LocalDate?>(habitToEdit?.endDate) }
     var showStartDatePicker by remember { mutableStateOf(false) }

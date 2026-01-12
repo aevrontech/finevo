@@ -3,6 +3,8 @@ package com.aevrontech.finevo.presentation.habit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.core.util.Result
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.DailyHabitSummary
 import com.aevrontech.finevo.domain.model.Habit
 import com.aevrontech.finevo.domain.model.HabitFrequency
@@ -13,9 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
+import kotlinx.datetime.Instant
 
 /** ViewModel for Habit Tracker feature. */
 class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel() {
@@ -24,7 +24,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
     val uiState: StateFlow<HabitUiState> = _uiState.asStateFlow()
 
     // Mutable selected date - can be changed by date selector
-    private var selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    private var selectedDate = getCurrentLocalDate()
 
     // Keep track of all habits for filtering
     private var allHabitsCache: List<Habit> = emptyList()
@@ -206,7 +206,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
         xpReward: Int = 10
     ) {
         viewModelScope.launch {
-            val now = Clock.System.now()
+            val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
 
             val habit =
                 Habit(
@@ -253,7 +253,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
         subCategory: String? = null
     ) {
         viewModelScope.launch {
-            val now = Clock.System.now()
+            val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
 
             val habit =
                 Habit(
@@ -331,7 +331,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
                 return@launch
             }
 
-            val now = Clock.System.now()
+            val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
             val updatedHabit =
                 existingHabit.copy(
                     name = name,
@@ -402,8 +402,7 @@ class HabitViewModel(private val habitRepository: HabitRepository) : ViewModel()
     }
 
     private fun generateId(): String {
-        return Clock.System.now().toEpochMilliseconds().toString() +
-            (1000..9999).random().toString()
+        return getCurrentTimeMillis().toString() + (1000..9999).random().toString()
     }
 }
 
@@ -412,10 +411,7 @@ data class HabitUiState(
     val isLoading: Boolean = true,
     val habits: List<Habit> = emptyList(), // Habits for selected date (filtered)
     val allHabits: List<Habit> = emptyList(), // All active habits (for reporting)
-    val selectedDate: kotlinx.datetime.LocalDate =
-        kotlinx.datetime.Clock.System.todayIn(
-            kotlinx.datetime.TimeZone.currentSystemDefault()
-        ),
+    val selectedDate: kotlinx.datetime.LocalDate = getCurrentLocalDate(),
     val completedHabitIds: Set<String> = emptySet(),
     val dailySummary: DailyHabitSummary? = null,
     val showAddDialog: Boolean = false,

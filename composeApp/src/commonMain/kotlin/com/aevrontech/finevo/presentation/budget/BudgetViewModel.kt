@@ -2,6 +2,8 @@ package com.aevrontech.finevo.presentation.budget
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.Budget
 import com.aevrontech.finevo.domain.model.BudgetPeriod
@@ -24,14 +26,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
 /** ViewModel for Budget feature */
 class BudgetViewModel(
@@ -74,40 +74,54 @@ class BudgetViewModel(
                             if (filter == null) {
                                 budgets
                             } else {
-                                budgets.filter { it.period == filter }
+                                budgets.filter {
+                                    it.period == filter
+                                }
                             }
                         Pair(filtered, filter)
                     }
                     .collect { (budgets, filter) ->
-                        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                        val today = getCurrentLocalDate()
 
-                        // Calculate transaction counts for each budget for the CURRENT
+                        // Calculate transaction counts for each budget for
+                        // the CURRENT
                         // period
                         val enrichedBudgets =
                             budgets.map { budget ->
                                 val (start, end) =
-                                    budgetRepository.getBudgetPeriodDates(
-                                        budget.period,
-                                        budget.startDate,
-                                        budget.endDate,
-                                        today,
-                                        0 // Always show current period status
-                                        // in list
-                                    )
+                                    budgetRepository
+                                        .getBudgetPeriodDates(
+                                            budget.period,
+                                            budget.startDate,
+                                            budget.endDate,
+                                            today,
+                                            0 // Always
+                                            // show
+                                            // current
+                                            // period
+                                            // status
+                                            // in list
+                                        )
 
-                                // We need to get transactions to count them
-                                // Note: This could be optimized by batching or a
+                                // We need to get transactions to
+                                // count them
+                                // Note: This could be optimized by
+                                // batching or a
                                 // specific count
                                 // query
                                 val transactions =
                                     expenseRepository
-                                        .getTransactions(start, end)
+                                        .getTransactions(
+                                            start,
+                                            end
+                                        )
                                         .first()
 
                                 val count =
                                     transactions.count { txn ->
                                         val categoryMatch =
-                                            if (budget.categoryIds.isNotEmpty()
+                                            if (budget.categoryIds
+                                                    .isNotEmpty()
                                             ) {
                                                 txn.categoryId in
                                                     budget.categoryIds
@@ -117,26 +131,38 @@ class BudgetViewModel(
                                             }
 
                                         val accountMatch =
-                                            budget.accountIds.isEmpty() ||
+                                            budget.accountIds
+                                                .isEmpty() ||
                                                 txn.accountId in
                                                 budget.accountIds
 
                                         categoryMatch &&
                                             accountMatch &&
-                                            txn.type == TransactionType.EXPENSE
+                                            txn.type ==
+                                            TransactionType
+                                                .EXPENSE
                                     }
 
-                                budget.copy(transactionCount = count)
+                                budget.copy(
+                                    transactionCount = count
+                                )
                             }
 
-                        val totalBudget = enrichedBudgets.sumOf { it.amount }
+                        val totalBudget =
+                            enrichedBudgets.sumOf { it.amount }
                         val totalSpent = enrichedBudgets.sumOf { it.spent }
                         val onTrackCount =
-                            enrichedBudgets.count { it.status == BudgetStatus.ON_TRACK }
+                            enrichedBudgets.count {
+                                it.status == BudgetStatus.ON_TRACK
+                            }
                         val warningCount =
-                            enrichedBudgets.count { it.status == BudgetStatus.WARNING }
+                            enrichedBudgets.count {
+                                it.status == BudgetStatus.WARNING
+                            }
                         val overCount =
-                            enrichedBudgets.count { it.status == BudgetStatus.OVER }
+                            enrichedBudgets.count {
+                                it.status == BudgetStatus.OVER
+                            }
 
                         _uiState.update { state ->
                             state.copy(
@@ -168,10 +194,15 @@ class BudgetViewModel(
                 // Filter to only expense categories
                 val expenseCategories =
                     categories.filter {
-                        it.type == com.aevrontech.finevo.domain.model.TransactionType.EXPENSE
+                        it.type ==
+                            com.aevrontech.finevo.domain.model
+                                .TransactionType.EXPENSE
                     }
                 _uiState.update {
-                    it.copy(categories = expenseCategories, availableCategories = expenseCategories)
+                    it.copy(
+                        categories = expenseCategories,
+                        availableCategories = expenseCategories
+                    )
                 }
             }
         }
@@ -212,14 +243,16 @@ class BudgetViewModel(
         notifyRisk: Boolean
     ) {
         viewModelScope.launch {
-            val now = Clock.System.now()
+            val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
 
             // Use first category as primary (for backwards compatibility)
             val primaryCategoryId = categoryIds.firstOrNull() ?: return@launch
 
             val budget =
                 Budget(
-                    id = now.toEpochMilliseconds().toString() + (1000..9999).random(),
+                    id =
+                        now.toEpochMilliseconds().toString() +
+                            (1000..9999).random(),
                     userId = defaultUserId,
                     name = name.ifBlank { null },
                     categoryId = primaryCategoryId,
@@ -240,7 +273,9 @@ class BudgetViewModel(
                 )
 
             budgetRepository.addBudget(budget)
-            _uiState.update { it.copy(showAddDialog = false, successMessage = "Budget created!") }
+            _uiState.update {
+                it.copy(showAddDialog = false, successMessage = "Budget created!")
+            }
             loadBudgets()
             loadCategories()
         }
@@ -254,7 +289,7 @@ class BudgetViewModel(
         alertThreshold: Int = 80,
         rollover: Boolean = false
     ) {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
         addBudget(
             name = "",
             categoryIds = listOf(categoryId),
@@ -297,16 +332,26 @@ class BudgetViewModel(
                     alertThreshold = alertThreshold,
                     notifyOverspent = notifyOverspent,
                     notifyRisk = notifyRisk,
-                    updatedAt = Clock.System.now()
+                    updatedAt =
+                        Instant.fromEpochMilliseconds(
+                            getCurrentTimeMillis()
+                        )
                 )
             budgetRepository.updateBudget(updated)
-            _uiState.update { it.copy(showAddDialog = false, successMessage = "Budget updated!") }
+            _uiState.update {
+                it.copy(showAddDialog = false, successMessage = "Budget updated!")
+            }
             loadBudgets()
         }
     }
 
     /** Legacy updateBudget for backwards compatibility */
-    fun updateBudget(budget: Budget, amount: Double, period: BudgetPeriod, alertThreshold: Int) {
+    fun updateBudget(
+        budget: Budget,
+        amount: Double,
+        period: BudgetPeriod,
+        alertThreshold: Int
+    ) {
         updateBudget(
             budget = budget,
             name = budget.name ?: "",
@@ -351,7 +396,7 @@ class BudgetViewModel(
         val newOffset = _uiState.value.periodOffset + offset
 
         // Don't allow navigating before budget creation
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
         val testDates =
             budgetRepository.getBudgetPeriodDates(
                 selectedBudget.period,
@@ -379,20 +424,30 @@ class BudgetViewModel(
                         if (updatedBudget == null) {
                             flowOf(null)
                         } else {
-                            val today =
-                                Clock.System.todayIn(TimeZone.currentSystemDefault())
+                            val today = getCurrentLocalDate()
                             val dates =
-                                budgetRepository.getBudgetPeriodDates(
-                                    updatedBudget.period,
-                                    updatedBudget.startDate,
-                                    updatedBudget.endDate,
-                                    today,
-                                    periodOffset
-                                )
+                                budgetRepository
+                                    .getBudgetPeriodDates(
+                                        updatedBudget
+                                            .period,
+                                        updatedBudget
+                                            .startDate,
+                                        updatedBudget
+                                            .endDate,
+                                        today,
+                                        periodOffset
+                                    )
 
-                            expenseRepository.getTransactions(dates.first, dates.second)
+                            expenseRepository.getTransactions(
+                                dates.first,
+                                dates.second
+                            )
                                 .map { transactions ->
-                                    Triple(updatedBudget, dates, transactions)
+                                    Triple(
+                                        updatedBudget,
+                                        dates,
+                                        transactions
+                                    )
                                 }
                         }
                     }
@@ -415,30 +470,44 @@ class BudgetViewModel(
                         // Determine navigation capabilities
                         val canNavigateNext = true
                         val canNavigatePrev =
-                            canNavigateEarlier(updatedBudget, periodOffset)
+                            canNavigateEarlier(
+                                updatedBudget,
+                                periodOffset
+                            )
 
                         // Filter transactions relevant to this budget
                         val uniqueCategoryIds =
                             if (updatedBudget.categoryIds.isNotEmpty())
                                 updatedBudget.categoryIds.toSet()
-                            else listOf(updatedBudget.categoryId).toSet()
-                        val uniqueAccountIds = updatedBudget.accountIds.toSet()
+                            else
+                                listOf(updatedBudget.categoryId)
+                                    .toSet()
+                        val uniqueAccountIds =
+                            updatedBudget.accountIds.toSet()
 
                         val filtered =
                             transactions
                                 .filter { txn ->
-                                    (uniqueCategoryIds.isEmpty() ||
-                                        txn.categoryId in uniqueCategoryIds) &&
-                                        (uniqueAccountIds.isEmpty() ||
+                                    (uniqueCategoryIds
+                                        .isEmpty() ||
+                                        txn.categoryId in
+                                        uniqueCategoryIds) &&
+                                        (uniqueAccountIds
+                                            .isEmpty() ||
                                             txn.accountId in
                                             uniqueAccountIds) &&
-                                        txn.type == TransactionType.EXPENSE
+                                        txn.type ==
+                                        TransactionType
+                                            .EXPENSE
                                 }
                                 .sortedByDescending { it.createdAt }
 
                         // Compute charts
                         val dailySpending =
-                            computeDailySpending(filtered, updatedBudget.period)
+                            computeDailySpending(
+                                filtered,
+                                updatedBudget.period
+                            )
                         val breakdown = computeCategoryBreakdown(filtered)
                         val trendData =
                             computeTrend(
@@ -449,7 +518,8 @@ class BudgetViewModel(
                                 updatedBudget.period
                             )
 
-                        val currentPeriodSpent = filtered.sumOf { it.amount }
+                        val currentPeriodSpent =
+                            filtered.sumOf { it.amount }
                         val budgetForDisplay =
                             updatedBudget.copy(
                                 spent = currentPeriodSpent,
@@ -465,7 +535,8 @@ class BudgetViewModel(
                                 budgetTrend = trendData,
                                 currentPeriodLabel = periodLabel,
                                 canNavigateNext = canNavigateNext,
-                                canNavigatePrevious = canNavigatePrev,
+                                canNavigatePrevious =
+                                    canNavigatePrev,
                                 isDetailsLoading = false
                             )
                         }
@@ -480,7 +551,7 @@ class BudgetViewModel(
     ): String {
         return when (period) {
             BudgetPeriod.WEEKLY -> {
-                val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                val today = getCurrentLocalDate()
                 if (endDate == today) {
                     val monthNames =
                         listOf(
@@ -515,11 +586,15 @@ class BudgetViewModel(
                             "Dec"
                         )
                     val startYear =
-                        if (startDate.year != today.year || startDate.year != endDate.year)
+                        if (startDate.year != today.year ||
+                            startDate.year != endDate.year
+                        )
                             ", ${startDate.year}"
                         else ""
                     val endYear =
-                        if (endDate.year != today.year || startDate.year != endDate.year)
+                        if (endDate.year != today.year ||
+                            startDate.year != endDate.year
+                        )
                             ", ${endDate.year}"
                         else ""
 
@@ -552,8 +627,10 @@ class BudgetViewModel(
                 "${startDate.year}"
             }
             BudgetPeriod.ONCE -> {
-                val startStr = "${startDate.dayOfMonth}/${startDate.monthNumber}/${startDate.year}"
-                val endStr = "${endDate.dayOfMonth}/${endDate.monthNumber}/${endDate.year}"
+                val startStr =
+                    "${startDate.dayOfMonth}/${startDate.monthNumber}/${startDate.year}"
+                val endStr =
+                    "${endDate.dayOfMonth}/${endDate.monthNumber}/${endDate.year}"
                 "$startStr - $endStr"
             }
         }
@@ -577,7 +654,8 @@ class BudgetViewModel(
         transactions: List<Transaction>,
         period: BudgetPeriod
     ): List<BarChartItem> {
-        // Group by day of month for Monthly, Day of Year for others for simplicity in daily view
+        // Group by day of month for Monthly, Day of Year for others for simplicity in daily
+        // view
         // Or if Weekly, day of week.
         // Let's stick to simple grouping by day number for now like ExpenseReportScreen
         val grouped =
@@ -589,12 +667,17 @@ class BudgetViewModel(
         // For simplicity, just return present days sorted.
         return grouped
             .map { (day, txns) ->
-                BarChartItem(label = day.toString(), value = txns.sumOf { it.amount })
+                BarChartItem(
+                    label = day.toString(),
+                    value = txns.sumOf { it.amount }
+                )
             }
             .sortedBy { it.label.toIntOrNull() ?: 0 }
     }
 
-    private fun computeCategoryBreakdown(transactions: List<Transaction>): List<CategoryBreakdown> {
+    private fun computeCategoryBreakdown(
+        transactions: List<Transaction>
+    ): List<CategoryBreakdown> {
         val categories = _uiState.value.availableCategories
         return transactions
             .groupBy { it.categoryId }
@@ -619,12 +702,15 @@ class BudgetViewModel(
         endDate: LocalDate,
         period: BudgetPeriod
     ): BudgetTrendData {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
 
         // Calculate visual range
         val (visibleStart, visibleEnd) =
             if (period == BudgetPeriod.WEEKLY) {
-                val monday = startDate.minus(DatePeriod(days = startDate.dayOfWeek.ordinal))
+                val monday =
+                    startDate.minus(
+                        DatePeriod(days = startDate.dayOfWeek.ordinal)
+                    )
                 val sunday = monday.plus(DatePeriod(days = 6))
                 monday to sunday
             } else {

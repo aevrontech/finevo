@@ -2,6 +2,7 @@ package com.aevrontech.finevo.presentation.label
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.repository.LabelRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,9 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlin.time.ExperimentalTime
 
 /** ViewModel for Label management */
+@OptIn(ExperimentalTime::class)
 class LabelViewModel(private val labelRepository: LabelRepository) : ViewModel() {
 
     // Default user ID for local storage (single user mode)
@@ -37,7 +40,8 @@ class LabelViewModel(private val labelRepository: LabelRepository) : ViewModel()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val now = Clock.System.now()
+                val timestamp = getCurrentTimeMillis()
+                val now = Instant.fromEpochMilliseconds(timestamp)
                 val label =
                     Label(
                         id = generateId(),
@@ -60,7 +64,11 @@ class LabelViewModel(private val labelRepository: LabelRepository) : ViewModel()
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                labelRepository.updateLabel(label.copy(updatedAt = Clock.System.now()))
+                labelRepository.updateLabel(
+                    label.copy(
+                        updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
+                    )
+                )
                 _uiState.update { it.copy(isLoading = false, successMessage = "Label updated") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
@@ -102,7 +110,13 @@ class LabelViewModel(private val labelRepository: LabelRepository) : ViewModel()
                 if (label.sortOrder != index) {
                     try {
                         labelRepository.updateLabel(
-                            label.copy(sortOrder = index, updatedAt = Clock.System.now())
+                            label.copy(
+                                sortOrder = index,
+                                updatedAt =
+                                    Instant.fromEpochMilliseconds(
+                                        getCurrentTimeMillis()
+                                    )
+                            )
                         )
                     } catch (e: Exception) {
                         // Log error but continue
@@ -151,7 +165,7 @@ class LabelViewModel(private val labelRepository: LabelRepository) : ViewModel()
     }
 
     private fun generateId(): String {
-        return "label_${Clock.System.now().toEpochMilliseconds()}"
+        return "label_${getCurrentTimeMillis()}"
     }
 }
 

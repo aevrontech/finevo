@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aevrontech.finevo.core.util.formatDecimal
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.domain.model.Label
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
@@ -55,12 +56,9 @@ import com.aevrontech.finevo.ui.theme.Expense
 import com.aevrontech.finevo.ui.theme.Income
 import com.aevrontech.finevo.ui.theme.OnSurfaceVariant
 import com.aevrontech.finevo.ui.theme.Primary
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
-import kotlinx.datetime.todayIn
 
 /** Data class for grouped transactions by date. */
 data class TransactionGroup(
@@ -72,8 +70,9 @@ data class TransactionGroup(
 )
 
 /** Groups transactions by date and creates appropriate labels. */
+@OptIn(kotlin.time.ExperimentalTime::class)
 fun groupTransactionsByDate(transactions: List<Transaction>): List<TransactionGroup> {
-    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val today = getCurrentLocalDate()
     val yesterday = today.minus(1, DateTimeUnit.DAY)
 
     return transactions
@@ -133,7 +132,9 @@ fun LazyListScope.groupedTransactionItems(
     groups.forEach { group ->
         item(key = "group_${group.date}") {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                 colors =
                     CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
@@ -162,13 +163,23 @@ fun LazyListScope.groupedTransactionItems(
                             transaction = transaction,
                             availableLabels = availableLabels,
                             currencySymbol = currencySymbol,
-                            onClick = { onTransactionClick(transaction) },
-                            onDelete = { onTransactionDelete(transaction) }
+                            onClick = {
+                                onTransactionClick(transaction)
+                            },
+                            onDelete = {
+                                onTransactionDelete(transaction)
+                            }
                         )
                         if (index < group.transactions.size - 1) {
                             HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = OnSurfaceVariant.copy(alpha = 0.1f)
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal = 16.dp
+                                    ),
+                                color =
+                                    OnSurfaceVariant.copy(
+                                        alpha = 0.1f
+                                    )
                             )
                         }
                     }
@@ -311,7 +322,9 @@ fun SwipeableTransactionItem(
                 ) { Text("Delete", color = Error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -327,7 +340,9 @@ private fun TransactionItemContent(
 ) {
     Surface(onClick = onClick, color = MaterialTheme.colorScheme.surface) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Category Icon
@@ -336,7 +351,10 @@ private fun TransactionItemContent(
                     Modifier.size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(
-                            parseColorSafe(transaction.categoryColor ?: "#607D8B")
+                            parseColorSafe(
+                                transaction.categoryColor
+                                    ?: "#607D8B"
+                            )
                                 .copy(alpha = 0.15f)
                         ),
                 contentAlignment = Alignment.Center
@@ -347,7 +365,8 @@ private fun TransactionItemContent(
             // Main Content
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy((-2).dp) // Reduced spacing
+                verticalArrangement =
+                    Arrangement.spacedBy((-2).dp) // Reduced spacing
             ) {
                 // Row 1: Category - Amount
                 Row(
@@ -357,7 +376,8 @@ private fun TransactionItemContent(
                 ) {
                     Text(
                         text = transaction.categoryName
-                            ?: transaction.description ?: "Transaction",
+                            ?: transaction.description
+                            ?: "Transaction",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 15.sp, // Reduced to 15sp
                         fontWeight = FontWeight.SemiBold,
@@ -373,7 +393,10 @@ private fun TransactionItemContent(
                                 transaction.amount.formatDecimal(2)
                             }",
                         color =
-                            if (transaction.type == TransactionType.EXPENSE) Expense
+                            if (transaction.type ==
+                                TransactionType.EXPENSE
+                            )
+                                Expense
                             else Income,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp // Reduced to 15sp
@@ -404,19 +427,29 @@ private fun TransactionItemContent(
                             if (parts.size >= 2) {
                                 val hour = parts[0].toInt()
                                 val minute = parts[1].toInt()
-                                val amPm = if (hour < 12) "AM" else "PM"
-                                val hour12 = if (hour % 12 == 0) 12 else hour % 12
+                                val amPm =
+                                    if (hour < 12) "AM"
+                                    else "PM"
+                                val hour12 =
+                                    if (hour % 12 == 0) 12
+                                    else hour % 12
                                 "${hour12}:${minute.toString().padStart(2, '0')} $amPm"
                             } else it
                         }
                             ?: ""
 
-                    Text(text = timeString, color = OnSurfaceVariant, fontSize = 13.sp)
+                    Text(
+                        text = timeString,
+                        color = OnSurfaceVariant,
+                        fontSize = 13.sp
+                    )
                 }
 
                 // Note (if present and distinct)
                 val noteText = transaction.note ?: transaction.description
-                if (!noteText.isNullOrBlank() && noteText != transaction.categoryName) {
+                if (!noteText.isNullOrBlank() &&
+                    noteText != transaction.categoryName
+                ) {
                     // Removed Spacer to tighten spacing
                     Text(
                         text = "\"$noteText\"",
@@ -428,27 +461,51 @@ private fun TransactionItemContent(
                 }
 
                 // Labels
-                if (transaction.labels.isNotEmpty() && availableLabels.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp)) // Reduced from 4.dp
+                if (transaction.labels.isNotEmpty() && availableLabels.isNotEmpty()
+                ) {
+                    Spacer(
+                        modifier = Modifier.height(2.dp)
+                    ) // Reduced from 4.dp
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         transaction.labels.forEach { labelId ->
-                            val label = availableLabels.find { it.id == labelId }
+                            val label =
+                                availableLabels.find {
+                                    it.id == labelId
+                                }
                             if (label != null) {
-                                val labelColor = parseColorSafe(label.color)
+                                val labelColor =
+                                    parseColorSafe(label.color)
                                 Box(
                                     modifier =
-                                        Modifier.clip(RoundedCornerShape(4.dp))
-                                            .background(labelColor.copy(alpha = 0.2f))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        Modifier.clip(
+                                            RoundedCornerShape(
+                                                4.dp
+                                            )
+                                        )
+                                            .background(
+                                                labelColor
+                                                    .copy(
+                                                        alpha =
+                                                            0.2f
+                                                    )
+                                            )
+                                            .padding(
+                                                horizontal =
+                                                    6.dp,
+                                                vertical =
+                                                    2.dp
+                                            )
                                 ) {
                                     Text(
                                         text = label.name,
                                         color = labelColor,
                                         fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight =
+                                            FontWeight
+                                                .Medium
                                     )
                                 }
                             }

@@ -3,6 +3,7 @@ package com.aevrontech.finevo.data.local
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrNull
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.Budget
 import com.aevrontech.finevo.domain.model.BudgetPeriod
 import com.aevrontech.finevo.domain.model.Category
@@ -22,7 +23,6 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 
@@ -56,7 +56,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     /** Insert or update user in local cache */
     suspend fun insertUser(user: User) =
         withContext(Dispatchers.IO) {
-            val now = Clock.System.now().toEpochMilliseconds()
+            val now = getCurrentTimeMillis()
             queries.insertUser(
                 id = user.id,
                 email = user.email,
@@ -104,7 +104,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
                 type = category.type.name,
                 is_default = if (category.isDefault) 1L else 0L,
                 sort_order = category.order.toLong(),
-                created_at = Clock.System.now().toEpochMilliseconds()
+                created_at = getCurrentTimeMillis()
             )
         }
 
@@ -224,7 +224,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun insertTransaction(transaction: Transaction) =
         withContext(Dispatchers.IO) {
-            val now = Clock.System.now().toEpochMilliseconds()
+            val now = getCurrentTimeMillis()
             queries.insertTransaction(
                 id = transaction.id,
                 user_id = defaultUserId,
@@ -288,7 +288,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun insertBudget(budget: Budget) =
         withContext(Dispatchers.IO) {
-            val now = Clock.System.now().toEpochMilliseconds()
+            val now = getCurrentTimeMillis()
             queries.insertBudget(
                 id = budget.id,
                 user_id = defaultUserId,
@@ -341,7 +341,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun insertHabit(habit: Habit) =
         withContext(Dispatchers.IO) {
-            val now = Clock.System.now().toEpochMilliseconds()
+            val now = getCurrentTimeMillis()
             queries.insertHabit(
                 id = habit.id,
                 user_id = defaultUserId,
@@ -382,7 +382,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
                 current_streak = currentStreak.toLong(),
                 best_streak = bestStreak.toLong(),
                 total_completions = totalCompletions.toLong(),
-                updated_at = Clock.System.now().toEpochMilliseconds(),
+                updated_at = getCurrentTimeMillis(),
                 id = habitId
             )
         }
@@ -417,7 +417,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
                 completed_count = log.completedCount.toLong(),
                 note = log.note,
                 skipped = if (log.skipped) 1L else 0L,
-                created_at = Clock.System.now().toEpochMilliseconds()
+                created_at = getCurrentTimeMillis()
             )
         }
 
@@ -444,7 +444,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun insertDebt(debt: Debt) =
         withContext(Dispatchers.IO) {
-            val now = Clock.System.now().toEpochMilliseconds()
+            val now = getCurrentTimeMillis()
             queries.insertDebt(
                 id = debt.id,
                 user_id = defaultUserId,
@@ -495,7 +495,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
                 date = payment.date.toString(),
                 note = payment.note,
                 is_extra_payment = if (payment.isExtraPayment) 1L else 0L,
-                created_at = Clock.System.now().toEpochMilliseconds()
+                created_at = getCurrentTimeMillis()
             )
         }
 
@@ -508,11 +508,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
 
     suspend fun setConfigValue(key: String, value: String) =
         withContext(Dispatchers.IO) {
-            queries.insertAppConfig(
-                key,
-                value,
-                Clock.System.now().toEpochMilliseconds()
-            )
+            queries.insertAppConfig(key, value, getCurrentTimeMillis())
         }
 
     // ============================================
@@ -559,7 +555,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
                 color = label.color,
                 auto_assign = if (label.autoAssign) 1L else 0L,
                 sort_order = label.sortOrder.toLong(),
-                updated_at = Clock.System.now().toEpochMilliseconds(),
+                updated_at = getCurrentTimeMillis(),
                 id = label.id
             )
         }
@@ -628,7 +624,7 @@ class LocalDataSource(private val database: FinEvoDatabase) {
     suspend fun updateCurrencyForUserAndAccounts(userId: String, currency: String) {
         withContext(Dispatchers.IO) {
             queries.transaction {
-                val timestamp = Clock.System.now().toEpochMilliseconds()
+                val timestamp = getCurrentTimeMillis()
                 queries.updateUserCurrency(currency, timestamp, userId)
                 queries.updateAllAccountsCurrency(currency, timestamp, userId)
             }

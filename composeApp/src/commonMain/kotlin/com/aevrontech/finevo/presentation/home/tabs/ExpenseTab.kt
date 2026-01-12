@@ -50,6 +50,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
@@ -71,14 +72,11 @@ import com.aevrontech.finevo.ui.theme.Error
 import com.aevrontech.finevo.ui.theme.HabitGradientEnd
 import com.aevrontech.finevo.ui.theme.HabitGradientStart
 import com.aevrontech.finevo.ui.theme.Primary
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 object ExpenseTab : Tab {
@@ -334,8 +332,8 @@ internal fun ExpenseTabContent() {
                     },
                     onDateClick = { date ->
                         // Calculate offset from today to the selected date
-                        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-                        val daysDiff = date.toEpochDays() - today.toEpochDays()
+                        val today = getCurrentLocalDate()
+                        val daysDiff = (date.toEpochDays() - today.toEpochDays()).toInt()
 
                         expenseViewModel.setFilterPeriod(FilterPeriod.DAY)
                         expenseViewModel.setPeriodOffset(daysDiff)
@@ -376,18 +374,18 @@ internal fun ExpenseTabContent() {
                     ?: expenseState.accounts.firstOrNull(),
                 availableLabels = labelUiState.labels,
                 onDismiss = { showAddTransaction = false },
-                onConfirm = { type,
-                              amount,
-                              accountId,
-                              categoryId,
-                              note,
-                              date,
-                              time,
-                              locationName,
-                              locationLat,
-                              locationLng,
-                              labels,
-                              photoPath ->
+                onConfirm = { type: TransactionType,
+                              amount: Double,
+                              accountId: String?,
+                              categoryId: String,
+                              note: String?,
+                              date: LocalDate,
+                              time: String,
+                              locationName: String?,
+                              locationLat: Double?,
+                              locationLng: Double?,
+                              labels: List<String>,
+                              photoPath: String? ->
                     expenseViewModel.addTransaction(
                         type,
                         amount,
@@ -404,7 +402,9 @@ internal fun ExpenseTabContent() {
                     )
                     showAddTransaction = false
                 },
-                onAddLabel = { name, color, auto -> labelViewModel.addLabel(name, color, auto) }
+                onAddLabel = { name: String, color: String, auto: Boolean ->
+                    labelViewModel.addLabel(name, color, auto)
+                }
             )
         }
 
@@ -427,18 +427,18 @@ internal fun ExpenseTabContent() {
                     availableLabels = labelUiState.labels,
                     editingTransaction = tx,
                     onDismiss = { transactionToEdit = null },
-                    onConfirm = { type,
-                                  amount,
-                                  accountId,
-                                  categoryId,
-                                  note,
-                                  date,
-                                  time,
-                                  locationName,
-                                  locationLat,
-                                  locationLng,
-                                  labels,
-                                  photoPath ->
+                    onConfirm = { type: TransactionType,
+                                  amount: Double,
+                                  accountId: String?,
+                                  categoryId: String,
+                                  note: String?,
+                                  date: LocalDate,
+                                  time: String,
+                                  locationName: String?,
+                                  locationLat: Double?,
+                                  locationLng: Double?,
+                                  labels: List<String>,
+                                  photoPath: String? ->
                         expenseViewModel.updateTransaction(
                             tx.id,
                             type,
@@ -456,7 +456,7 @@ internal fun ExpenseTabContent() {
                         )
                         transactionToEdit = null
                     },
-                    onAddLabel = { name, color, auto ->
+                    onAddLabel = { name: String, color: String, auto: Boolean ->
                         labelViewModel.addLabel(name, color, auto)
                     }
                 )
@@ -558,7 +558,7 @@ internal fun GradientFab(onClick: () -> Unit, icon: ImageVector, modifier: Modif
 }
 
 private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
-    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val today = getCurrentLocalDate()
 
     return when (period) {
         FilterPeriod.DAY -> {
@@ -573,8 +573,8 @@ private fun getPeriodLabelForReport(period: FilterPeriod, offset: Int): String {
             "${weekStart.dayOfMonth} ${weekStart.month.name.take(3)} - ${weekEnd.dayOfMonth} ${weekEnd.month.name.take(3)}"
         }
         FilterPeriod.MONTH -> {
-            var targetYear = today.year
-            var targetMonth = today.monthNumber + offset
+            var targetYear: Int = today.year
+            var targetMonth: Int = today.monthNumber + offset
             while (targetMonth < 1) {
                 targetMonth += 12
                 targetYear -= 1

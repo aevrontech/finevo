@@ -2,6 +2,7 @@ package com.aevrontech.finevo.presentation.category
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.Category
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.domain.repository.CategoryRepository
@@ -10,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 
 /** ViewModel for Category Management. */
 class CategoryViewModel(private val categoryRepository: CategoryRepository) : ViewModel() {
@@ -59,7 +59,7 @@ class CategoryViewModel(private val categoryRepository: CategoryRepository) : Vi
         viewModelScope.launch {
             val newCategory =
                 Category(
-                    id = "cat_${Clock.System.now().toEpochMilliseconds()}",
+                    id = "cat_${getCurrentTimeMillis()}",
                     userId = "local_user", // User-created categories have userId
                     name = name,
                     icon = icon,

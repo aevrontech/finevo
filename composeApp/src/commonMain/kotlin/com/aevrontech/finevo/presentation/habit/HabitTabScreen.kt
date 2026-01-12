@@ -48,14 +48,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.Habit
 import com.aevrontech.finevo.ui.theme.HabitGradientEnd
 import com.aevrontech.finevo.ui.theme.HabitGradientStart
 import com.aevrontech.finevo.ui.theme.Primary
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
 
@@ -70,9 +71,7 @@ fun HabitTabScreen(
     val viewModel: HabitViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    var selectedDate by remember {
-        mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault()))
-    }
+    var selectedDate by remember { mutableStateOf(getCurrentLocalDate()) }
     var showCompletionDialog by remember { mutableStateOf(false) }
     var previousCompletionCount by remember { mutableStateOf(0) }
 
@@ -463,8 +462,9 @@ private fun EmptyHabitsCard(onAddClick: () -> Unit) {
     }
 }
 
+@OptIn(kotlin.time.ExperimentalTime::class)
 private fun getGreeting(): String {
-    val now = Clock.System.now()
+    val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
     val localDateTime = now.toLocalDateTime(TimeZone.currentSystemDefault())
     val hour = localDateTime.hour
     return when {

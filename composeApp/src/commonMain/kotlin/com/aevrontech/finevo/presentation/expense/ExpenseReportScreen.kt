@@ -37,15 +37,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.presentation.label.LabelViewModel
 import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
 import com.aevrontech.finevo.ui.theme.DashboardGradientMid
 import com.aevrontech.finevo.ui.theme.DashboardGradientStart
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Full screen report with swipe-able charts and history - Redesigned with Blue Header */
@@ -288,8 +286,8 @@ fun ExpenseReportScreen(onDismiss: () -> Unit) {
                         // Optional: Navigate/Zoom to that date.
                         // For now, mirroring Wallet behavior or leaving as simple interaction.
                         // Wallet calculates offset and sets to DAY view.
-                        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-                        val daysDiff = date.toEpochDays() - today.toEpochDays()
+                        val today = getCurrentLocalDate()
+                        val daysDiff = (date.toEpochDays() - today.toEpochDays()).toInt()
                         expenseViewModel.setFilterPeriod(FilterPeriod.DAY)
                         expenseViewModel.setPeriodOffset(daysDiff)
                     }

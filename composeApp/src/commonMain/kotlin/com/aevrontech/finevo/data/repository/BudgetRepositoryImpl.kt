@@ -1,5 +1,7 @@
 package com.aevrontech.finevo.data.repository
 
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.domain.manager.NotificationManager
 import com.aevrontech.finevo.domain.model.Budget
@@ -10,13 +12,11 @@ import com.aevrontech.finevo.domain.repository.BudgetRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
 /** BudgetRepository implementation using SQLDelight for local storage. */
 class BudgetRepositoryImpl(
@@ -69,7 +69,11 @@ class BudgetRepositoryImpl(
 
     override suspend fun updateBudgetSpent(budgetId: String, spent: Double) {
         val budget = getBudgetById(budgetId) ?: return
-        val updated = budget.copy(spent = spent, updatedAt = Clock.System.now())
+        val updated =
+            budget.copy(
+                spent = spent,
+                updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
+            )
         localDataSource.insertBudget(updated)
     }
 
@@ -79,12 +83,17 @@ class BudgetRepositoryImpl(
         val budgets = localDataSource.getBudgets().first()
         val budget = budgets.find { it.id == id } ?: return
         // Mark as inactive instead of deleting for data safety
-        localDataSource.insertBudget(budget.copy(isActive = false, updatedAt = Clock.System.now()))
+        localDataSource.insertBudget(
+            budget.copy(
+                isActive = false,
+                updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
+            )
+        )
     }
 
     override suspend fun recalculateAllBudgets(userId: String) {
         val budgets = localDataSource.getBudgets().first().filter { it.isActive }
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
 
         for (budget in budgets) {
             val (startDate, endDate) =

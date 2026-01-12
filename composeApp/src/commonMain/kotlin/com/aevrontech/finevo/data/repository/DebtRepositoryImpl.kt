@@ -2,6 +2,8 @@ package com.aevrontech.finevo.data.repository
 
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.domain.model.Bill
 import com.aevrontech.finevo.domain.model.Debt
@@ -16,19 +18,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
-/**
- * DebtRepository implementation using SQLDelight for local storage.
- */
-class DebtRepositoryImpl(
-    private val localDataSource: LocalDataSource
-) : DebtRepository {
+/** DebtRepository implementation using SQLDelight for local storage. */
+class DebtRepositoryImpl(private val localDataSource: LocalDataSource) : DebtRepository {
 
     override fun getDebts(): Flow<List<Debt>> {
         return localDataSource.getDebts()
@@ -40,12 +36,9 @@ class DebtRepositoryImpl(
 
     override suspend fun getDebt(id: String): Result<Debt> {
         return try {
-            val debt = localDataSource.getDebts()
-                .first()
-                .find { it.id == id }
+            val debt = localDataSource.getDebts().first().find { it.id == id }
 
-            if (debt != null) Result.success(debt)
-            else Result.error(AppException.NotFound("Debt"))
+            if (debt != null) Result.success(debt) else Result.error(AppException.NotFound("Debt"))
         } catch (e: Exception) {
             Result.error(AppException.DatabaseError(e.message ?: "Unknown error"))
         }
@@ -86,7 +79,7 @@ class DebtRepositoryImpl(
             val paidOff = debt.copy(
                 isPaidOff = true,
                 currentBalance = 0.0,
-                updatedAt = Clock.System.now()
+                updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
             )
             localDataSource.insertDebt(paidOff)
             Result.success(paidOff)
@@ -114,7 +107,7 @@ class DebtRepositoryImpl(
                 val updated = debt.copy(
                     currentBalance = newBalance,
                     isPaidOff = newBalance == 0.0,
-                    updatedAt = Clock.System.now()
+                    updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
                 )
                 localDataSource.insertDebt(updated)
             }
@@ -130,14 +123,14 @@ class DebtRepositoryImpl(
     }
 
     override suspend fun calculatePayoffPlan(
-        strategy: PayoffStrategy,
-        extraMonthlyPayment: Double
-    ): Result<PayoffPlan> {
+        strategy: PayoffStrategy, extraMonthlyPayment: Double): Result<PayoffPlan> {
         return try {
             val debts = localDataSource.getActiveDebts().first()
 
             if (debts.isEmpty()) {
-                return Result.error(AppException.ValidationError("validation", "No active debts to calculate"))
+                return Result.error(
+                    AppException.ValidationError("validation", "No active debts to calculate")
+                )
             }
 
             // Sort by strategy
@@ -152,7 +145,7 @@ class DebtRepositoryImpl(
             val monthlyPayment = debts.sumOf { it.minimumPayment } + extraMonthlyPayment
             val estimatedMonths = if (monthlyPayment > 0) ((totalDebt / monthlyPayment) + 1).toInt() else 12
 
-            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val today = getCurrentLocalDate()
             val payoffDate = today.plus(DatePeriod(months = estimatedMonths))
 
             Result.success(
@@ -178,7 +171,8 @@ class DebtRepositoryImpl(
         }
     }
 
-    override suspend fun calculateWhatIf(debtId: String, extraPayment: Double): Result<WhatIfScenario> {
+    override suspend fun calculateWhatIf(
+        debtId: String, extraPayment: Double): Result<WhatIfScenario> {
         return Result.error(AppException.Unknown("Not implemented"))
     }
 

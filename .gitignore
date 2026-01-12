@@ -70,3 +70,6 @@ sentry.properties
 /shared/build/
 /composeApp/build/
 /iosApp/build/
+
+# Kotlin Cache
+.kotlin/

@@ -2,6 +2,7 @@ package com.aevrontech.finevo.data.repository
 
 import com.aevrontech.finevo.core.util.AppException
 import com.aevrontech.finevo.core.util.Result
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.domain.model.Achievement
 import com.aevrontech.finevo.domain.model.DailyHabitSummary
@@ -15,15 +16,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 
-/**
- * HabitRepository implementation using SQLDelight for local storage.
- */
-class HabitRepositoryImpl(
-    private val localDataSource: LocalDataSource
-) : HabitRepository {
+/** HabitRepository implementation using SQLDelight for local storage. */
+class HabitRepositoryImpl(private val localDataSource: LocalDataSource) : HabitRepository {
 
     override fun getHabits(): Flow<List<Habit>> {
         return localDataSource.getHabits()
@@ -41,9 +38,7 @@ class HabitRepositoryImpl(
 
     override suspend fun getHabit(id: String): Result<Habit> {
         return try {
-            val habit = localDataSource.getHabits()
-                .first()
-                .find { it.id == id }
+            val habit = localDataSource.getHabits().first().find { it.id == id }
 
             if (habit != null) Result.success(habit)
             else Result.error(AppException.NotFound("Habit"))
@@ -82,10 +77,15 @@ class HabitRepositoryImpl(
 
     override suspend fun archiveHabit(id: String): Result<Habit> {
         return try {
-            val habit = localDataSource.getHabits().first().find { it.id == id }
-                ?: return Result.error(AppException.NotFound("Habit"))
+            val habit =
+                localDataSource.getHabits().first().find { it.id == id }
+                    ?: return Result.error(AppException.NotFound("Habit"))
 
-            val archived = habit.copy(isArchived = true, updatedAt = Clock.System.now())
+            val archived =
+                habit.copy(
+                    isArchived = true,
+                    updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
+                )
             localDataSource.insertHabit(archived)
             Result.success(archived)
         } catch (e: Exception) {
@@ -109,16 +109,21 @@ class HabitRepositoryImpl(
         return localDataSource.getHabitLogsForHabit(habitId)
     }
 
-    override suspend fun completeHabit(habitId: String, date: LocalDate, note: String?): Result<HabitLog> {
+    override suspend fun completeHabit(
+        habitId: String,
+        date: LocalDate,
+        note: String?
+    ): Result<HabitLog> {
         return try {
-            val log = HabitLog(
-                id = "log_${Clock.System.now().toEpochMilliseconds()}",
-                habitId = habitId,
-                date = date,
-                completedCount = 1,
-                note = note,
-                createdAt = Clock.System.now()
-            )
+            val log =
+                HabitLog(
+                    id = "log_${getCurrentTimeMillis()}",
+                    habitId = habitId,
+                    date = date,
+                    completedCount = 1,
+                    note = note,
+                    createdAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
+                )
             localDataSource.insertHabitLog(log)
 
             // Update streak
@@ -141,14 +146,15 @@ class HabitRepositoryImpl(
 
     override suspend fun skipHabit(habitId: String, date: LocalDate): Result<HabitLog> {
         return try {
-            val log = HabitLog(
-                id = "log_${Clock.System.now().toEpochMilliseconds()}",
-                habitId = habitId,
-                date = date,
-                completedCount = 0,
-                skipped = true,
-                createdAt = Clock.System.now()
-            )
+            val log =
+                HabitLog(
+                    id = "log_${getCurrentTimeMillis()}",
+                    habitId = habitId,
+                    date = date,
+                    completedCount = 0,
+                    skipped = true,
+                    createdAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
+                )
             localDataSource.insertHabitLog(log)
             Result.success(log)
         } catch (e: Exception) {
@@ -158,9 +164,9 @@ class HabitRepositoryImpl(
 
     override suspend fun isHabitCompleted(habitId: String, date: LocalDate): Boolean {
         return try {
-            localDataSource.getHabitLogsForDate(date)
-                .first()
-                .any { it.habitId == habitId && !it.skipped }
+            localDataSource.getHabitLogsForDate(date).first().any {
+                it.habitId == habitId && !it.skipped
+            }
         } catch (e: Exception) {
             false
         }
@@ -188,7 +194,8 @@ class HabitRepositoryImpl(
 
     override fun getAchievements(): Flow<List<Achievement>> = flowOf(emptyList())
 
-    override suspend fun checkAchievements(): Result<List<Achievement>> = Result.success(emptyList())
+    override suspend fun checkAchievements(): Result<List<Achievement>> =
+        Result.success(emptyList())
 
     override suspend fun addXp(amount: Int): Result<UserStats> {
         return Result.success(UserStats(userId = "", totalXp = amount))
@@ -214,7 +221,9 @@ class HabitRepositoryImpl(
         }
     }
 
-    override suspend fun getWeeklyAnalytics(weekStartDate: LocalDate): Result<WeeklyHabitAnalytics> {
+    override suspend fun getWeeklyAnalytics(
+        weekStartDate: LocalDate
+    ): Result<WeeklyHabitAnalytics> {
         return Result.success(
             WeeklyHabitAnalytics(
                 weekStartDate = weekStartDate,
@@ -228,7 +237,10 @@ class HabitRepositoryImpl(
         )
     }
 
-    override fun getStreakCalendar(habitId: String, month: LocalDate): Flow<Map<LocalDate, Boolean>> {
+    override fun getStreakCalendar(
+        habitId: String,
+        month: LocalDate
+    ): Flow<Map<LocalDate, Boolean>> {
         return localDataSource.getHabitLogsForHabit(habitId).map { logs ->
             logs.associate { it.date to !it.skipped }
         }
@@ -261,12 +273,13 @@ class HabitRepositoryImpl(
         }
     }
 
-    private fun defaultCategories(): List<HabitCategory> = listOf(
-        HabitCategory("hcat_health", null, "Health", "💪", "#4CAF50", 1),
-        HabitCategory("hcat_productivity", null, "Productivity", "⚡", "#FF9800", 2),
-        HabitCategory("hcat_mindfulness", null, "Mindfulness", "🧘", "#9C27B0", 3),
-        HabitCategory("hcat_learning", null, "Learning", "📚", "#2196F3", 4),
-        HabitCategory("hcat_social", null, "Social", "👥", "#E91E63", 5),
-        HabitCategory("hcat_finance", null, "Finance", "💰", "#00BCD4", 6)
-    )
+    private fun defaultCategories(): List<HabitCategory> =
+        listOf(
+            HabitCategory("hcat_health", null, "Health", "💪", "#4CAF50", 1),
+            HabitCategory("hcat_productivity", null, "Productivity", "⚡", "#FF9800", 2),
+            HabitCategory("hcat_mindfulness", null, "Mindfulness", "🧘", "#9C27B0", 3),
+            HabitCategory("hcat_learning", null, "Learning", "📚", "#2196F3", 4),
+            HabitCategory("hcat_social", null, "Social", "👥", "#E91E63", 5),
+            HabitCategory("hcat_finance", null, "Finance", "💰", "#00BCD4", 6)
+        )
 }

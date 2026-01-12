@@ -89,6 +89,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.aevrontech.finevo.core.util.formatDecimal
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.Category
 import com.aevrontech.finevo.domain.model.Label
@@ -102,7 +104,6 @@ import com.aevrontech.finevo.presentation.common.LocationPickerMap
 import com.aevrontech.finevo.presentation.label.LabelColors
 import com.aevrontech.finevo.presentation.label.LabelPickerBottomSheet
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -110,7 +111,6 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.todayIn
 
 /** Comprehensive transaction entry screen with unified calculator and details. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,19 +157,21 @@ fun AddTransactionScreen(
                     if (parts.size >= 2) {
                         LocalTime(parts[0].toInt(), parts[1].toInt())
                     } else {
-                        Clock.System.now()
+                        Instant.fromEpochMilliseconds(
+                            getCurrentTimeMillis()
+                        )
                             .toLocalDateTime(
                                 TimeZone.currentSystemDefault()
                             )
                             .time
                     }
                 } catch (e: Exception) {
-                    Clock.System.now()
+                    Instant.fromEpochMilliseconds(getCurrentTimeMillis())
                         .toLocalDateTime(TimeZone.currentSystemDefault())
                         .time
                 }
             }
-                ?: Clock.System.now()
+                ?: Instant.fromEpochMilliseconds(getCurrentTimeMillis())
                     .toLocalDateTime(TimeZone.currentSystemDefault())
                     .time
         )
@@ -182,10 +184,7 @@ fun AddTransactionScreen(
     }
     var note by remember { mutableStateOf(editingTransaction?.note ?: "") }
     var selectedDate by remember {
-        mutableStateOf(
-            editingTransaction?.date
-                ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
-        )
+        mutableStateOf(editingTransaction?.date ?: getCurrentLocalDate())
     }
     var showCategoryPicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
@@ -1599,8 +1598,7 @@ fun AddTransactionScreen(
                 imagePicker.pickFromGallery(context) { result ->
                     if (result.isSuccess && result.bytes != null) {
                         // Save to local file
-                        val fileName =
-                            "trans_${Clock.System.now().toEpochMilliseconds()}.jpg"
+                        val fileName = "trans_${getCurrentTimeMillis()}.jpg"
                         val filePath =
                             FileStorage.saveAvatar(
                                 context,
@@ -1616,8 +1614,7 @@ fun AddTransactionScreen(
             onCaptureFromCamera = { context ->
                 imagePicker.captureFromCamera(context) { result ->
                     if (result.isSuccess && result.bytes != null) {
-                        val fileName =
-                            "trans_${Clock.System.now().toEpochMilliseconds()}.jpg"
+                        val fileName = "trans_${getCurrentTimeMillis()}.jpg"
                         val filePath =
                             FileStorage.saveAvatar(
                                 context,
@@ -1738,7 +1735,7 @@ private fun formatAmount(amount: Double): String {
 }
 
 private fun formatDateShort(date: LocalDate): String {
-    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val today = getCurrentLocalDate()
     return when {
         date == today -> "Today"
         date == today.minus(1, DateTimeUnit.DAY) -> "Yesterday"

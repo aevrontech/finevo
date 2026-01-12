@@ -1,12 +1,12 @@
 package com.aevrontech.finevo.data.repository
 
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.data.local.LocalDataSource
 import com.aevrontech.finevo.domain.model.Account
 import com.aevrontech.finevo.domain.model.AccountType
 import com.aevrontech.finevo.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlin.random.Random
 
@@ -43,7 +43,7 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
         icon: String,
         isDefault: Boolean
     ): Account {
-        val now = Clock.System.now()
+        val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
         val account =
             Account(
                 id = generateId(),
@@ -67,16 +67,13 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
     }
 
     override suspend fun updateAccount(account: Account) {
-        val updated = account.copy(updatedAt = Clock.System.now())
+        val updated =
+            account.copy(updatedAt = Instant.fromEpochMilliseconds(getCurrentTimeMillis()))
         localDataSource.insertAccount(updated.toEntity())
     }
 
     override suspend fun updateAccountBalance(accountId: String, newBalance: Double) {
-        localDataSource.updateAccountBalance(
-            accountId,
-            newBalance,
-            Clock.System.now().toEpochMilliseconds()
-        )
+        localDataSource.updateAccountBalance(accountId, newBalance, getCurrentTimeMillis())
     }
 
     override suspend fun deleteAccount(accountId: String) {
@@ -89,10 +86,7 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
         accounts.forEach { account ->
             if (account.is_default == 1L && account.id != accountId) {
                 localDataSource.insertAccount(
-                    account.copy(
-                        is_default = 0,
-                        updated_at = Clock.System.now().toEpochMilliseconds()
-                    )
+                    account.copy(is_default = 0, updated_at = getCurrentTimeMillis())
                 )
             }
         }
@@ -101,10 +95,7 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
         val targetAccount = localDataSource.getAccountById(accountId)
         if (targetAccount != null) {
             localDataSource.insertAccount(
-                targetAccount.copy(
-                    is_default = 1,
-                    updated_at = Clock.System.now().toEpochMilliseconds()
-                )
+                targetAccount.copy(is_default = 1, updated_at = getCurrentTimeMillis())
             )
         }
     }
@@ -187,6 +178,6 @@ class AccountRepositoryImpl(private val localDataSource: LocalDataSource) : Acco
     }
 
     private fun generateId(): String {
-        return "acc_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt(1000, 9999)}"
+        return "acc_${getCurrentTimeMillis()}_${Random.nextInt(1000, 9999)}"
     }
 }

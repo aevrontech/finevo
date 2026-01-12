@@ -3,6 +3,8 @@ package com.aevrontech.finevo.presentation.expense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.core.util.Result
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.*
 import com.aevrontech.finevo.domain.repository.AccountRepository
 import com.aevrontech.finevo.domain.repository.BudgetRepository
@@ -33,10 +35,9 @@ class ExpenseViewModel(
     val periodOffset: StateFlow<Int> = _periodOffset.asStateFlow()
 
     // Get current month date range
-    private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    private val today = getCurrentLocalDate()
     private val monthStart = LocalDate(today.year, today.month, 1)
-    private val monthEnd =
-        LocalDate(today.year, today.month, today.month.length(today.year % 4 == 0))
+    private val monthEnd = monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
 
     init {
         loadAccounts()
@@ -228,7 +229,7 @@ class ExpenseViewModel(
         photoPath: String? = null
     ) {
         viewModelScope.launch {
-            val now = Clock.System.now()
+            val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
             val selectedAccount = _uiState.value.accounts.find { it.id == accountId }
             val transaction =
                 Transaction(
@@ -359,7 +360,7 @@ class ExpenseViewModel(
             // Find the old transaction to calculate balance delta
             val oldTransaction = _uiState.value.transactions.find { it.id == id }
 
-            val now = Clock.System.now()
+            val now = Instant.fromEpochMilliseconds(getCurrentTimeMillis())
             val selectedAccount = _uiState.value.accounts.find { it.id == accountId }
             val transaction =
                 Transaction(
@@ -466,8 +467,7 @@ class ExpenseViewModel(
     }
 
     private fun generateId(): String {
-        return Clock.System.now().toEpochMilliseconds().toString() +
-            (1000..9999).random().toString()
+        return getCurrentTimeMillis().toString() + (1000..9999).random().toString()
     }
 
     // Filter methods
@@ -540,7 +540,7 @@ class ExpenseViewModel(
     /** Get bar chart data (income vs expense by time periods) */
     fun getBarChartData(): List<BarChartDataItem> {
         val period = _filterPeriod.value
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
         val items = mutableListOf<BarChartDataItem>()
 
         // For Month and Year, show 12 months. For Week, show 7 days. For Day, show 24 hours (or
@@ -623,7 +623,7 @@ class ExpenseViewModel(
     }
 
     private fun getDateRange(period: FilterPeriod, offset: Int): Pair<LocalDate, LocalDate> {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
 
         return when (period) {
             FilterPeriod.DAY -> {
@@ -748,7 +748,7 @@ class ExpenseViewModel(
     }
 
     private fun getTimeRangeDates(range: TimeRange): Pair<LocalDate, LocalDate> {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = getCurrentLocalDate()
         return when (range) {
             is LastDaysRange -> {
                 today.minus(range.days - 1, DateTimeUnit.DAY) to today

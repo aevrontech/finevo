@@ -18,10 +18,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 import kotlin.math.max
 
 @Composable
@@ -158,10 +158,7 @@ fun BudgetTrendChart(data: BudgetTrendData, modifier: Modifier = Modifier) {
             }
 
             // --- Draw "Today" Vertical Line ---
-            val today =
-                kotlinx.datetime.Clock.System.todayIn(
-                    kotlinx.datetime.TimeZone.currentSystemDefault()
-                )
+            val today = getCurrentLocalDate()
             if (today >= data.visibleStartDate && today <= data.visibleEndDate) {
                 val todayX = xForDate(today)
                 drawLine(

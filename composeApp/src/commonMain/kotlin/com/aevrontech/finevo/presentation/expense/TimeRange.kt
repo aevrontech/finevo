@@ -1,12 +1,10 @@
 package com.aevrontech.finevo.presentation.expense
 
-import kotlinx.datetime.Clock
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
 enum class FilterPeriod(val label: String) {
     DAY("Day"),
@@ -39,14 +37,14 @@ data class LastDaysRange(val days: Int, override val label: String) : TimeRange 
 data class CalendarTimeRange(val period: FilterPeriod, val offset: Int = 0) : TimeRange {
     override val displayLabel: String
         get() {
-            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val today = getCurrentLocalDate()
             val (start, end) = getRangeDates(period, offset, today)
             return getFormattedDate(period, start, end, today)
         }
 
     override val label: String
         get() {
-            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val today = getCurrentLocalDate()
 
             // Special cases for Selection List ("Today", "This Month", etc)
             if (offset == 0) {

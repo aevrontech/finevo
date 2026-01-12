@@ -29,16 +29,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.ui.theme.DashboardGradientEnd
 import com.aevrontech.finevo.ui.theme.DashboardGradientStart
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
 /** Data class for date item in selector. */
 data class DateItem(
@@ -55,7 +53,7 @@ fun DateSelector(
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val today = getCurrentLocalDate()
 
     // Generate dates for the current month (15 days before and after today)
     val dates =
@@ -118,10 +116,7 @@ private fun DateItemCard(dateItem: DateItem, isSelected: Boolean, onClick: () ->
             Brush.verticalGradient(listOf(DashboardGradientStart, DashboardGradientEnd))
         } else {
             Brush.linearGradient(
-                listOf(
-                    MaterialTheme.colorScheme.surface,
-                    MaterialTheme.colorScheme.surface
-                )
+                listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surface)
             )
         }
 
@@ -149,9 +144,7 @@ private fun DateItemCard(dateItem: DateItem, isSelected: Boolean, onClick: () ->
                 fontWeight = FontWeight.Medium,
                 color =
                     if (isSelected) Color.White.copy(alpha = 0.8f)
-                    else
-                        MaterialTheme.colorScheme
-                            .onSurfaceVariant // Lighter day name
+                    else MaterialTheme.colorScheme.onSurfaceVariant // Lighter day name
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -160,9 +153,7 @@ private fun DateItemCard(dateItem: DateItem, isSelected: Boolean, onClick: () ->
                 fontWeight = FontWeight.Bold,
                 color =
                     if (isSelected) Color.White
-                    else
-                        MaterialTheme.colorScheme
-                            .onSurface // Darker day number
+                    else MaterialTheme.colorScheme.onSurface // Darker day number
             )
         }
     }

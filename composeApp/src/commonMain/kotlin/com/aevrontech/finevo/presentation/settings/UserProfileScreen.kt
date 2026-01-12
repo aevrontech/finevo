@@ -70,12 +70,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.aevrontech.finevo.core.util.getCurrentTimeMillis
 import com.aevrontech.finevo.domain.model.User
 import com.aevrontech.finevo.domain.model.UserTier
 import com.aevrontech.finevo.presentation.common.FileStorage
 import com.aevrontech.finevo.presentation.common.ImagePicker
 import com.aevrontech.finevo.presentation.common.ImagePickerResult
-import kotlinx.datetime.Clock
 import org.koin.compose.viewmodel.koinViewModel
 
 class UserProfileScreen : Screen {
@@ -118,8 +118,12 @@ class UserProfileScreen : Screen {
                                 Brush.verticalGradient(
                                     colors =
                                         listOf(
-                                            Color(0xFF667EEA),
-                                            Color(0xFF764BA2),
+                                            Color(
+                                                0xFF667EEA
+                                            ),
+                                            Color(
+                                                0xFF764BA2
+                                            ),
                                             MaterialTheme
                                                 .colorScheme
                                                 .background
@@ -134,12 +138,16 @@ class UserProfileScreen : Screen {
                     modifier =
                         Modifier.fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = 8.dp,
+                                vertical = 8.dp
+                            ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { navigator.pop() }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector =
+                                Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.White
                         )
@@ -163,9 +171,14 @@ class UserProfileScreen : Screen {
                         ProfileContent(
                             user = uiState.user!!,
                             isSaving = uiState.isSaving,
-                            pendingAvatarBytes = uiState.pendingAvatarBytes,
-                            onAvatarClick = { showImagePickerSheet = true },
-                            onUpdateName = { viewModel.updateDisplayName(it) },
+                            pendingAvatarBytes =
+                                uiState.pendingAvatarBytes,
+                            onAvatarClick = {
+                                showImagePickerSheet = true
+                            },
+                            onUpdateName = {
+                                viewModel.updateDisplayName(it)
+                            },
                             modifier = Modifier.padding(padding)
                         )
                     }
@@ -183,11 +196,20 @@ class UserProfileScreen : Screen {
                     Box(
                         modifier =
                             Modifier.fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.5f)),
+                                .background(
+                                    Color.Black.copy(
+                                        alpha = 0.5f
+                                    )
+                                ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = Color.White)
+                        Column(
+                            horizontalAlignment =
+                                Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color.White
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "Saving...",
@@ -204,13 +226,21 @@ class UserProfileScreen : Screen {
                         onDismiss = { showImagePickerSheet = false },
                         onPickFromGallery = { context ->
                             imagePicker.pickFromGallery(context) { result ->
-                                handleImageResult(result, viewModel, context)
+                                handleImageResult(
+                                    result,
+                                    viewModel,
+                                    context
+                                )
                                 showImagePickerSheet = false
                             }
                         },
                         onCaptureFromCamera = { context ->
                             imagePicker.captureFromCamera(context) { result ->
-                                handleImageResult(result, viewModel, context)
+                                handleImageResult(
+                                    result,
+                                    viewModel,
+                                    context
+                                )
                                 showImagePickerSheet = false
                             }
                         }
@@ -227,7 +257,7 @@ class UserProfileScreen : Screen {
     ) {
         if (result.isSuccess && result.bytes != null) {
             // Save to local file
-            val fileName = "avatar_${Clock.System.now().toEpochMilliseconds()}.jpg"
+            val fileName = "avatar_${getCurrentTimeMillis()}.jpg"
             val filePath = FileStorage.saveAvatar(context, result.bytes, fileName)
 
             // Update avatar with bytes and file path
@@ -278,17 +308,27 @@ class UserProfileScreen : Screen {
                                     Brush.linearGradient(
                                         colors =
                                             listOf(
-                                                Color.White.copy(
-                                                    alpha = 0.3f
-                                                ),
-                                                Color.White.copy(
-                                                    alpha = 0.1f
-                                                )
+                                                Color.White
+                                                    .copy(
+                                                        alpha =
+                                                            0.3f
+                                                    ),
+                                                Color.White
+                                                    .copy(
+                                                        alpha =
+                                                            0.1f
+                                                    )
                                             )
                                     )
                             )
-                            .border(4.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-                            .clickable(enabled = !isSaving) { onAvatarClick() },
+                            .border(
+                                4.dp,
+                                Color.White.copy(alpha = 0.5f),
+                                CircleShape
+                            )
+                            .clickable(enabled = !isSaving) {
+                                onAvatarClick()
+                            },
                     contentAlignment = Alignment.Center
                 ) {
                     // Priority: pendingAvatarBytes > user.avatarUrl > initials
@@ -296,7 +336,8 @@ class UserProfileScreen : Screen {
                         pendingAvatarBytes != null -> {
                             AsyncImage(
                                 model = pendingAvatarBytes,
-                                contentDescription = "Profile picture",
+                                contentDescription =
+                                    "Profile picture",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -304,7 +345,8 @@ class UserProfileScreen : Screen {
                         user.avatarUrl != null -> {
                             AsyncImage(
                                 model = user.avatarUrl,
-                                contentDescription = "Profile picture",
+                                contentDescription =
+                                    "Profile picture",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -312,7 +354,11 @@ class UserProfileScreen : Screen {
                         else -> {
                             // Default avatar with initials
                             Text(
-                                text = getInitials(user.displayName, user.email),
+                                text =
+                                    getInitials(
+                                        user.displayName,
+                                        user.email
+                                    ),
                                 fontSize = 48.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -327,9 +373,13 @@ class UserProfileScreen : Screen {
                         Modifier.size(40.dp)
                             .offset(x = (-4).dp, y = (-4).dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
+                            .background(
+                                MaterialTheme.colorScheme.primary
+                            )
                             .border(2.dp, Color.White, CircleShape)
-                            .clickable(enabled = !isSaving) { onAvatarClick() },
+                            .clickable(enabled = !isSaving) {
+                                onAvatarClick()
+                            },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -368,67 +418,112 @@ class UserProfileScreen : Screen {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (isEditingName) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
                             OutlinedTextField(
                                 value = editedName,
                                 onValueChange = { editedName = it },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardOptions =
+                                    KeyboardOptions(
+                                        imeAction =
+                                            ImeAction
+                                                .Done
+                                    ),
                                 keyboardActions =
                                     KeyboardActions(
                                         onDone = {
-                                            if (editedName.isNotBlank()) {
-                                                onUpdateName(editedName)
-                                                isEditingName = false
-                                                focusManager.clearFocus()
+                                            if (editedName
+                                                    .isNotBlank()
+                                            ) {
+                                                onUpdateName(
+                                                    editedName
+                                                )
+                                                isEditingName =
+                                                    false
+                                                focusManager
+                                                    .clearFocus()
                                             }
                                         }
                                     ),
                                 colors =
-                                    OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor =
-                                            MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor =
-                                            MaterialTheme.colorScheme.outline
-                                    ),
+                                    OutlinedTextFieldDefaults
+                                        .colors(
+                                            focusedBorderColor =
+                                                MaterialTheme
+                                                    .colorScheme
+                                                    .primary,
+                                            unfocusedBorderColor =
+                                                MaterialTheme
+                                                    .colorScheme
+                                                    .outline
+                                        ),
                                 shape = RoundedCornerShape(12.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             IconButton(
                                 onClick = {
-                                    if (editedName.isNotBlank()) {
-                                        onUpdateName(editedName)
-                                        isEditingName = false
-                                        focusManager.clearFocus()
+                                    if (editedName.isNotBlank()
+                                    ) {
+                                        onUpdateName(
+                                            editedName
+                                        )
+                                        isEditingName =
+                                            false
+                                        focusManager
+                                            .clearFocus()
                                     }
                                 },
-                                enabled = !isSaving && editedName.isNotBlank()
+                                enabled =
+                                    !isSaving &&
+                                        editedName
+                                            .isNotBlank()
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Check,
+                                    imageVector =
+                                        Icons.Filled.Check,
                                     contentDescription = "Save",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primary
                                 )
                             }
                         }
                     } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween,
+                            verticalAlignment =
+                                Alignment.CenterVertically
                         ) {
                             Text(
-                                text = user.displayName ?: "Not set",
-                                style = MaterialTheme.typography.bodyLarge,
+                                text = user.displayName
+                                    ?: "Not set",
+                                style =
+                                    MaterialTheme.typography
+                                        .bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
-                            IconButton(onClick = { isEditingName = true }, enabled = !isSaving) {
+                            IconButton(
+                                onClick = { isEditingName = true },
+                                enabled = !isSaving
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Edit,
-                                    contentDescription = "Edit name",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector =
+                                        Icons.Filled.Edit,
+                                    contentDescription =
+                                        "Edit name",
+                                    tint =
+                                        MaterialTheme
+                                            .colorScheme
+                                            .primary,
+                                    modifier =
+                                        Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -490,12 +585,18 @@ class UserProfileScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Plan", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = "Plan",
+                            color =
+                                MaterialTheme.colorScheme
+                                    .onSurfaceVariant
+                        )
                         Text(
                             text =
-                                user.tier.name.lowercase().replaceFirstChar {
-                                    it.uppercase()
-                                },
+                                user.tier.name.lowercase()
+                                    .replaceFirstChar {
+                                        it.uppercase()
+                                    },
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -506,7 +607,12 @@ class UserProfileScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Status", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = "Status",
+                            color =
+                                MaterialTheme.colorScheme
+                                    .onSurfaceVariant
+                        )
                         Text(
                             text = "Active",
                             fontWeight = FontWeight.Medium,
@@ -542,7 +648,10 @@ class UserProfileScreen : Screen {
                 UserTier.FAMILY_MEMBER -> Color(0xFF764BA2) to Color.White
             }
 
-        Surface(shape = RoundedCornerShape(20.dp), color = backgroundColor.copy(alpha = 0.9f)) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = backgroundColor.copy(alpha = 0.9f)
+        ) {
             Row(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -603,7 +712,9 @@ class UserProfileScreen : Screen {
                     shape = RoundedCornerShape(16.dp),
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                            containerColor =
+                                MaterialTheme.colorScheme
+                                    .primaryContainer
                         )
                 ) {
                     Icon(
@@ -614,7 +725,9 @@ class UserProfileScreen : Screen {
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Choose from Gallery",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color =
+                            MaterialTheme.colorScheme
+                                .onPrimaryContainer,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -629,18 +742,23 @@ class UserProfileScreen : Screen {
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor =
-                                MaterialTheme.colorScheme.secondaryContainer
+                                MaterialTheme.colorScheme
+                                    .secondaryContainer
                         )
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        tint =
+                            MaterialTheme.colorScheme
+                                .onSecondaryContainer
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Take Photo",
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color =
+                            MaterialTheme.colorScheme
+                                .onSecondaryContainer,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -648,7 +766,10 @@ class UserProfileScreen : Screen {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(onClick = onDismiss) {
-                    Text(text = "Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "Cancel",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aevrontech.finevo.core.presentation.BackHandler
+import com.aevrontech.finevo.core.util.getCurrentLocalDate
 import com.aevrontech.finevo.domain.model.Habit
 import com.aevrontech.finevo.domain.model.UserTier
 import com.aevrontech.finevo.ui.theme.*
@@ -56,9 +57,7 @@ fun HabitReportScreen(
 
     // Report state
     var selectedPeriod by remember { mutableStateOf(ReportPeriod.WEEKLY) }
-    var currentDate by remember {
-        mutableStateOf(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date)
-    }
+    var currentDate by remember { mutableStateOf(getCurrentLocalDate()) }
 
     BackHandler(enabled = true) { onDismiss() }
 
@@ -410,9 +409,7 @@ private fun WeeklyHabitRow(habit: Habit, startOfWeek: LocalDate, isCompletedToda
         // 7 day cells
         repeat(7) { dayIndex ->
             val dayDate = startOfWeek.plus(DatePeriod(days = dayIndex))
-            val isToday =
-                dayDate ==
-                    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+            val isToday = dayDate == getCurrentLocalDate()
             val isCompleted = isToday && isCompletedToday
 
             // Get habit color or default

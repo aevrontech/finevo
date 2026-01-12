@@ -22,6 +22,9 @@ val localProperties = Properties().apply {
 }
 
 kotlin {
+    sourceSets.all {
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
+    }
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -54,7 +57,7 @@ kotlin {
             // Kotlinx
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.datetime)
+            api(libs.kotlinx.datetime)
 
             // Ktor
             implementation(libs.ktor.client.core)
@@ -127,8 +130,8 @@ kotlin {
             implementation(libs.androidx.fragment.ktx)
 
             // Credential Manager for Google Sign-In
-            implementation("androidx.credentials:credentials:1.3.0")
-            implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+            implementation("androidx.credentials:credentials:1.5.0")
+            implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
             implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
             // Legacy Google Sign-In (fallback for emulators)
@@ -144,6 +147,7 @@ kotlin {
             implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
         }
 
+
         iosMain.dependencies {
             // Ktor iOS engine
             implementation(libs.ktor.client.darwin)
@@ -156,12 +160,12 @@ kotlin {
 
 android {
     namespace = "com.aevrontech.finevo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.aevrontech.finevo"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
 
