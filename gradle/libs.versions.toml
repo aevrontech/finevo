@@ -17,7 +17,7 @@ kotlinx-datetime = "0.6.1"
 
 # Database
 sqldelight = "2.0.2"
-sqlcipher = "4.5.7"
+sqlcipher = "4.6.0"
 
 # Networking
 ktor = "3.0.2"

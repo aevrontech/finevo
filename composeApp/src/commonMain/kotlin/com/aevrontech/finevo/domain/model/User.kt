@@ -3,9 +3,7 @@ package com.aevrontech.finevo.domain.model
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
-/**
- * User domain model
- */
+/** User domain model */
 @Serializable
 data class User(
     val id: String,
@@ -20,9 +18,7 @@ data class User(
     val updatedAt: Instant
 )
 
-/**
- * User subscription tier
- */
+/** User subscription tier */
 @Serializable
 enum class UserTier {
     FREE,
@@ -31,9 +27,7 @@ enum class UserTier {
     FAMILY_MEMBER
 }
 
-/**
- * User preferences/settings
- */
+/** User preferences/settings */
 @Serializable
 data class UserPreferences(
     val userId: String,
@@ -47,6 +41,8 @@ data class UserPreferences(
     val budgetAlerts: Boolean = true,
     val paymentReminders: Boolean = true,
     val habitReminders: Boolean = true,
+    val dailyReminderEnabled: Boolean = false,
+    val dailyReminderTime: String? = null, // "HH:mm" format
     val weeklyReport: Boolean = true,
     val firstDayOfWeek: Int = 1 // 1 = Monday, 7 = Sunday
 )

@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Stub implementation of SettingsRepository for Phase 1. */
-class SettingsRepositoryImpl : SettingsRepository {
+class SettingsRepositoryImpl(
+    private val secureStorage: com.aevrontech.finevo.data.local.SecureStorage
+) : SettingsRepository {
 
     private val settings: Settings = Settings()
 
@@ -92,16 +94,27 @@ class SettingsRepositoryImpl : SettingsRepository {
     }
 
     override suspend fun setPinEnabled(enabled: Boolean, pin: String?): Result<Unit> {
+        if (enabled && pin != null) {
+            secureStorage.saveSecret("user_pin", pin)
+        } else if (!enabled) {
+            secureStorage.removeSecret("user_pin")
+        }
         _preferences.value = _preferences.value.copy(pinEnabled = enabled)
         return Result.success(Unit)
     }
 
     override suspend fun verifyPin(pin: String): Result<Boolean> {
-        return Result.success(true)
+        val storedPin = secureStorage.getSecret("user_pin")
+        return Result.success(storedPin == pin)
     }
 
     override suspend fun changePin(oldPin: String, newPin: String): Result<Unit> {
-        return Result.success(Unit)
+        val storedPin = secureStorage.getSecret("user_pin")
+        if (storedPin == oldPin) {
+            secureStorage.saveSecret("user_pin", newPin)
+            return Result.success(Unit)
+        }
+        return Result.error(com.aevrontech.finevo.core.util.AppException.Unauthorized)
     }
 
     override suspend fun setBiometricEnabled(enabled: Boolean): Result<Unit> {

@@ -1,8 +1,10 @@
 package com.aevrontech.finevo.data.repository
 
 import com.aevrontech.finevo.data.local.LocalDataSource
+import com.aevrontech.finevo.domain.manager.NotificationManager
 import com.aevrontech.finevo.domain.model.Budget
 import com.aevrontech.finevo.domain.model.BudgetPeriod
+import com.aevrontech.finevo.domain.model.Transaction
 import com.aevrontech.finevo.domain.model.TransactionType
 import com.aevrontech.finevo.domain.repository.BudgetRepository
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +19,10 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
 /** BudgetRepository implementation using SQLDelight for local storage. */
-class BudgetRepositoryImpl(private val localDataSource: LocalDataSource) : BudgetRepository {
+class BudgetRepositoryImpl(
+    private val localDataSource: LocalDataSource,
+    private val notificationManager: NotificationManager
+) : BudgetRepository {
 
     private val defaultUserId = "local_user"
 
@@ -90,9 +95,22 @@ class BudgetRepositoryImpl(private val localDataSource: LocalDataSource) : Budge
                 localDataSource.getTransactionsByDateRange(startDate, endDate).first()
             val categorySpent =
                 transactions
-                    .filter {
-                        it.categoryId == budget.categoryId &&
-                            it.type == TransactionType.EXPENSE
+                    .filter { txn ->
+                        // Check Category: Matches primary ID OR is in list of IDs
+                        val categoryMatch =
+                            if (budget.categoryIds.isNotEmpty()) {
+                                txn.categoryId in budget.categoryIds
+                            } else {
+                                txn.categoryId == budget.categoryId
+                            }
+
+                        // Check Account: Matches list of IDs OR list is empty (all
+                        // accounts)
+                        val accountMatch =
+                            budget.accountIds.isEmpty() ||
+                                txn.accountId in budget.accountIds
+
+                        categoryMatch && accountMatch && txn.type == TransactionType.EXPENSE
                     }
                     .sumOf { it.amount }
 
@@ -191,5 +209,76 @@ class BudgetRepositoryImpl(private val localDataSource: LocalDataSource) : Budge
             categoryIcon = category?.icon,
             categoryColor = category?.color
         )
+    }
+
+    override suspend fun checkAndTriggerAlerts(transaction: Transaction) {
+        if (transaction.type != TransactionType.EXPENSE) return
+
+        val budgets =
+            localDataSource.getBudgets().first().filter { budget ->
+                val categoryMatch =
+                    if (budget.categoryIds.isNotEmpty()) {
+                        transaction.categoryId in budget.categoryIds
+                    } else {
+                        budget.categoryId == transaction.categoryId
+                    }
+                budget.isActive && categoryMatch
+            }
+        val today = transaction.date
+
+        for (budget in budgets) {
+            val (startDate, endDate) =
+                getBudgetPeriodDates(budget.period, budget.startDate, budget.endDate, today)
+            // Check if transaction falls within this budget period
+            if (transaction.date >= startDate && (endDate == null || transaction.date <= endDate)) {
+                // Calculate total spent including this transaction
+                // We need to fetch fresh because recalculate might not have happened yet or we want
+                // to be sure
+                // However, recalculateAllBudgets updates the 'spent' field. If we assume that ran
+                // or we run it now...
+                // Let's rely on calculating it fresh for accuracy
+                val transactions =
+                    localDataSource.getTransactionsByDateRange(startDate, endDate).first()
+                val totalSpent =
+                    transactions
+                        .filter { txn ->
+                            // Check Category: Matches primary ID OR is in list of IDs
+                            val categoryMatch =
+                                if (budget.categoryIds.isNotEmpty()) {
+                                    txn.categoryId in budget.categoryIds
+                                } else {
+                                    txn.categoryId == budget.categoryId
+                                }
+
+                            // Check Account: Matches list of IDs OR list is empty (all
+                            // accounts)
+                            val accountMatch =
+                                budget.accountIds.isEmpty() ||
+                                    txn.accountId in budget.accountIds
+
+                            categoryMatch &&
+                                accountMatch &&
+                                txn.type == TransactionType.EXPENSE
+                        }
+                        .sumOf { it.amount }
+
+                val percentage = (totalSpent / budget.amount) * 100
+
+                if (percentage >= 100) {
+                    notificationManager.showNotification(
+                        id = budget.id.hashCode(),
+                        title = "Budget Exceeded: ${budget.categoryName ?: "Uncategorized"}",
+                        message =
+                            "You have exceeded your ${budget.period.name.lowercase()} budget limit of ${budget.amount}."
+                    )
+                } else if (percentage >= 80) { // Warning threshold
+                    notificationManager.showNotification(
+                        id = budget.id.hashCode(),
+                        title = "Budget Warning: ${budget.categoryName ?: "Uncategorized"}",
+                        message = "You have used ${percentage.toInt()}% of your budget."
+                    )
+                }
+            }
+        }
     }
 }

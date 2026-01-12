@@ -9,47 +9,45 @@ import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 
 /**
- * Supabase client configuration.
- * Credentials are loaded from BuildConfig (injected from local.properties).
+ * Supabase client configuration. Credentials are loaded from BuildConfig (injected from
+ * local.properties).
  */
 object SupabaseConfig {
 
     private var _client: SupabaseClient? = null
 
-    /**
-     * Initialize Supabase client with URL and key.
-     * Call this during app initialization.
-     */
-    fun initialize(supabaseUrl: String, supabaseKey: String) {
+    /** Initialize Supabase client with URL and key. Call this during app initialization. */
+    /** Initialize Supabase client with URL and key. Call this during app initialization. */
+    fun initialize(
+        supabaseUrl: String,
+        supabaseKey: String,
+        secureStorage: com.aevrontech.finevo.data.local.SecureStorage
+    ) {
         if (_client != null) return
 
-        _client = createSupabaseClient(
-            supabaseUrl = supabaseUrl,
-            supabaseKey = supabaseKey
-        ) {
-            install(Auth) {
-                flowType = FlowType.PKCE
-                scheme = "finevo"
-                host = "auth-callback"
+        _client =
+            createSupabaseClient(supabaseUrl = supabaseUrl, supabaseKey = supabaseKey) {
+                install(Auth) {
+                    flowType = FlowType.PKCE
+                    scheme = "finevo"
+                    host = "auth-callback"
+                    sessionManager = SecureSessionManager(secureStorage)
+                }
+                install(Postgrest)
+                install(Realtime)
+                install(Storage)
             }
-            install(Postgrest)
-            install(Realtime)
-            install(Storage)
-        }
     }
 
-    /**
-     * Get the Supabase client instance.
-     * Throws if not initialized.
-     */
+    /** Get the Supabase client instance. Throws if not initialized. */
     val client: SupabaseClient
-        get() = _client ?: throw IllegalStateException(
-            "Supabase client not initialized. Call SupabaseConfig.initialize() first."
-        )
+        get() =
+            _client
+                ?: throw IllegalStateException(
+                    "Supabase client not initialized. Call SupabaseConfig.initialize() first."
+                )
 
-    /**
-     * Check if client is initialized.
-     */
+    /** Check if client is initialized. */
     val isInitialized: Boolean
         get() = _client != null
 }

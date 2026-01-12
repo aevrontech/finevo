@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.aevrontech.finevo.core.util.Result
 import com.aevrontech.finevo.domain.model.*
 import com.aevrontech.finevo.domain.repository.AccountRepository
+import com.aevrontech.finevo.domain.repository.BudgetRepository
 import com.aevrontech.finevo.domain.repository.ExpenseRepository
 import com.aevrontech.finevo.domain.repository.LabelRepository
 import com.aevrontech.finevo.domain.repository.SettingsRepository
@@ -17,7 +18,8 @@ class ExpenseViewModel(
     private val expenseRepository: ExpenseRepository,
     private val accountRepository: AccountRepository,
     private val labelRepository: LabelRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val budgetRepository: BudgetRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
@@ -286,6 +288,11 @@ class ExpenseViewModel(
 
                     // Reload transactions for selected accounts
                     loadDataForTimeRange()
+
+                    // Check for budget alerts
+                    budgetRepository.checkAndTriggerAlerts(transaction)
+                    // Recalculate budgets to update spent amounts
+                    budgetRepository.recalculateAllBudgets("local_user")
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -322,6 +329,8 @@ class ExpenseViewModel(
                     _uiState.update { it.copy(successMessage = "Transaction deleted") }
                     // Reload transactions for selected accounts
                     loadDataForTimeRange()
+                    // Recalculate budgets after deletion
+                    budgetRepository.recalculateAllBudgets("local_user")
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }
@@ -426,6 +435,11 @@ class ExpenseViewModel(
 
                     // Reload transactions
                     loadDataForTimeRange()
+
+                    // Check for budget alerts
+                    budgetRepository.checkAndTriggerAlerts(transaction)
+                    // Recalculate budgets to update spent amounts
+                    budgetRepository.recalculateAllBudgets("local_user")
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(error = result.exception.message) }

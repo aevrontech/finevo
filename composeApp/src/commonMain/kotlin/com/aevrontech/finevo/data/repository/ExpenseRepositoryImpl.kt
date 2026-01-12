@@ -20,18 +20,22 @@ import kotlinx.datetime.LocalDate
 class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : ExpenseRepository {
 
     override fun getTransactions(): Flow<List<Transaction>> {
-        return localDataSource.getTransactions()
+        return localDataSource.getTransactions().map { enrichTransactionsWithCategoryData(it) }
     }
 
     override fun getTransactions(
         startDate: LocalDate,
         endDate: LocalDate
     ): Flow<List<Transaction>> {
-        return localDataSource.getTransactionsByDateRange(startDate, endDate)
+        return localDataSource.getTransactionsByDateRange(startDate, endDate).map {
+            enrichTransactionsWithCategoryData(it)
+        }
     }
 
     override fun getTransactionsForDate(date: LocalDate): Flow<List<Transaction>> {
-        return localDataSource.getTransactionsByDateRange(date, date)
+        return localDataSource.getTransactionsByDateRange(date, date).map {
+            enrichTransactionsWithCategoryData(it)
+        }
     }
 
     override fun getTransactionsByAccount(
@@ -40,6 +44,7 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
         endDate: LocalDate
     ): Flow<List<Transaction>> {
         return localDataSource.getTransactionsByAccountAndDateRange(accountId, startDate, endDate)
+            .map { enrichTransactionsWithCategoryData(it) }
     }
 
     override suspend fun getTransaction(id: String): Result<Transaction> {
@@ -204,4 +209,24 @@ class ExpenseRepositoryImpl(private val localDataSource: LocalDataSource) : Expe
     override fun getPendingChangesCount(): Flow<Int> = flowOf(0)
 
     /** Initialize default categories if none exist. */
+    private suspend fun enrichTransactionsWithCategoryData(
+        transactions: List<Transaction>
+    ): List<Transaction> {
+        if (transactions.isEmpty()) return transactions
+        val categories = localDataSource.getCategories().first()
+        val accounts = localDataSource.getAllAccounts("local_user").first() // Fetch accounts
+        val categoryMap = categories.associateBy { it.id }
+        val accountMap = accounts.associateBy { it.id }
+
+        return transactions.map { txn ->
+            val category = categoryMap[txn.categoryId]
+            val account = accountMap[txn.accountId]
+            txn.copy(
+                categoryName = category?.name,
+                categoryIcon = category?.icon,
+                categoryColor = category?.color,
+                accountName = account?.name // Populate account name
+            )
+        }
+    }
 }

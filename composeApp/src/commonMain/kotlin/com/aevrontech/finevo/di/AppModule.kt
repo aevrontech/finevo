@@ -54,19 +54,19 @@ val appModule = module {
     single<AccountRepository> { AccountRepositoryImpl(get()) }
     single<CategoryRepository> { CategoryRepositoryImpl(get()) }
     single<LabelRepository> { LabelRepositoryImpl(get()) }
-    single<SettingsRepository> { SettingsRepositoryImpl() }
-    single<BudgetRepository> { BudgetRepositoryImpl(get()) }
+    single<SettingsRepository> { SettingsRepositoryImpl(get()) }
+    single<BudgetRepository> { BudgetRepositoryImpl(get(), get()) }
 
     // ViewModels
     viewModel { OnboardingViewModel(get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { HomeViewModel() }
     viewModel {
-        ExpenseViewModel(get(), get(), get(), get())
-    } // ExpenseRepo + AccountRepo + LabelRepo + SettingsRepo
+        ExpenseViewModel(get(), get(), get(), get(), get())
+    } // ExpenseRepo + AccountRepo + LabelRepo + SettingsRepo + BudgetRepo
     viewModel { DebtViewModel(get()) }
     viewModel { HabitViewModel(get()) }
-    viewModel { SettingsViewModel(get()) }
+    viewModel { SettingsViewModel(get(), get()) }
     viewModel { AccountViewModel(get()) }
     viewModel { CategoryViewModel(get()) }
     viewModel { LabelViewModel(get()) }

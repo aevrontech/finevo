@@ -52,7 +52,8 @@ class FinEvoApplication : Application() {
             val supabaseKey = BuildConfig.SUPABASE_ANON_KEY
 
             if (supabaseUrl.isNotEmpty() && supabaseKey.isNotEmpty()) {
-                SupabaseConfig.initialize(supabaseUrl, supabaseKey)
+                val secureStorage = com.aevrontech.finevo.data.local.AndroidSecureStorage(this)
+                SupabaseConfig.initialize(supabaseUrl, supabaseKey, secureStorage)
             }
         } catch (e: Exception) {
             // Supabase not configured - app will work in offline mode

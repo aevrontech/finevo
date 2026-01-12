@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
  * Android implementation of DatabaseFactory. Uses standard SQLite driver for now. TODO: Add
@@ -11,10 +12,14 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
  */
 actual class DatabaseFactory(private val context: Context) {
     actual fun createDriver(): SqlDriver {
+        System.loadLibrary("sqlcipher")
+        val passphrase = EncryptionKeyManager.getOrCreateKey(context)
+        val factory = SupportOpenHelperFactory(passphrase)
         return AndroidSqliteDriver(
             schema = FinEvoDatabase.Schema,
             context = context,
             name = "finevo.db",
+            factory = factory,
             callback =
                 object : AndroidSqliteDriver.Callback(FinEvoDatabase.Schema) {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -43,18 +48,30 @@ actual class DatabaseFactory(private val context: Context) {
                 listOf(
                     Triple("cat_exp_accessories", "Accessories", "💍"),
                     Triple("cat_exp_beauty", "Beauty", "💄"),
-                    Triple("cat_exp_bills_utilities", "Bills & Utilities", "📄"),
+                    Triple(
+                        "cat_exp_bills_utilities",
+                        "Bills & Utilities",
+                        "📄"
+                    ),
                     Triple("cat_exp_books", "Books", "📚"),
                     Triple("cat_exp_business", "Business", "💼"),
                     Triple("cat_exp_cafe", "Cafe", "☕"),
                     Triple("cat_exp_car", "Car", "🚗"),
                     Triple("cat_exp_charity", "Charity", "🎗️"),
-                    Triple("cat_exp_children_babies", "Children & Babies", "👶"),
+                    Triple(
+                        "cat_exp_children_babies",
+                        "Children & Babies",
+                        "👶"
+                    ),
                     Triple("cat_exp_clothing", "Clothing", "👕"),
                     Triple("cat_exp_doctor", "Doctor", "👨‍⚕️"),
                     Triple("cat_exp_donations", "Donations", "🤝"),
                     Triple("cat_exp_education", "Education", "🎓"),
-                    Triple("cat_exp_electricity_bills", "Electricity Bills", "⚡"),
+                    Triple(
+                        "cat_exp_electricity_bills",
+                        "Electricity Bills",
+                        "⚡"
+                    ),
                     Triple("cat_exp_electronics", "Electronics", "💻"),
                     Triple("cat_exp_entertainment", "Entertainment", "🎬"),
                     Triple("cat_exp_family", "Family", "👨‍👩‍👧‍👦"),
@@ -67,7 +84,11 @@ actual class DatabaseFactory(private val context: Context) {
                     Triple("cat_exp_gas_bill", "Gas Bill", "⛽"),
                     Triple("cat_exp_gifts", "Gifts", "🎁"),
                     Triple("cat_exp_health_fitness", "Health & Fitness", "🏃"),
-                    Triple("cat_exp_home_improvement", "Home Improvement", "🔨"),
+                    Triple(
+                        "cat_exp_home_improvement",
+                        "Home Improvement",
+                        "🔨"
+                    ),
                     Triple("cat_exp_home_services", "Home Services", "🧹"),
                     Triple("cat_exp_insurances", "Insurances", "🛡️"),
                     Triple("cat_exp_internet_bill", "Internet Bill", "🌐"),
@@ -160,7 +181,8 @@ actual class DatabaseFactory(private val context: Context) {
                 )
 
             incomeCategories.forEachIndexed { index, (id, name, icon) ->
-                val color = colors[(index + 5) % colors.size] // Offset to vary colors
+                val color =
+                    colors[(index + 5) % colors.size] // Offset to vary colors
                 db.execSQL(
                     "INSERT OR IGNORE INTO categories (id, user_id, name, icon, color, type, is_default, sort_order, created_at) VALUES ('$id', 'local_user', '$name', '$icon', '$color', 'INCOME', 1, $index, 0)"
                 )

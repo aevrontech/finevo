@@ -45,4 +45,7 @@ interface BudgetRepository {
         today: LocalDate,
         periodOffset: Int = 0 // 0 = current, -1 = previous, etc.
     ): Pair<LocalDate, LocalDate>
+
+    /** Check and trigger budget alerts for a transaction */
+    suspend fun checkAndTriggerAlerts(transaction: com.aevrontech.finevo.domain.model.Transaction)
 }
